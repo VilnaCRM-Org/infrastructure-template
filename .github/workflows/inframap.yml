@@ -1,4 +1,5 @@
-name: Inframap
+name: docs
+
 on:
   pull_request:
     branches: [ "main" ]

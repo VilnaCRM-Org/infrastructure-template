@@ -1,4 +1,5 @@
-name: Checkov
+name: security
+
 on:
   pull_request:
     branches: [ "main" ]
