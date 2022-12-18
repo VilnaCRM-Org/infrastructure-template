@@ -14,5 +14,4 @@ jobs:
       - name: Create & commit diagram with PR
         uses: erzz/inframap-action@v1
         with:
-          pr-comment: true
           plan-files: provisioning
