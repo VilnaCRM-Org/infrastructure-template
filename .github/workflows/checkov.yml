@@ -4,7 +4,7 @@ on:
     branches: [ "main" ]
 
 jobs:
-  checkov-job:
+  checkov:
     runs-on: ubuntu-latest
     name: checkov-action
     steps:

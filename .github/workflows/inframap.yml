@@ -1,0 +1,15 @@
+name: Inframap
+on:
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  inframap:
+    name: Create inframap diagram
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Create & commit diagram with PR
+        uses: erzz/inframap-action@v1
