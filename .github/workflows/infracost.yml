@@ -16,7 +16,7 @@ jobs:
       pull-requests: write
 
     env:
-      TF_ROOT: provisioning
+      TF_ROOT: provisioning/plan.json
 
     steps:
       - name: Setup Infracost
