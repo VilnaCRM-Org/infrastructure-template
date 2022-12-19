@@ -7,7 +7,7 @@ on:
 jobs:
   terrascan:
     runs-on: ubuntu-latest
-    name: terrascan-action
+    name: run terrascan
     steps:
       - name: Checkout repository
         uses: actions/checkout@v2

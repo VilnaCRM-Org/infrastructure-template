@@ -5,9 +5,9 @@ on:
     branches: [ "main" ]
 
 jobs:
-  check_format:
+  format:
     runs-on: ubuntu-latest
-    name: Check terraform file are formatted correctly
+    name: check terraform file are formatted correctly
     steps:
       - name: Checkout
         uses: actions/checkout@v3

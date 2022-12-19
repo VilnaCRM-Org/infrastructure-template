@@ -6,7 +6,7 @@ on:
 
 jobs:
   inframap:
-    name: Create inframap diagram
+    name: create inframap diagram
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
