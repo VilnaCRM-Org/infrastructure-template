@@ -16,7 +16,7 @@ jobs:
       pull-requests: write
 
     env:
-      TF_ROOT: examples/terraform-project/code
+      TF_ROOT: provisioning
 
     steps:
       - name: Setup Infracost
