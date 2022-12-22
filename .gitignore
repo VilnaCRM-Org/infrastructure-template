@@ -34,3 +34,5 @@ terraform/.terraformrc
 terraform/terraform.rc
 
 docker/.env
+
+cli/cli

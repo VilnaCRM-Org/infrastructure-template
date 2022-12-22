@@ -16,7 +16,7 @@ jobs:
         uses: dflook/terraform-fmt-check@v1
         id: fmt-check
         with:
-          path: provisioning
+          path: terraform
 
       - name: Wrong formatting found
         if: ${{ failure() && steps.fmt-check.outputs.failure-reason == 'check-failed' }}

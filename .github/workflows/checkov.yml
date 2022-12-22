@@ -16,4 +16,4 @@ jobs:
         id: checkov
         uses: bridgecrewio/checkov-action@master
         with:
-          directory: provisioning
+          directory: terraform
