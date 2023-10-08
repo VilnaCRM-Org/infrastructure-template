@@ -1,3 +1,5 @@
+.idea
+
 # Local .terraform directories
 terraform/.terraform/*
 
@@ -33,6 +35,4 @@ terraform/*_override.tf.json
 terraform/.terraformrc
 terraform/terraform.rc
 
-docker/.env
-
-cli/cli
+.env
