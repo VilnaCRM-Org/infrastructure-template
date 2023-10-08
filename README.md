@@ -2,8 +2,6 @@
 
 # Infrastructure template for modern DevOps applications
 
-/* TODO: list of badges */ 
-
 ## Possibilities
 - Modern stack for services: [Terraform](https://www.terraform.io/), [Terraspace](https://terraspace.cloud/)
 - Built-in docker environment and convenient `make` cli command
@@ -45,13 +43,9 @@ The list of the `make` possibilities:
 ## Documentation
 Start reading at the [GitHub wiki](https://github.com/VilnaCRM-Org/infrastructure-template/wiki). If you're having trouble, head for [the troubleshooting guide](https://github.com/VilnaCRM-Org/infrastructure-template/wiki/Troubleshooting) as it's frequently updated.
 
-You can generate complete API-level documentation by running `phpdoc` in the top-level folder, and documentation will appear in the `docs` folder, though you'll need to have [PHPDocumentor](http://www.phpdoc.org) installed.
-
 If the documentation doesn't cover what you need, search the [many questions on Stack Overflow](http://stackoverflow.com/questions/tagged/vilnacrm), and before you ask a question, [read the troubleshooting guide](https://github.com/VilnaCRM-Org/infrastructure-template/wiki/Troubleshooting).
 
 ## Tests
-[Tests](https://github.com/VilnaCRM-Org/infrastructure-template/tree/main/tests/) use PHPUnit 9 and [Behat](https://github.com/Behat/Behat).
-
 [Test status](https://github.com/VilnaCRM-Org/infrastructure-template/actions)
 
 If this isn't passing, is there something you can do to help?
@@ -72,28 +66,6 @@ If you found a mistake in the docs, or want to add something, go ahead and amend
 Development time and resources for this repository are provided by [VilnaCRM](https://vilnacrm.com/), the free and opensource CRM system.
 
 Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard cash 💰. Sponsorship through GitHub is a simple and convenient way to say "thank you" to maintainers and contributors – just click the "Sponsor" button [on the project page](https://github.com/VilnaCRM-Org/infrastructure-template). If your company uses this template, consider taking part in the VilnaCRM's enterprise support program.
-
-## Changelog
-See [changelog](CHANGELOG.md).
-
-<!-- BEGIN_TF_DOCS -->
-## Requirements
-
-No requirements.
-
-## Providers
-
-No providers.
-
-## Modules
-
-No modules.
-
-## Resources
-
-No resources.
-
-## Inputs
 
 No inputs.
 
