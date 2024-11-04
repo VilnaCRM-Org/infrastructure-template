@@ -3,9 +3,9 @@
 # Infrastructure template for modern DevOps applications
 
 ## Possibilities
-- Modern stack for services: [Terraform](https://www.terraform.io/), [Terraspace](https://terraspace.cloud/)
+- Modern stack for services: [Pulumi](https://www.pulumi.com)
 - Built-in docker environment and convenient `make` cli command
-- A lot of CI checks to ensure the highest code quality that can be ([checkov](https://www.checkov.io/), [infracost](https://www.infracost.io/), [inframap](https://github.com/cycloidio/inframap), [terrascan](https://runterrascan.io/) and other terraform related checks)
+- A lot of CI checks to ensure the highest code quality that can be ( and other terraform related checks)
 - Configured testing tools
 - Much more!
 
@@ -20,7 +20,11 @@ This software is distributed under the [Creative Commons Zero v1.0 Universal](ht
 ### Minimal installation
 You can clone this repository locally or use Github functionality "Use this template"
 
-Install the latest [docker](https://docs.docker.com/engine/install/) and [docker compose](https://docs.docker.com/compose/install/)
+Install the latest:
+* [pulumi](https://www.pulumi.com/docs/iac/download-install/)
+* [python 3](https://realpython.com/installing-python/)
+* [poetry](https://python-poetry.org/docs/#installing-with-the-official-installer)
+* [aws cli](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
 
 Use `make` command to check all commands that you will need for creating own project
 > make start
