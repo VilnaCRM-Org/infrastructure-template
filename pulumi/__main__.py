@@ -1,10 +1,18 @@
 """An AWS Python Pulumi program"""
 
 import pulumi
-from pulumi_aws import s3
+from pulumi_aws import ec2
 
-# Create an AWS resource (S3 Bucket)
-bucket = s3.BucketV2("my-bucket")
+# Create an AWS EC2 instance (migrated from terraform)
+instance = ec2.Instance("app-server",
+    ami="ami-06ce824c157700cd2",  # Same AMI as original terraform
+    instance_type="t2.micro",
+    tags={
+        "Name": "ExampleAppServerInstance"
+    }
+)
 
-# Export the name of the bucket
-pulumi.export("bucket_name", bucket.id)
+# Export the instance details
+pulumi.export("instance_id", instance.id)
+pulumi.export("instance_public_ip", instance.public_ip)
+pulumi.export("instance_private_ip", instance.private_ip)
