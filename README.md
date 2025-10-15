@@ -5,7 +5,7 @@
 ## Possibilities
 - Modern stack for services: [Pulumi](https://www.pulumi.com)
 - Built-in docker environment and convenient `make` cli command
-- A lot of CI checks to ensure the highest code quality that can be (linters and other terraform related checks)
+- CI checks to ensure the highest code quality through linters and infrastructure validation
 - Configured testing tools
 - Much more!
 
@@ -24,6 +24,10 @@ Install the latest [docker](https://docs.docker.com/engine/install/) and [docker
 
 Use `make` command to set up project and automatically install all needed dependencies
 > make start
+
+Before starting, ensure you have:
+1. Installed [Pulumi CLI](https://www.pulumi.com/docs/install/)
+2. Configured your cloud provider credentials
 
 Check [Getting started](https://www.pulumi.com/docs/iac/get-started/aws/review-project/) section to manage your infrastructure
 
@@ -64,6 +68,11 @@ The synchronization is powered by the [actions-template-sync](https://github.com
 ### Handling Workflow Permissions Error
 
 When setting up the repository synchronization, you may encounter permission-related issues. Below are two methods to resolve common workflow permissions errors: using a Personal Access Token (PAT) or using a GitHub App.
+
+**Important security considerations:**
+- Use the principle of least privilege when granting permissions
+- Regularly rotate credentials (PATs and GitHub App keys)
+- Monitor synchronization logs for unauthorized access attempts
 
 #### Option 1: Using a Personal Access Token (PAT)
 

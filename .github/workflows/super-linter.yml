@@ -30,9 +30,6 @@ jobs:
           VALIDATE_PYTHON_BLACK: true
           VALIDATE_PYTHON_FLAKE8: true
           VALIDATE_TYPESCRIPT: true
-          VALIDATE_PYTHON_PYLINT: false
-          VALIDATE_PYTHON_MYPY: false
-          VALIDATE_ALL_CODEBASE: true
           VALIDATE_YAML: true
           VALIDATE_YAML_PRETTIER: true
           FIX_MARKDOWN_PRETTIER: true
