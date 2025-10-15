@@ -5,6 +5,7 @@ build-backend = "poetry.core.masonry.api"
 [tool]
 [tool.poetry]
 package-mode = false
+version = "0.1.0"
 [tool.poetry.dependencies]
 pulumi = "^3.138"
 pulumi-aws = "^6.58"

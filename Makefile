@@ -19,12 +19,15 @@ help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
 	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
 
-start: ## Docker container with terraspace and terraform
+start: ## Initialize and start Pulumi development environment
 	${DOCKER_COMPOSE} up -d --build
 #"${PULUMI} login --local && ${PULUMI} install"
 
+health: ## Check if containers are healthy
+	$(DOCKER_COMPOSE) ps --format json | grep -q '"Health": "healthy"'
+
 up: ## Start the container for development
-	$(DOCKER_COMPOSE) up --detach
+	$(DOCKER_COMPOSE) up --detach && $(MAKE) health
 
 build: ## Builds the images (PHP, caddy)
 	$(DOCKER_COMPOSE) build --pull --no-cache
@@ -37,3 +40,15 @@ sh: ## Log to the docker container
 
 pulumi: ## Pulumi enables you to safely and predictably create, change, and improve infrastructure.
 	@$(EXEC_APP) ${PULUMI} "$1"
+
+pulumi-preview: ## Preview infrastructure changes
+	@$(EXEC_APP) ${PULUMI} preview
+
+pulumi-up: ## Apply infrastructure changes
+	@$(EXEC_APP) ${PULUMI} up
+
+pulumi-refresh: ## Refresh stack state
+	@$(EXEC_APP) ${PULUMI} refresh
+
+pulumi-destroy: ## Destroy infrastructure (use with caution)
+	@$(EXEC_APP) ${PULUMI} destroy

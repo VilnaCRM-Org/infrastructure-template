@@ -1,5 +1,5 @@
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim
+FROM python:3.11.7-slim
 
 # Set build-time variables for UID and GID with defaults
 ARG UID=1000
@@ -8,9 +8,9 @@ ARG USERNAME=appuser
 
 # Install system dependencies as root
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    unzip \
-    gnupg \
+    curl=7.88.1-10+deb12u5 \
+    unzip=6.0-28 \
+    gnupg=2.2.40-1.1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Create home directory and set ownership
@@ -33,7 +33,8 @@ RUN curl -sSL https://install.python-poetry.org | python3 - && \
 
 # Install AWS CLI
 RUN mkdir awscliv2 && \
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2/awscliv2.zip" && \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.15.0.zip" -o "awscliv2/awscliv2.zip" && \
+    echo "3f80bd96a06427da3de238594127ccb704bd220578f1242fe910ae9f5becf7f5  awscliv2/awscliv2.zip" | sha256sum -c && \
     unzip awscliv2/awscliv2.zip -d awscliv2 && \
     awscliv2/aws/install --install-dir /home/${USERNAME}/.aws-cli --bin-dir /home/${USERNAME}/.local/bin && \
     rm -rf awscliv2

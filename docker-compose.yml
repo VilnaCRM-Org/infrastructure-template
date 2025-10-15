@@ -10,7 +10,12 @@ services:
         GID: "${GID:-1000}"
         USERNAME: "${USER:-appuser}"
     volumes:
-      - ./pulumi:/home/${USER}/project
+      - type: bind
+        source: ./pulumi
+        target: /home/${USER}/project
+        read_only: true
+        bind:
+          create_host_path: true
     working_dir: /home/${USER}/project
     environment:
       - USER

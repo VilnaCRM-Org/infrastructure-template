@@ -25,6 +25,7 @@ jobs:
         uses: super-linter/super-linter@v7.1.0
         env:
           VALIDATE_MARKDOWN: true
+          VALIDATE_MARKDOWN_PRETTIER: true
           VALIDATE_ENV: true
           VALIDATE_PYTHON_BLACK: true
           VALIDATE_PYTHON_FLAKE8: true
@@ -33,6 +34,7 @@ jobs:
           VALIDATE_PYTHON_MYPY: true
           VALIDATE_ALL_CODEBASE: true
           VALIDATE_YAML: true
+          VALIDATE_YAML_PRETTIER: true
           FIX_MARKDOWN_PRETTIER: true
           FIX_YAML_PRETTIER: true
           FIX_PYTHON_BLACK: true
