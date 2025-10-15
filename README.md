@@ -1,6 +1,8 @@
+# Infrastructure Template
+
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://supportukrainenow.org/)
 
-# Infrastructure template for modern DevOps applications
+Infrastructure template for modern DevOps applications
 
 ## Possibilities
 - Modern stack for services: [Pulumi](https://www.pulumi.com)
@@ -40,7 +42,7 @@ Execute `make` or `make help` to see the full list of project commands.
 
 The list of the `make` possibilities:
 
-```
+```text
 build           Builds the images (PHP, caddy)
 down            Stop the docker hub
 pulumi          Pulumi enables you to safely and predictably create, change, and improve infrastructure.
@@ -95,6 +97,8 @@ We're particularly interested in fixing edge cases, expanding test coverage, and
 If you found a mistake in the docs, or want to add something, go ahead and amend the wiki – anyone can edit it.
 
 ## Sponsorship
-Development time and resources for this repository are provided by [VilnaCRM](https://vilnacrm.com/), the free and opensource CRM system.
+
+Development time and resources for this repository are provided by [VilnaCRM](https://vilnacrm.com/),
+the free and opensource CRM system.
 
 Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard cash 💰. Sponsorship through GitHub is a simple and convenient way to say "thank you" to maintainers and contributors – just click the "Sponsor" button [on the project page](https://github.com/VilnaCRM-Org/infrastructure-template). If your company uses this template, consider taking part in the VilnaCRM's enterprise support program.
