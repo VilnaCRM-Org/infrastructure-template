@@ -4,12 +4,11 @@ import pulumi
 from pulumi_aws import ec2
 
 # Create an AWS EC2 instance (migrated from terraform)
-instance = ec2.Instance("app-server",
+instance = ec2.Instance(
+    "app-server",
     ami="ami-06ce824c157700cd2",  # Same AMI as original terraform
     instance_type="t2.micro",
-    tags={
-        "Name": "ExampleAppServerInstance"
-    }
+    tags={"Name": "ExampleAppServerInstance"},
 )
 
 # Export the instance details

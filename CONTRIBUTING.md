@@ -46,6 +46,7 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
 1. Fork the repository.
 
 - Using GitHub Desktop:
+
   - [Getting started with GitHub Desktop](https://docs.github.com/en/desktop/installing-and-configuring-github-desktop/getting-started-with-github-desktop)
     will guide you through setting up Desktop.
   - Once Desktop is set up, you can use
@@ -54,7 +55,7 @@ If you find an issue to work on, you are welcome to open a PR with a fix.
 - Using the command line:
   - [Fork the repo](https://docs.github.com/en/github/getting-started-with-github/fork-a-repo#fork-an-example-repository)
     so that you can make your changes without affecting the original project until
-      you're ready to merge them.
+    you're ready to merge them.
 
 1. Install or update to **Docker** and **Docker compose**. For more information, see [the README](README.md).
 

@@ -5,6 +5,7 @@
 Infrastructure template for modern DevOps applications
 
 ## Possibilities
+
 - Modern stack for services: [Pulumi](https://www.pulumi.com)
 - Built-in docker environment and convenient `make` cli command
 - CI checks to ensure the highest code quality through linters and infrastructure validation
@@ -12,22 +13,27 @@ Infrastructure template for modern DevOps applications
 - Much more!
 
 ## Why you might need it
+
 Many DevOps engineers need to create new projects from scratch and spend a lot of time.
 
 We decided to simplify this exhausting process and create a public template for modern infrastructures. This template is used for all our microservices in VilnaCRM.
 
 ## License
+
 This software is distributed under the [Creative Commons Zero v1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/deed) license. Please read [LICENSE](https://github.com/VilnaCRM-Org/infrastructure-template/blob/main/LICENSE) for information on the software availability and distribution.
 
 ### Minimal installation
+
 You can clone this repository locally or use Github functionality "Use this template"
 
 Install the latest [docker](https://docs.docker.com/engine/install/) and [docker compose](https://docs.docker.com/compose/install/)
 
 Use `make` command to set up project and automatically install all needed dependencies
+
 > make start
 
 Before starting, ensure you have:
+
 1. Installed [Pulumi CLI](https://www.pulumi.com/docs/install/)
 2. Configured your cloud provider credentials
 
@@ -36,6 +42,7 @@ Check [Getting started](https://www.pulumi.com/docs/iac/get-started/aws/review-p
 That's it. You should now be ready to use infrastructure template!
 
 ## Using
+
 You can use `make` command to easily control and work with project locally.
 
 Execute `make` or `make help` to see the full list of project commands.
@@ -52,11 +59,13 @@ up              Start the container for development
 ```
 
 ## Documentation
+
 Start reading at the [GitHub wiki](https://github.com/VilnaCRM-Org/infrastructure-template/wiki). If you're having trouble, head for [the troubleshooting guide](https://github.com/VilnaCRM-Org/infrastructure-template/wiki/Troubleshooting) as it's frequently updated.
 
 If the documentation doesn't cover what you need, search the [many questions on Stack Overflow](http://stackoverflow.com/questions/tagged/vilnacrm), and before you ask a question, [read the troubleshooting guide](https://github.com/VilnaCRM-Org/infrastructure-template/wiki/Troubleshooting).
 
 ## Tests
+
 [Test status](https://github.com/VilnaCRM-Org/infrastructure-template/actions)
 
 If this isn't passing, is there something you can do to help?
@@ -72,6 +81,7 @@ The synchronization is powered by the [actions-template-sync](https://github.com
 When setting up the repository synchronization, you may encounter permission-related issues. Below are two methods to resolve common workflow permissions errors: using a Personal Access Token (PAT) or using a GitHub App.
 
 **Important security considerations:**
+
 - Use the principle of least privilege when granting permissions
 - Regularly rotate credentials (PATs and GitHub App keys)
 - Monitor synchronization logs for unauthorized access attempts
@@ -85,11 +95,13 @@ Details on how to configure and use a PAT for repository synchronization can be 
 For projects that prefer GitHub App authentication, please refer to the [TEMPLATE_SYNC_APP.md](.github/TEMPLATE_SYNC_APP.md) file in the `.github` directory for setup instructions and examples.
 
 ## Security
+
 Please disclose any vulnerabilities found responsibly – report security issues to the maintainers privately.
 
 See [SECURITY](https://github.com/VilnaCRM-Org/infrastructure-template/tree/main/SECURITY.md) and [Security advisories on GitHub](https://github.com/VilnaCRM-Org/infrastructure-template/security).
 
 ## Contributing
+
 Please submit bug reports, suggestions, and pull requests to the [GitHub issue tracker](https://github.com/VilnaCRM-Org/infrastructure-template/issues).
 
 We're particularly interested in fixing edge cases, expanding test coverage, and updating translations.

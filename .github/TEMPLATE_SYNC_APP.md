@@ -11,25 +11,28 @@ By configuring a GitHub App, you can automate repository synchronization while e
 ### Steps Overview
 
 1. **GitHub App Configuration**:
-    - Create and configure the GitHub App with the following specific permissions:
-      - Repository Administration: Read & Write (for managing repository settings)
-      - Repository Contents: Read & Write (for creating PRs and commits)
-      - Issues: Read & Write (for creating linked issues if needed)
-      - Metadata: Read-only (minimum required permission)
-      - Pull Requests: Read & Write (for creating and managing sync PRs)
+
+   - Create and configure the GitHub App with the following specific permissions:
+     - Repository Administration: Read & Write (for managing repository settings)
+     - Repository Contents: Read & Write (for creating PRs and commits)
+     - Issues: Read & Write (for creating linked issues if needed)
+     - Metadata: Read-only (minimum required permission)
+     - Pull Requests: Read & Write (for creating and managing sync PRs)
 
 2. **Repository Secrets**:
-    - Configure secrets for the private key and App ID.
+
+   - Configure secrets for the private key and App ID.
 
 3. **Branch Protection Rules**:
-    - Navigate to repository Settings > Branches > Branch protection rules
-    - Add the GitHub App to the list of accounts allowed to bypass branch protections
-    - Ensure "Allow force pushes" is enabled for the GitHub App
+
+   - Navigate to repository Settings > Branches > Branch protection rules
+   - Add the GitHub App to the list of accounts allowed to bypass branch protections
+   - Ensure "Allow force pushes" is enabled for the GitHub App
 
 4. **Workflow Permissions**:
-    - Go to your project's **Settings** > **Actions** > **General**
-    - Under the **Workflow permissions** section, check the box for **Allow GitHub Actions to create and approve pull requests**
-    > **Security Note**: Enabling this permission allows any workflow in the repository to create and approve pull requests. Ensure all workflows are properly secured and reviewed before enabling this setting.
+   - Go to your project's **Settings** > **Actions** > **General**
+   - Under the **Workflow permissions** section, check the box for **Allow GitHub Actions to create and approve pull requests**
+     > **Security Note**: Enabling this permission allows any workflow in the repository to create and approve pull requests. Ensure all workflows are properly secured and reviewed before enabling this setting.
 
 ### GitHub Action Configuration
 
@@ -68,17 +71,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           token: ${{ steps.generate_token.outputs.token }}
-          fetch-depth: 0  # Required for template sync
+          fetch-depth: 0 # Required for template sync
           # submodules: true  # Uncomment if your repository uses git submodules
 
       - name: actions-template-sync
         uses: AndreasAugustin/actions-template-sync@v2
         with:
           github_token: ${{ steps.generate_token.outputs.token }}
-          source_repo_path: <owner/repo>  # e.g., "VilnaCRM-Org/infrastructure-template"
-          upstream_branch: <target_branch>  # defaults to main, e.g., "master"
-          pr_labels: <label1>,<label2>[,...]  # optional, e.g., "sync,automated"
-          pr_title: "chore: sync with template repository"  # optional, customize as needed
+          source_repo_path: <owner/repo> # e.g., "VilnaCRM-Org/infrastructure-template"
+          upstream_branch: <target_branch> # defaults to main, e.g., "master"
+          pr_labels: <label1>,<label2>[,...] # optional, e.g., "sync,automated"
+          pr_title: "chore: sync with template repository" # optional, customize as needed
 
       - name: Notify on failure
         if: failure()
@@ -110,20 +113,24 @@ While this guide focuses on GitHub Apps (the recommended approach), if you choos
 ### PAT Security Considerations
 
 1. **Repository Scope Limitation**:
+
    - Limit the PAT to specific repositories rather than granting access to all repositories
    - Use fine-grained PATs when possible for better security control
 
 2. **Expiration Management**:
+
    - Set an appropriate expiration date (recommended: 90 days or less)
    - Never create PATs without expiration dates
    - Set up calendar reminders before expiration
 
 3. **Regular Rotation**:
+
    - Rotate PATs regularly as per security best practices (recommended: every 60-90 days)
    - Update the repository secret immediately after rotation
    - Revoke old PATs after successful rotation
 
 4. **Minimal Permissions**:
+
    - Grant only the minimum required scopes (`repo`, `workflow`)
    - Avoid granting admin or org-level permissions unless absolutely necessary
 
@@ -141,4 +148,3 @@ While this guide focuses on GitHub Apps (the recommended approach), if you choos
 - **Automatic token refresh**: Tokens are short-lived and refreshed automatically
 
 Following these steps should resolve any permission issues with workflows, allowing smooth synchronization between repositories.
-
