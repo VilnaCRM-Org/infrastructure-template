@@ -101,4 +101,7 @@ If you found a mistake in the docs, or want to add something, go ahead and amend
 Development time and resources for this repository are provided by [VilnaCRM](https://vilnacrm.com/),
 the free and opensource CRM system.
 
-Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard cash 💰. Sponsorship through GitHub is a simple and convenient way to say "thank you" to maintainers and contributors – just click the "Sponsor" button [on the project page](https://github.com/VilnaCRM-Org/infrastructure-template). If your company uses this template, consider taking part in the VilnaCRM's enterprise support program.
+Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard cash 💰.
+Sponsorship through GitHub is a simple and convenient way to say "thank you" to maintainers
+and contributors – just click the "Sponsor" button [on the project page](https://github.com/VilnaCRM-Org/infrastructure-template).
+If your company uses this template, consider taking part in the VilnaCRM's enterprise support program.
