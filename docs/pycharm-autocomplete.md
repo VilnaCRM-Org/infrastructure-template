@@ -38,8 +38,9 @@ dependencies, reactivate it (`source pulumi/.venv/bin/activate`,
 1. Open PyCharm.
 2. Go to `Settings → Project: infrastructure-template → Python Interpreter`.
 3. Click the gear icon → `Add…` → `Existing environment`.
-4. Browse to the interpreter you created (for example `pulumi/.venv/bin/python`
-   or `.venv/bin/python`), select it, and apply the change.
+4. Browse to the interpreter you created—e.g. `pulumi/.venv/bin/python` (macOS/Linux),
+   `pulumi\.venv\Scripts\python.exe` (Windows), `.venv/bin/python`, or `.venv\Scripts\python.exe`—select
+   the path that matches your OS, and apply the change.
 
 PyCharm immediately indexes the environment and enables autocomplete for the
 Pulumi SDKs, AWS provider, and the helper tooling (Black, Flake8, Pre-commit).
