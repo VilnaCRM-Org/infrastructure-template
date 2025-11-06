@@ -59,6 +59,20 @@ sh                Open a shell inside the Pulumi container.
 down              Stop the Docker Compose environment.
 ```
 
+## Development
+
+PyCharm autocomplete: create a local venv (`python3 -m venv pulumi/.venv`), install Pulumi deps, then add that interpreter via `Settings → Project → Python Interpreter → Add → Existing environment`.
+
+```bash
+python3 -m venv pulumi/.venv
+source pulumi/.venv/bin/activate  # use the equivalent activate script on Windows
+pip install --upgrade pip
+pip install "pulumi>=3.138,<4" "pulumi-aws>=7.0,<8" black flake8 pre-commit
+deactivate
+```
+
+Re-run the `pip install …` line whenever dependencies change, or recreate the venv after switching Python versions.
+
 ## CI/CD and Secrets
 
 Two GitHub Actions workflows handle environment parity:
