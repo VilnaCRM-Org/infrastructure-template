@@ -18,16 +18,20 @@ Run the commands below from the repository root, replacing `pulumi/.venv` with
 
 ```bash
 python3 -m venv pulumi/.venv
-source pulumi/.venv/bin/activate
+# Activate the environment (run the line that matches your shell):
+#   macOS/Linux:        source pulumi/.venv/bin/activate
+#   Windows PowerShell: pulumi\.venv\Scripts\Activate
+#   Windows cmd:        pulumi\.venv\Scripts\activate.bat
 pip install --upgrade pip
-pip install "pulumi>=3.138,<4" "pulumi-aws>=6.58,<7" black flake8 pre-commit
+pip install "pulumi>=3.138,<4" "pulumi-aws>=7.0,<8" black flake8 pre-commit
 deactivate
 ```
 
 If the virtual environment already exists and you want to refresh the
-dependencies, reactivate it (`source pulumi/.venv/bin/activate` or
-`source .venv/bin/activate`) and rerun the
-`pip install …` line.
+dependencies, reactivate it (`source pulumi/.venv/bin/activate`,
+`source .venv/bin/activate`, `pulumi\.venv\Scripts\Activate`,
+`.venv\Scripts\Activate`, `pulumi\.venv\Scripts\activate.bat`, or
+`.venv\Scripts\activate.bat`) and rerun the `pip install …` line.
 
 ## 2. Point PyCharm at the new interpreter
 
