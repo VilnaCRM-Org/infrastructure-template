@@ -120,4 +120,4 @@ Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard c
 2. Cross-link the new material from `README.md` or other docs so it is discoverable.
 3. Include documentation updates in the same PR as related code changes whenever possible.
 
-Feel free to create subdirectories (for example `docs/pulumi/`) to organize the content as it grows.
+You can organize content as it grows by creating subdirectories (e.g., `docs/pulumi/`).
