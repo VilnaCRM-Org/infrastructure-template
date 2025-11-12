@@ -50,6 +50,28 @@ If the documentation doesn't cover what you need, search the [many questions on 
 
 If this isn't passing, is there something you can do to help?
 
+### Local Pulumi test suites
+
+Install development dependencies and then use the `make` targets to run the different Pulumi-focused suites:
+
+```sh
+pip install -r requirements/dev.txt
+
+# Configuration validation
+make test-pulumi
+
+# Unit tests (pure Pulumi runtime with mocks)
+make test-unit
+
+# Automation-based integration tests
+make test-integration
+
+# Mutation analysis (time-consuming)
+make test-mutation
+```
+
+You can also execute `make test` to run the structural, unit, and integration checks as a batch.
+
 ## Security
 Please disclose any vulnerabilities found responsibly – report security issues to the maintainers privately.
 
