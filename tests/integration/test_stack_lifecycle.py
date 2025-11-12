@@ -1,37 +1,27 @@
 from __future__ import annotations
 
-import sys
+import shutil
 import uuid
 from pathlib import Path
 
+import pytest
 import pulumi.automation as auto
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PULUMI_WORKDIR = PROJECT_ROOT / "pulumi"
 
+pytestmark = pytest.mark.skipif(
+    shutil.which("pulumi") is None, reason="Pulumi CLI binary is not available in PATH."
+)
+
 
 def _stack_name() -> str:
     return f"it-{uuid.uuid4().hex[:8]}"
 
 
-def _pulumi_command() -> auto.PulumiCommand:
-    return auto.PulumiCommand(
-        command=sys.executable,
-        args=["-m", "pulumi"],
-    )
-
-
-def _workspace_options() -> auto.LocalWorkspaceOptions:
-    return auto.LocalWorkspaceOptions(pulumi_command=_pulumi_command())
-
-
 def test_pulumi_stack_preview_and_up_cycle() -> None:
-    stack = auto.create_or_select_stack(
-        stack_name=_stack_name(),
-        work_dir=str(PULUMI_WORKDIR),
-        opts=_workspace_options(),
-    )
+    stack = auto.create_or_select_stack(stack_name=_stack_name(), work_dir=str(PULUMI_WORKDIR))
     stack.set_config("environment", auto.ConfigValue(value="integration"))
     stack.set_config("serviceName", auto.ConfigValue(value="integration-test"))
 
