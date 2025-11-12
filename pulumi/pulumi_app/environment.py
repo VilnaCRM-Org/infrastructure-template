@@ -23,14 +23,26 @@ class EnvironmentSettings(pulumi.ComponentResource):
         super().__init__("infrastructure-template:core:EnvironmentSettings", name, None, opts)
 
         config = pulumi.Config()
+
+        # Environment resolution order:
+        # 1. Explicit parameter
+        # 2. Pulumi config
+        # 3. Default to "dev"
         resolved_environment = environment or config.get("environment") or "dev"
+
+        # Service name resolution order:
+        # 1. Explicit parameter
+        # 2. Pulumi config
+        # 3. Project name fallback
         resolved_service = service_name or config.get("serviceName") or pulumi.get_project()
 
         self.environment = pulumi.Output.from_input(resolved_environment)
         self.service_name = pulumi.Output.from_input(resolved_service)
+
         self.stack_tag = pulumi.Output.all(self.service_name, self.environment).apply(
             lambda args: f"{args[0]}-{args[1]}"
         )
+
         self.default_tags = pulumi.Output.all(self.service_name, self.environment).apply(
             lambda args: {"Project": args[0], "Environment": args[1]}
         )
