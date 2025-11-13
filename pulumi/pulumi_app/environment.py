@@ -24,16 +24,8 @@ class EnvironmentSettings(pulumi.ComponentResource):
 
         config = pulumi.Config()
 
-        # Environment resolution order:
-        # 1. Explicit parameter
-        # 2. Pulumi config
-        # 3. Default to "dev"
         resolved_environment = environment or config.get("environment") or "dev"
 
-        # Service name resolution order:
-        # 1. Explicit parameter
-        # 2. Pulumi config
-        # 3. Project name fallback
         resolved_service = service_name or config.get("serviceName") or pulumi.get_project()
 
         self.environment = pulumi.Output.from_input(resolved_environment)

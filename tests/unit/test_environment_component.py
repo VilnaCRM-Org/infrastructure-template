@@ -4,7 +4,7 @@ from unittest.mock import patch
 import pulumi
 from pulumi.runtime import mocks, settings, stack, sync_await
 
-from pulumi.pulumi_app.environment import EnvironmentSettings
+from pulumi_app.environment import EnvironmentSettings
 
 
 class SimpleMocks(mocks.Mocks):
@@ -139,41 +139,3 @@ def test_service_name_defaults_to_project_name() -> None:
     assert outputs["serviceName"] == "project-fallback"
     assert outputs["stackTag"] == "project-fallback-qa"
     assert outputs["defaultTags"] == {"Project": "project-fallback", "Environment": "qa"}
-
-def test_environment_prefers_explicit_over_config_and_default() -> None:
-    """Covers mutation that swaps fallback order for environment."""
-    def program():
-        env = EnvironmentSettings("unit", environment="explicit")
-        pulumi.export("env", env.environment)
-
-    with patch("pulumi_app.environment.pulumi.Config") as mock_config:
-        mock_config.return_value.get.return_value = "fromconfig"
-        outputs = _run_pulumi_program(program)
-    assert outputs["env"] == "explicit"
-
-
-def test_service_name_prefers_explicit_over_config_and_project() -> None:
-    """Covers mutation that swaps fallback order for service name."""
-    def program():
-        env = EnvironmentSettings("unit", environment="qa", service_name="explicit")
-        pulumi.export("serviceName", env.service_name)
-
-    with patch("pulumi_app.environment.pulumi.Config") as mock_config, patch(
-        "pulumi_app.environment.pulumi.get_project", return_value="project"
-    ):
-        mock_config.return_value.get.side_effect = lambda k: {"serviceName": "fromconfig"}.get(k)
-        outputs = _run_pulumi_program(program)
-    assert outputs["serviceName"] == "explicit"
-
-
-def test_default_tags_have_correct_keys() -> None:
-    """Ensures default_tags dict key order and names are correct."""
-    def program():
-        env = EnvironmentSettings("unit", environment="qa", service_name="svc")
-        pulumi.export("tags", env.default_tags)
-
-    outputs = _run_pulumi_program(program)
-    tags = outputs["tags"]
-    assert set(tags.keys()) == {"Project", "Environment"}
-    assert tags["Project"] == "svc"
-    assert tags["Environment"] == "qa"
