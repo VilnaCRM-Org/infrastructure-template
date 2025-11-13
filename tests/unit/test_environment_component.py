@@ -139,3 +139,49 @@ def test_service_name_defaults_to_project_name() -> None:
     assert outputs["serviceName"] == "project-fallback"
     assert outputs["stackTag"] == "project-fallback-qa"
     assert outputs["defaultTags"] == {"Project": "project-fallback", "Environment": "qa"}
+
+
+def test_component_uses_expected_type_token() -> None:
+    captured: dict[str, EnvironmentSettings] = {}
+
+    def program() -> None:
+        env_settings = EnvironmentSettings("unit")
+        captured["resource"] = env_settings
+        pulumi.export("environment", env_settings.environment)
+
+    _run_pulumi_program(program)
+
+    resource = captured.get("resource")
+    assert resource is not None, "EnvironmentSettings instance was not created"
+    assert getattr(resource, "_type", None) == "infrastructure-template:core:EnvironmentSettings"
+
+
+def test_register_outputs_maps_component_properties() -> None:
+    original_register = pulumi.ComponentResource.register_outputs
+
+    def program() -> None:
+        env_settings = EnvironmentSettings("unit", environment="qa", service_name="svc")
+        pulumi.export("stackTag", env_settings.stack_tag)
+        pulumi.export("defaultTags", env_settings.default_tags)
+
+    with patch.object(
+        pulumi.ComponentResource,
+        "register_outputs",
+        autospec=True,
+        wraps=original_register,
+    ) as mock_register:
+        _run_pulumi_program(program)
+
+    env_calls = [
+        register_call
+        for register_call in mock_register.call_args_list
+        if isinstance(register_call.args[0], EnvironmentSettings)
+    ]
+    assert env_calls, "EnvironmentSettings.register_outputs was not invoked"
+
+    resource, outputs = env_calls[0].args
+    assert set(outputs.keys()) == {"environment", "serviceName", "stackTag", "defaultTags"}
+    assert outputs["environment"] is resource.environment
+    assert outputs["serviceName"] is resource.service_name
+    assert outputs["stackTag"] is resource.stack_tag
+    assert outputs["defaultTags"] is resource.default_tags
