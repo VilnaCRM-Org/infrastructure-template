@@ -20,7 +20,7 @@ class EnvironmentSettings(pulumi.ComponentResource):
         service_name: Optional[str] = None,
         opts: Optional[pulumi.ResourceOptions] = None,
     ) -> None:
-        super().__init__("infrastructure-template:core:EnvironmentSettings", name, None, opts)
+        super().__init__("XXinfrastructure-template:core:EnvironmentSettingsXX", name, None, opts)
 
         config = pulumi.Config()
 

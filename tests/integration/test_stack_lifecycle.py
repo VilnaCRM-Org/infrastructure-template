@@ -20,8 +20,11 @@ def _stack_name() -> str:
     return f"it-{uuid.uuid4().hex[:8]}"
 
 
-def test_pulumi_stack_preview_and_up_cycle() -> None:
-    stack = auto.create_or_select_stack(stack_name=_stack_name(), work_dir=str(PULUMI_WORKDIR))
+def test_pulumi_stack_preview_and_up_cycle(tmp_path: Path) -> None:
+    work_dir = tmp_path / "pulumi-program"
+    shutil.copytree(PULUMI_WORKDIR, work_dir)
+
+    stack = auto.create_or_select_stack(stack_name=_stack_name(), work_dir=str(work_dir))
     stack.set_config("environment", auto.ConfigValue(value="integration"))
     stack.set_config("serviceName", auto.ConfigValue(value="integration-test"))
 

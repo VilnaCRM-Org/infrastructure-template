@@ -5,6 +5,12 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "${ROOT_DIR}"
 
-poetry run mutmut run \
+POETRY_BIN="${POETRY_BIN:-poetry}"
+if ! command -v "${POETRY_BIN}" >/dev/null 2>&1; then
+  POETRY_HOME="${POETRY_HOME:-/opt/poetry}"
+  POETRY_BIN="${POETRY_HOME}/bin/poetry"
+fi
+
+"${POETRY_BIN}" run mutmut run \
   --paths-to-mutate pulumi/pulumi_app \
-  --runner "poetry run pytest -q tests/unit tests/integration"
+  --runner "${POETRY_BIN} run pytest -q tests/unit tests/integration"
