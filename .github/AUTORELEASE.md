@@ -44,7 +44,8 @@ Once you are creating a new GitHub app, make sure to configure the following:
 
    - Check "Install Only on this account"
    - Enable "Suspend installations on detected abuse"
-     After creating the app:
+
+After creating the app:
 
 5. Install the app on your repository:
 
