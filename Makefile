@@ -36,19 +36,17 @@ sh: ## Open a shell inside the Pulumi container.
 down: ## Stop the Docker Compose environment.
 	$(DOCKER_COMPOSE) down
 
-PYTHON ?= python3
-
 test-unit: ## Execute fast unit tests for the Pulumi application layer.
-	PYTHONPATH="pulumi:$${PYTHONPATH:-}" $(PYTHON) -m pytest -q tests/unit
+	$(DOCKER_COMPOSE) --env-file $(ENV_FILE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/unit
 
 test-integration: ## Execute Pulumi automation-based integration tests.
-	PYTHONPATH="pulumi:$${PYTHONPATH:-}" $(PYTHON) -m pytest -q tests/integration
+	$(DOCKER_COMPOSE) --env-file $(ENV_FILE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/integration
 
 test-pulumi: ## Perform structural checks on Pulumi project configuration.
-	PYTHONPATH="pulumi:$${PYTHONPATH:-}" $(PYTHON) -m pytest -q tests/pulumi
+	$(DOCKER_COMPOSE) --env-file $(ENV_FILE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/pulumi
 
 test-mutation: ## Run mutation testing suite against Pulumi components.
-	./scripts/run_mutation_tests.sh
+	$(DOCKER_COMPOSE) --env-file $(ENV_FILE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
 
 test: ## Run the complete Pulumi-focused test battery.
 	$(MAKE) test-pulumi

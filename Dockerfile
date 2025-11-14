@@ -1,53 +1,69 @@
 # syntax=docker/dockerfile:1.7-labs
 
-FROM python:3.11.9-slim
+FROM python:3.11-slim AS base
 
 ARG USERNAME=dev
 ARG UID=1000
 ARG GID=1000
+ARG PULUMI_VERSION=3.138.0
+ARG AWSCLI_VERSION=2.16.9
+ARG AWSCLI_ARCH=linux-x86_64
 
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install OS dependencies required for Pulumi CLI, AWS CLI, and Python tooling
-RUN apt-get update && apt-get install -y --no-install-recommends \
+RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/99retries \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
     unzip \
     groff \
     less \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user that mirrors the host developer UID/GID
 RUN groupadd --gid "${GID}" "${USERNAME}" \
     && useradd --uid "${UID}" --gid "${GID}" --create-home "${USERNAME}"
 
-# Create a dedicated virtual environment for Python packages
-RUN python -m venv /opt/pulumi-venv
-ENV VIRTUAL_ENV=/opt/pulumi-venv
-ENV PATH="$VIRTUAL_ENV/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
-
-# Install Pulumi CLI and expose it on the PATH for all users
-RUN curl -fsSL https://get.pulumi.com | sh \
-    && ln -sf /root/.pulumi/bin/pulumi /usr/local/bin/pulumi
+# Install Pulumi CLI once and expose it on the PATH for all users
+RUN curl --fail --silent --show-error --location \
+        --retry 5 --retry-delay 5 --retry-all-errors \
+        "https://get.pulumi.com/releases/sdk/pulumi-v${PULUMI_VERSION}-linux-x64.tar.gz" \
+        --output /tmp/pulumi.tar.gz \
+    && mkdir -p /opt/pulumi \
+    && tar --extract --gzip --file /tmp/pulumi.tar.gz --strip-components=1 --directory /opt/pulumi \
+    && ln -sf /opt/pulumi/pulumi /usr/local/bin/pulumi \
+    && rm -rf /tmp/pulumi.tar.gz
 
 # Install AWS CLI v2
-RUN curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "/tmp/awscliv2.zip" \
+RUN curl --fail --silent --show-error --location \
+        --retry 5 --retry-delay 5 --retry-all-errors \
+        "https://awscli.amazonaws.com/awscli-exe-${AWSCLI_ARCH}-${AWSCLI_VERSION}.zip" \
+        --output "/tmp/awscliv2.zip" \
     && unzip /tmp/awscliv2.zip -d /tmp \
     && /tmp/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
     && rm -rf /tmp/aws /tmp/awscliv2.zip
 
-# Install Python dependencies used by the Pulumi project and linting tooling
-RUN pip install --no-cache-dir --upgrade pip \
-    && pip install --no-cache-dir \
-        "pulumi>=3.138,<4" \
-        "pulumi-aws>=7.0,<8" \
-        black \
-        flake8 \
-        poetry \
-        pre-commit
-
-# Configure Poetry to use the container-wide virtual environment
+# Install Poetry
+ENV POETRY_HOME=/opt/poetry
+ENV PATH="/opt/pulumi:${POETRY_HOME}/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
+ARG POETRY_VERSION=1.8.4
+RUN curl --fail --silent --show-error --location \
+        --retry 5 --retry-delay 5 --retry-all-errors \
+        https://install.python-poetry.org \
+        | python - --version "${POETRY_VERSION}"
 ENV POETRY_VIRTUALENVS_CREATE=false
+ENV POETRY_HTTP_TIMEOUT=60
+
+COPY --chown=${USERNAME}:${GID} pyproject.toml poetry.lock /workspace/
+
+RUN --mount=type=cache,target=/root/.cache/pip \
+    --mount=type=cache,target=/root/.cache/pypoetry \
+    cd /workspace \
+    && poetry config installer.max-workers 4 \
+    && poetry install --no-root --no-interaction --no-ansi --with dev
 
 USER "${USERNAME}"
 WORKDIR /workspace
