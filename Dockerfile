@@ -8,6 +8,12 @@ ARG GID=1000
 ARG PULUMI_VERSION=3.138.0
 ARG AWSCLI_VERSION=2.16.9
 ARG AWSCLI_ARCH=linux-x86_64
+ARG CA_CERTIFICATES_VERSION=20230311
+ARG CURL_VERSION=7.88.1-10+deb12u6
+ARG UNZIP_VERSION=6.0-28
+ARG GROFF_VERSION=1.23.0-1
+ARG LESS_VERSION=590-1
+ARG GIT_VERSION=1:2.39.2-1.1
 
 ENV DEBIAN_FRONTEND=noninteractive
 
@@ -15,12 +21,12 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/99retries \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    curl \
-    unzip \
-    groff \
-    less \
-    git \
+    ca-certificates="${CA_CERTIFICATES_VERSION}" \
+    curl="${CURL_VERSION}" \
+    unzip="${UNZIP_VERSION}" \
+    groff="${GROFF_VERSION}" \
+    less="${LESS_VERSION}" \
+    git="${GIT_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user that mirrors the host developer UID/GID
@@ -50,10 +56,10 @@ RUN curl --fail --silent --show-error --location \
 ENV POETRY_HOME=/opt/poetry
 ENV PATH="/opt/pulumi:${POETRY_HOME}/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
 ARG POETRY_VERSION=1.8.4
-RUN curl --fail --silent --show-error --location \
+RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
         --retry 5 --retry-delay 5 --retry-all-errors \
         https://install.python-poetry.org \
-        | python - --version "${POETRY_VERSION}"
+        | python - --version "${POETRY_VERSION}"'
 ENV POETRY_VIRTUALENVS_CREATE=false
 ENV POETRY_HTTP_TIMEOUT=60
 

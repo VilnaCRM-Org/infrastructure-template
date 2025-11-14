@@ -16,13 +16,16 @@ export USER
 
 # Executables
 DOCKER_COMPOSE    = docker compose
-COMPOSE_ENV_FLAG  = $(if $(wildcard $(ENV_FILE)),--env-file $(ENV_FILE),)
+COMPOSE_ENV_FLAG  = $(if $(EFFECTIVE_ENV_FILE),--env-file $(EFFECTIVE_ENV_FILE),)
 COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 
 # Misc
 .DEFAULT_GOAL     = help
 .RECIPEPREFIX    +=
-.PHONY: $(filter-out vendor node_modules,$(MAKECMDGOALS))
+.PHONY: help start pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
+        sh down test-unit test-integration test-pulumi test-mutation test all clean
+
+all: help ## Display help (default goal).
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
@@ -65,3 +68,9 @@ test: ## Run the complete Pulumi-focused test battery.
 	$(MAKE) test-pulumi
 	$(MAKE) test-unit
 	$(MAKE) test-integration
+
+clean: ## Remove Docker Compose artifacts, Python caches, and build artifacts.
+	$(DOCKER_COMPOSE) down -v 2>/dev/null || true
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	rm -rf .venv dist build *.egg-info 2>/dev/null || true

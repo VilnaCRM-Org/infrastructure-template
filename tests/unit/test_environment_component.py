@@ -1,4 +1,5 @@
 from collections.abc import Callable
+from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
 
 import pulumi
@@ -38,7 +39,25 @@ def _run_pulumi_program(program: Callable[[], None]) -> dict[str, object]:
                 resolved[name] = value
         return resolved
     finally:
-        settings.reset_options(project="project", stack="stack")
+        settings.reset_options(project=None, stack=None)
+
+
+@contextmanager
+def mocked_pulumi_context(
+    config_values: dict[str, object] | None = None, *, project_name: str | None = None
+) -> None:
+    config_values = config_values or {}
+    with ExitStack() as stack:
+        config_patch = stack.enter_context(patch("pulumi_app.environment.pulumi.Config"))
+        config_instance = config_patch.return_value
+        config_instance.get.side_effect = lambda key, default=None: config_values.get(key, default)
+
+        if project_name is not None:
+            stack.enter_context(
+                patch("pulumi_app.environment.pulumi.get_project", return_value=project_name)
+            )
+
+        yield
 
 
 def test_stack_tag_combines_service_and_environment() -> None:
@@ -71,9 +90,7 @@ def test_environment_falls_back_to_config_value() -> None:
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
 
-    with patch("pulumi_app.environment.pulumi.Config") as mock_config:
-        config_instance = mock_config.return_value
-        config_instance.get.side_effect = lambda key: {"environment": "qa"}.get(key)
+    with mocked_pulumi_context({"environment": "qa"}):
         outputs = _run_pulumi_program(program)
 
     assert outputs["environment"] == "qa"
@@ -93,8 +110,7 @@ def test_environment_defaults_to_dev_when_unset() -> None:
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
 
-    with patch("pulumi_app.environment.pulumi.Config") as mock_config:
-        mock_config.return_value.get.return_value = None
+    with mocked_pulumi_context():
         outputs = _run_pulumi_program(program)
 
     assert outputs["environment"] == "dev"
@@ -113,9 +129,7 @@ def test_service_name_falls_back_to_config_value() -> None:
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
 
-    with patch("pulumi_app.environment.pulumi.Config") as mock_config:
-        config_instance = mock_config.return_value
-        config_instance.get.side_effect = lambda key: {"serviceName": "billing"}.get(key)
+    with mocked_pulumi_context({"serviceName": "billing"}):
         outputs = _run_pulumi_program(program)
 
     assert outputs["serviceName"] == "billing"
@@ -130,10 +144,7 @@ def test_service_name_defaults_to_project_name() -> None:
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
 
-    with patch("pulumi_app.environment.pulumi.Config") as mock_config, patch(
-        "pulumi_app.environment.pulumi.get_project", return_value="project-fallback"
-    ):
-        mock_config.return_value.get.return_value = None
+    with mocked_pulumi_context(project_name="project-fallback"):
         outputs = _run_pulumi_program(program)
 
     assert outputs["serviceName"] == "project-fallback"
