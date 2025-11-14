@@ -22,7 +22,11 @@ def _stack_name() -> str:
 
 def test_pulumi_stack_preview_and_up_cycle(tmp_path: Path) -> None:
     work_dir = tmp_path / "pulumi-program"
-    shutil.copytree(PULUMI_WORKDIR, work_dir)
+    shutil.copytree(
+        PULUMI_WORKDIR,
+        work_dir,
+        ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", ".pytest_cache"),
+    )
 
     stack = auto.create_or_select_stack(stack_name=_stack_name(), work_dir=str(work_dir))
     stack.set_config("environment", auto.ConfigValue(value="integration"))
