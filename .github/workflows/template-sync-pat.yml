@@ -24,7 +24,8 @@ jobs:
         run: |
           set -euo pipefail
 
-          git fetch --quiet "https://x-access-token:${TEMPLATE_PAT}@github.com/VilnaCRM-Org/php-service-template.git" main:template-main
+          # Template repository is fixed for this project.
+          git fetch --quiet "https://x-access-token:${TEMPLATE_PAT}@github.com/VilnaCRM-Org/infrastructure-template.git" main:template-main
 
           if git diff --quiet template-main HEAD; then
             echo "needs_sync=false" >> "$GITHUB_OUTPUT"
@@ -35,9 +36,8 @@ jobs:
       - name: actions-template-sync
         if: steps.check_updates.outputs.needs_sync == 'true'
         uses: AndreasAugustin/actions-template-sync@v2
-        continue-on-error: true
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          source_repo_path: VilnaCRM-Org/php-service-template
+          github_token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          source_repo_path: VilnaCRM-Org/infrastructure-template
           upstream_branch: main
           pr_labels: template_sync

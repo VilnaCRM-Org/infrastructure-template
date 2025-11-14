@@ -47,20 +47,20 @@ Once you are creating a new GitHub app, make sure to configure the following:
 
 After creating the app:
 
-5. Install the app on your repository:
+1. Install the app on your repository:
 
    - Go to the app's settings page
    - Click "Install App"
    - Select the repository where you want to use auto-release
 
-6. Generate and secure the private key:
+2. Generate and secure the private key:
 
    - In app settings, click "Generate Private Key"
    - The key will be automatically downloaded
    - **IMPORTANT**: Store this key securely - it cannot be downloaded again
    - If the key is ever compromised, revoke it immediately and generate a new one
 
-7. Locate the App ID:
+3. Locate the App ID:
    - Find it at: Settings > Developer Settings > GitHub Apps > Your App > General
    - The App ID is displayed at the top of the page
 
