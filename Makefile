@@ -1,7 +1,11 @@
 # Parameters
 PROJECT            = infrastructure-template
 ENV_FILE           = .env
+EMPTY_ENV_FILE     = .env.empty
 COMPOSE_SERVICE   ?= pulumi
+EFFECTIVE_ENV_FILE := $(firstword $(wildcard $(ENV_FILE)) $(wildcard $(EMPTY_ENV_FILE)))
+
+export COMPOSE_ENV_FILE := $(if $(EFFECTIVE_ENV_FILE),$(EFFECTIVE_ENV_FILE),$(EMPTY_ENV_FILE))
 
 # Executables
 DOCKER_COMPOSE    = docker compose
