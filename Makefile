@@ -6,6 +6,13 @@ COMPOSE_SERVICE   ?= pulumi
 EFFECTIVE_ENV_FILE := $(firstword $(wildcard $(ENV_FILE)) $(wildcard $(EMPTY_ENV_FILE)))
 
 export COMPOSE_ENV_FILE := $(if $(EFFECTIVE_ENV_FILE),$(EFFECTIVE_ENV_FILE),$(EMPTY_ENV_FILE))
+UID ?= $(shell id -u 2>/dev/null || echo 1000)
+GID ?= $(shell id -g 2>/dev/null || echo 1000)
+USER ?= $(shell id -un 2>/dev/null || echo dev)
+
+export UID
+export GID
+export USER
 
 # Executables
 DOCKER_COMPOSE    = docker compose
