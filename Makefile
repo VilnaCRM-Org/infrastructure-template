@@ -24,7 +24,7 @@ start: ## Initialize and start Pulumi development environment
 #"${PULUMI} login --local && ${PULUMI} install"
 
 health: ## Check if containers are healthy
-	$(DOCKER_COMPOSE) ps --format json | grep -q '"Health": "healthy"'
+	@$(DOCKER_COMPOSE) ps --format json | python3 -c "import json, sys; data=json.load(sys.stdin); sys.exit(0 if all((svc.get('Health') in (None, '', 'healthy')) for svc in data) else 1)"
 
 up: ## Start the container for development
 	$(DOCKER_COMPOSE) up --detach && $(MAKE) health
@@ -38,8 +38,8 @@ down: ## Stop the docker hub
 sh: ## Log to the docker container
 	@$(EXEC_APP) sh
 
-pulumi: ## Pulumi enables you to safely and predictably create, change, and improve infrastructure.
-	@$(EXEC_APP) ${PULUMI} "$1"
+pulumi: ## Pulumi command proxy (usage: make pulumi ARGS="version")
+	@$(EXEC_APP) ${PULUMI} $(ARGS)
 
 pulumi-preview: ## Preview infrastructure changes
 	@$(EXEC_APP) ${PULUMI} preview

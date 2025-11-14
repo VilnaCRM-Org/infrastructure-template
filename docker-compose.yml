@@ -24,3 +24,8 @@ services:
       - AWS_SESSION_TOKEN
     tty: true
     stdin_open: true
+    healthcheck:
+      test: ["CMD", "true"]
+      interval: 30s
+      timeout: 5s
+      retries: 3

@@ -15,3 +15,5 @@ instance = ec2.Instance(
 pulumi.export("instance_id", instance.id)
 pulumi.export("instance_public_ip", instance.public_ip)
 pulumi.export("instance_private_ip", instance.private_ip)
+pulumi.export("instance_ami", ami.id)
+pulumi.export("instance_security_group", app_security_group.id)

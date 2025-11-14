@@ -30,10 +30,10 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
+          aws-region: ${{ vars.AWS_REGION || secrets.AWS_REGION || 'eu-central-1' }}
 
       - name: Deploy with Pulumi
-        uses: pulumi/actions@v4
+        uses: pulumi/actions@v5
         with:
           command: up
           stack-name: dev
