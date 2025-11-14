@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7-labs
 
-FROM python:3.11-slim AS base
+FROM python:3.11.9-slim-bookworm AS base
 
 ARG USERNAME=dev
 ARG UID=1000
@@ -11,22 +11,21 @@ ARG AWSCLI_ARCH=linux-x86_64
 ARG CA_CERTIFICATES_VERSION=20230311
 ARG CURL_VERSION=7.88.1-10+deb12u6
 ARG UNZIP_VERSION=6.0-28
-ARG GROFF_VERSION=1.23.0-1
+ARG GROFF_VERSION=1.22.4-10
 ARG LESS_VERSION=590-1
 ARG GIT_VERSION=1:2.39.2-1.1
-
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install OS dependencies required for Pulumi CLI, AWS CLI, and Python tooling
 RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/99retries \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-    ca-certificates="${CA_CERTIFICATES_VERSION}" \
-    curl="${CURL_VERSION}" \
-    unzip="${UNZIP_VERSION}" \
-    groff="${GROFF_VERSION}" \
-    less="${LESS_VERSION}" \
-    git="${GIT_VERSION}" \
+        ca-certificates="${CA_CERTIFICATES_VERSION}" \
+        curl="${CURL_VERSION}" \
+        unzip="${UNZIP_VERSION}" \
+        groff="${GROFF_VERSION}" \
+        less="${LESS_VERSION}" \
+        git="${GIT_VERSION}" \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user that mirrors the host developer UID/GID
