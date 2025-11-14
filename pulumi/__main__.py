@@ -3,10 +3,9 @@
 import pulumi
 from pulumi_aws import ec2
 
-# Create an AWS EC2 instance (migrated from terraform)
 instance = ec2.Instance(
     "app-server",
-    ami="ami-06ce824c157700cd2",  # Same AMI as original terraform
+    ami="ami-06ce824c157700cd2",
     instance_type="t2.micro",
     tags={"Name": "ExampleAppServerInstance"},
 )
@@ -15,5 +14,3 @@ instance = ec2.Instance(
 pulumi.export("instance_id", instance.id)
 pulumi.export("instance_public_ip", instance.public_ip)
 pulumi.export("instance_private_ip", instance.private_ip)
-pulumi.export("instance_ami", ami.id)
-pulumi.export("instance_security_group", app_security_group.id)
