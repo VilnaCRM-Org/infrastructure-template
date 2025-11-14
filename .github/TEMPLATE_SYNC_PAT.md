@@ -3,11 +3,13 @@
 Currently, the `GITHUB_TOKEN` cannot be granted workflow permissions by default. You can grant the workflow permissions using a Personal Access Token (PAT) by following these steps:
 
 1. [Create a PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens#creating-a-fine-grained-personal-access-token) with the following repository permissions:
+
    - `contents:write`
    - `workflows:write`
    - `metadata:read`
 
    To make the options for repository permissions (such as contents:write, workflows:write, and metadata:read) appear, ensure that the access level is not set to read-only.
+
 2. Copy the generated token and [create a new secret](https://docs.github.com/en/actions/security-for-github-actions/security-guides/using-secrets-in-github-actions#creating-secrets-for-a-repository) for your target repository.
 
 3. Configure the checkout action to use the token in secrets, as shown below:
