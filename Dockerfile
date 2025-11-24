@@ -5,6 +5,7 @@ FROM python:3.11.7-slim
 ARG UID=1000
 ARG GID=1000
 ARG USERNAME=appuser
+ARG PULUMI_VERSION=3.131.0
 
 # Install system dependencies as root
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -24,8 +25,17 @@ WORKDIR /home/${USERNAME}
 # Switch to the user with specified UID and GID
 USER ${UID}:${GID}
 
-# Install Pulumi
-RUN curl -fsSL https://get.pulumi.com | bash
+# Install Pulumi securely by verifying the release checksum
+RUN set -euo pipefail && \
+    TARBALL="pulumi-v${PULUMI_VERSION}-linux-x64.tar.gz" && \
+    mkdir -p /tmp/pulumi && \
+    curl -fsSL "https://get.pulumi.com/releases/sdk/${TARBALL}" -o "/tmp/${TARBALL}" && \
+    curl -fsSL "https://get.pulumi.com/releases/sdk/${TARBALL}.sha256" -o "/tmp/${TARBALL}.sha256" && \
+    (cd /tmp && sha256sum -c "${TARBALL}.sha256") && \
+    tar -xzf "/tmp/${TARBALL}" -C /tmp && \
+    mkdir -p /home/${USERNAME}/.pulumi/bin && \
+    cp -r /tmp/pulumi/bin/* /home/${USERNAME}/.pulumi/bin && \
+    rm -rf /tmp/pulumi "/tmp/${TARBALL}" "/tmp/${TARBALL}.sha256"
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 - && \

@@ -1,3 +1,4 @@
 encryptionsalt: <your-encryption-salt-here>
 config:
   aws:region: eu-central-1
+  vilnacrm:amiId: ami-xxxxxxxxxxxxxxxxx

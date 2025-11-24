@@ -21,7 +21,6 @@ help:
 
 start: ## Initialize and start Pulumi development environment
 	${DOCKER_COMPOSE} up -d --build
-#"${PULUMI} login --local && ${PULUMI} install"
 
 health: ## Check if containers are healthy
 	@$(DOCKER_COMPOSE) ps --format json | python3 -c "import json, sys; data=json.load(sys.stdin); sys.exit(0 if all((svc.get('Health') in (None, '', 'healthy')) for svc in data) else 1)"
@@ -29,7 +28,7 @@ health: ## Check if containers are healthy
 up: ## Start the container for development
 	$(DOCKER_COMPOSE) up --detach && $(MAKE) health
 
-build: ## Builds the images (PHP, caddy)
+build: ## Builds the Pulumi development container images
 	$(DOCKER_COMPOSE) build --pull --no-cache
 
 down: ## Stop the docker hub
