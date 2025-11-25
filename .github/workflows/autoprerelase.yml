@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    env:
+      CHANGELOG_BRANCH: ${{ github.head_ref }}
 
     permissions:
       contents: write
@@ -17,7 +20,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: 'main'
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
 
       - name: Conventional Changelog Action
@@ -27,6 +30,7 @@ jobs:
           github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
           output-file: "false"
           pre-release: "true"
+          git-branch: ${{ env.CHANGELOG_BRANCH }}
           skip-commit: "true"
           skip-tag: "true"
           skip-on-empty: "true"
