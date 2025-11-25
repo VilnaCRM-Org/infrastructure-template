@@ -37,8 +37,11 @@ RUN set -euo pipefail && \
     cp -r /tmp/pulumi/bin/* /home/${USERNAME}/.pulumi/bin && \
     rm -rf /tmp/pulumi "/tmp/${TARBALL}" "/tmp/${TARBALL}.sha256"
 
-# Install Poetry
-RUN curl -sSL https://install.python-poetry.org | python3 - && \
+# Install Poetry using a verified download step
+RUN set -euo pipefail && \
+    curl -fsSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
+    python3 /tmp/install-poetry.py && \
+    rm /tmp/install-poetry.py && \
     ~/.local/bin/poetry config virtualenvs.in-project true
 
 # Install AWS CLI

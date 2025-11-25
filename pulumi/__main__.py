@@ -5,11 +5,12 @@ from pulumi_aws import ec2
 
 config = pulumi.Config()
 ami_id = config.require("amiId")
+instance_type = config.get("instanceType") or "t2.micro"
 
 instance = ec2.Instance(
     "app-server",
     ami=ami_id,
-    instance_type="t2.micro",
+    instance_type=instance_type,
     tags={"Name": "ExampleAppServerInstance"},
 )
 
