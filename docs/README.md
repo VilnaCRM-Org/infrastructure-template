@@ -69,7 +69,7 @@ Two GitHub Actions workflows handle environment parity:
 - `pulumi-preview.yml` evaluates changes on pull requests.
 - `pulumi-deploy.yml` applies changes to the `dev` stack on `main`.
 
-Both workflows require AWS and Pulumi credentials. Follow [`docs/github-actions-secrets.md`](github-actions-secrets.md) to configure:
+Both workflows require AWS and Pulumi credentials. Follow [GitHub Actions Secrets guide](github-actions-secrets.md) to configure:
 
 - `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` **or** a GitHub OIDC role.
 - `PULUMI_ACCESS_TOKEN` for authenticating with the Pulumi Service.
@@ -110,7 +110,7 @@ Bug reports, feature requests, and pull requests are welcome via the [issue trac
 
 ## Sponsorship
 
-Development time and resources for this repository are provided by [VilnaCRM](https://vilnacrm.com/), the free and opensource CRM system.
+Development time and resources for this repository are provided by [VilnaCRM](https://vilnacrm.com/), the free and open-source CRM system.
 
 Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard cash 💰. Sponsorship through GitHub is a simple and convenient way to say "thank you" to maintainers and contributors – just click the "Sponsor" button [on the project page](https://github.com/VilnaCRM-Org/infrastructure-template). If your company uses this template, consider taking part in the VilnaCRM's enterprise support program.
 

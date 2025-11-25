@@ -18,7 +18,7 @@ If you prefer short-lived credentials:
 2. Grant the role permissions to manage the stack resources.
 3. Store the role ARN as `AWS_OIDC_ROLE_ARN` (or another name) and update the workflow to assume it.
 
-See [Configuring OpenID Connect in GitHub](https://docs.github.com/actions/deployment/security-hardening-your-deployments/configuring-openid-connect-in-github-actions) for detailed steps.
+See [Configuring OpenID Connect in cloud providers](https://docs.github.com/en/actions/security-guides/security-hardening-your-deployments/configuring-openid-connect-in-cloud-providers) for detailed steps.
 
 ## Setting Secrets
 
