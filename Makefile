@@ -16,7 +16,7 @@ export USER
 
 # Executables
 DOCKER_COMPOSE    = docker compose
-COMPOSE_ENV_FLAG  = $(if $(EFFECTIVE_ENV_FILE),--env-file $(EFFECTIVE_ENV_FILE),)
+COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
 COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 
 # Misc

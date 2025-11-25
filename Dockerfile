@@ -43,13 +43,14 @@ RUN curl --fail --silent --show-error --location \
     && rm -rf /tmp/pulumi.tar.gz
 
 # Install AWS CLI v2
-RUN curl --fail --silent --show-error --location \
+RUN bash -o pipefail -c "set -euo pipefail \
+    && curl --fail --silent --show-error --location \
         --retry 5 --retry-delay 5 --retry-all-errors \
-        "https://awscli.amazonaws.com/awscli-exe-${AWSCLI_ARCH}-${AWSCLI_VERSION}.zip" \
-        --output "/tmp/awscliv2.zip" \
+        \"https://awscli.amazonaws.com/awscli-exe-${AWSCLI_ARCH}-${AWSCLI_VERSION}.zip\" \
+        --output \"/tmp/awscliv2.zip\" \
     && unzip /tmp/awscliv2.zip -d /tmp \
     && /tmp/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
-    && rm -rf /tmp/aws /tmp/awscliv2.zip
+    && rm -rf /tmp/aws /tmp/awscliv2.zip"
 
 # Install Poetry
 ENV POETRY_HOME=/opt/poetry

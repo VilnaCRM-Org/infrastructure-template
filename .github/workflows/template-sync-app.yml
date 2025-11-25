@@ -25,7 +25,7 @@ jobs:
         uses: AndreasAugustin/actions-template-sync@v2
         with:
           github_token: ${{ steps.generate_token.outputs.token }}
-          source_repo_path: VilnaCRM-Org/php-service-template
+          source_repo_path: VilnaCRM-Org/infrastructure-template
           upstream_branch: main
           pr_labels: template_sync
           is_force_push_pr: true
