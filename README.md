@@ -1,68 +1,71 @@
+# Infrastructure Template for Modern DevOps applications
+
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://supportukrainenow.org/)
 
-# Infrastructure template for modern DevOps applications
+[![Pulumi Preview](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-preview.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-preview.yml)
+[![Pulumi Deploy](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-deploy.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-deploy.yml)
+[![Super Linter](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/super-linter.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/super-linter.yml)
+
+Production-ready scaffold for teams that want to ship infrastructure-as-code with Pulumi and Docker from day zero.
 
 ## Possibilities
-- Modern stack for services: [Terraform](https://www.terraform.io/), [Terraspace](https://terraspace.cloud/)
-- Built-in docker environment and convenient `make` cli command
-- A lot of CI checks to ensure the highest code quality that can be ([checkov](https://www.checkov.io/), [infracost](https://www.infracost.io/), [inframap](https://github.com/cycloidio/inframap), [terrascan](https://runterrascan.io/) and other terraform related checks)
-- Configured testing tools
-- Much more!
 
-## Why you might need it
-Many DevOps engineers need to create new projects from scratch and spend a lot of time.
+- Pulumi (Python) starter that provisions an AWS EC2 instance and exports connection metadata.
+- Reproducible Docker Compose workspace with a Pulumi-ready container and helper `make` tasks.
+- CI/CD pipelines for previews and deployments, powered by GitHub Actions and Pulumi Cloud.
+- Built-in linting via GitHub Super Linter to keep YAML, Markdown, and workflows healthy.
+- Documentation on AWS credential management for secure automation using GitHub OIDC or static secrets.
 
-We decided to simplify this exhausting process and create a public template for modern infrastructures. This template is used for all our microservices in VilnaCRM.
+## Why You Might Need It
+
+Spin up consistent project infrastructure without wiring every component manually. This template gives DevOps teams a single source that:
+
+- Encodes best practices from VilnaCRM’s production stack.
+- Works out-of-the-box with AWS and Pulumi.
+- Keeps cloud changes reviewable with preview pipelines before production deploys.
 
 ## License
-This software is distributed under the [Creative Commons Zero v1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/deed) license. Please read [LICENSE](https://github.com/VilnaCRM-Org/infrastructure-template/blob/main/LICENSE) for information on the software availability and distribution.
 
-### Minimal installation
-You can clone this repository locally or use Github functionality "Use this template"
-
-Install the latest [docker](https://docs.docker.com/engine/install/) and [docker compose](https://docs.docker.com/compose/install/)
-
-Use `make` command to check all commands that you will need for creating own project
-> make start
-
-Check [Getting started](https://terraspace.cloud/getting-started/) section to manage your infrastructure
-
-That's it. You should now be ready to use infrastructure template!
-
-## Using
-You can use `make` command to easily control and work with project locally.
-
-Execute `make` or `make help` to see the full list of project commands.
-
-The list of the `make` possibilities:
-
-```
- start  Docker container with terraspace and terraform
-```
+This software is distributed under the [Creative Commons Zero v1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/deed) license. Please read [`LICENSE`](LICENSE) for details.
 
 ## Documentation
-Start reading at the [GitHub wiki](https://github.com/VilnaCRM-Org/infrastructure-template/wiki). If you're having trouble, head for [the troubleshooting guide](https://github.com/VilnaCRM-Org/infrastructure-template/wiki/Troubleshooting) as it's frequently updated.
 
-If the documentation doesn't cover what you need, search the [many questions on Stack Overflow](http://stackoverflow.com/questions/tagged/vilnacrm), and before you ask a question, [read the troubleshooting guide](https://github.com/VilnaCRM-Org/infrastructure-template/wiki/Troubleshooting).
+All project docs live under `docs/` to keep everything version controlled. Start with the handbook and jump directly to common topics:
 
-## Tests
-[Test status](https://github.com/VilnaCRM-Org/infrastructure-template/actions)
+- [Quick Start](docs/README.md#quick-start)
+- [Local Tooling](docs/README.md#local-tooling)
+- [Development Environment](docs/README.md#development)
+- [PyCharm Autocomplete](docs/pycharm-autocomplete.md)
+- [CI/CD and Secrets](docs/README.md#cicd-and-secrets)
+- [Testing and Validation](docs/README.md#testing-and-validation)
+- [Security](docs/README.md#security)
+- [Contributing](docs/README.md#contributing)
+- [Sponsorship](docs/README.md#sponsorship)
 
-If this isn't passing, is there something you can do to help?
+Community Q&A lives under the [`vilnacrm` tag on Stack Overflow](https://stackoverflow.com/questions/tagged/vilnacrm). For questions or feature requests, open an issue.
 
-## Security
-Please disclose any vulnerabilities found responsibly – report security issues to the maintainers privately.
+<!-- BEGIN_TF_DOCS -->
+## Requirements
 
-See [SECURITY](https://github.com/VilnaCRM-Org/infrastructure-template/tree/main/SECURITY.md) and [Security advisories on GitHub](https://github.com/VilnaCRM-Org/infrastructure-template/security).
+No requirements.
 
-## Contributing
-Please submit bug reports, suggestions, and pull requests to the [GitHub issue tracker](https://github.com/VilnaCRM-Org/infrastructure-template/issues).
+## Providers
 
-We're particularly interested in fixing edge cases, expanding test coverage, and updating translations.
+No providers.
 
-If you found a mistake in the docs, or want to add something, go ahead and amend the wiki – anyone can edit it.
+## Modules
 
-## Sponsorship
-Development time and resources for this repository are provided by [VilnaCRM](https://vilnacrm.com/), the free and opensource CRM system.
+No modules.
 
-Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard cash 💰. Sponsorship through GitHub is a simple and convenient way to say "thank you" to maintainers and contributors – just click the "Sponsor" button [on the project page](https://github.com/VilnaCRM-Org/infrastructure-template). If your company uses this template, consider taking part in the VilnaCRM's enterprise support program.
+## Resources
+
+No resources.
+
+## Inputs
+
+No inputs.
+
+## Outputs
+
+No outputs.
+<!-- END_TF_DOCS -->
