@@ -55,7 +55,31 @@ No providers.
 
 ## Modules
 
-No modules.
+### Local Pulumi test suites
+
+Install development dependencies via Poetry and then use the `make` targets to run the different Pulumi-focused suites:
+
+```sh
+poetry install --with dev
+
+# Configuration validation
+make test-pulumi
+
+# Unit tests (pure Pulumi runtime with mocks)
+make test-unit
+
+# Automation-based integration tests
+make test-integration
+
+# Mutation analysis (time-consuming)
+make test-mutation
+```
+
+You can also execute `make test` to run the structural, unit, and integration checks as a batch.
+
+
+## Security
+Please disclose any vulnerabilities found responsibly – report security issues to the maintainers privately.
 
 ## Resources
 

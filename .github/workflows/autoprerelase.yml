@@ -9,6 +9,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+    env:
+      CHANGELOG_BRANCH: ${{ github.head_ref }}
 
     permissions:
       contents: write
@@ -17,7 +20,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: 'main'
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
 
       - name: Conventional Changelog Action
         id: changelog
@@ -26,12 +30,45 @@ jobs:
           github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
           output-file: "false"
           pre-release: "true"
+          git-branch: ${{ env.CHANGELOG_BRANCH }}
+          skip-commit: "true"
+          skip-tag: "true"
+          skip-on-empty: "true"
+
+      - name: Check if release already exists
+        id: release_check
+        if: ${{ steps.changelog.outputs.skipped == 'false' }}
+        uses: actions/github-script@v7
+        env:
+          TAG_NAME: ${{ steps.changelog.outputs.tag }}
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const tag = process.env.TAG_NAME;
+            if (!tag) {
+              core.setOutput('exists', 'false');
+              return;
+            }
+            try {
+              await github.rest.repos.getReleaseByTag({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                tag,
+              });
+              core.setOutput('exists', 'true');
+            } catch (error) {
+              if (error.status === 404) {
+                core.setOutput('exists', 'false');
+              } else {
+                throw error;
+              }
+            }
 
       - name: Create Release
         uses: actions/create-release@v1
-        if: ${{ steps.changelog.outputs.skipped == 'false' }}
+        if: ${{ steps.changelog.outputs.skipped == 'false' && steps.release_check.outputs.exists != 'true' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.changelog.outputs.tag }}
           release_name: ${{ steps.changelog.outputs.tag }}

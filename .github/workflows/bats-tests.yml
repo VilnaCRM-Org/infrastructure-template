@@ -1,0 +1,25 @@
+name: CLI testing
+
+on:
+  pull_request:
+    branches: ['main']
+
+jobs:
+  bats_tests:
+    runs-on: ubuntu-latest
+    name: Run Bats Tests
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Docker context
+        run: |
+          mkdir -p "${HOME}/.aws"
+          cp -n .env.empty .env || touch .env
+          mkdir -p .pulumi-backend
+
+      - name: Run CLI suite via Make
+        env:
+          PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
+          PULUMI_CONFIG_PASSPHRASE: ""
+        run: make test-cli

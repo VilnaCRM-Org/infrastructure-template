@@ -1,0 +1,27 @@
+name: Pulumi Unit Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  unit:
+    name: Unit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare Docker context
+        run: |
+          mkdir -p "${HOME}/.aws"
+          cp -n .env.empty .env || touch .env
+
+      - name: Run unit suite inside Docker
+        env:
+          PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
+          PULUMI_CONFIG_PASSPHRASE: ""
+        run: |
+          mkdir -p .pulumi-backend
+          make test-unit
