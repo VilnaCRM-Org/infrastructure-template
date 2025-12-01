@@ -23,7 +23,7 @@ COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 .DEFAULT_GOAL     = help
 .RECIPEPREFIX    +=
 .PHONY: help start pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
-        sh down test-unit test-integration test-pulumi test-mutation test all clean
+        sh down test-unit test-integration test-pulumi test-mutation test-cli test all clean
 
 all: help ## Display help (default goal).
 
@@ -64,10 +64,14 @@ test-pulumi: ## Perform structural checks on Pulumi project configuration.
 test-mutation: ## Run mutation testing suite against Pulumi components.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
 
+test-cli: ## Validate Makefile front-ends via Bats.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bats tests/unit
+
 test: ## Run the complete Pulumi-focused test battery.
 	$(MAKE) test-pulumi
 	$(MAKE) test-unit
 	$(MAKE) test-integration
+	$(MAKE) test-cli
 
 clean: ## Remove Docker Compose artifacts, Python caches, and build artifacts.
 	$(DOCKER_COMPOSE) down -v 2>/dev/null || true

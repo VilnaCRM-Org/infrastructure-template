@@ -52,10 +52,10 @@ If this isn't passing, is there something you can do to help?
 
 ### Local Pulumi test suites
 
-Install development dependencies and then use the `make` targets to run the different Pulumi-focused suites:
+Install development dependencies via Poetry and then use the `make` targets to run the different Pulumi-focused suites:
 
 ```sh
-pip install -r requirements/dev.txt
+poetry install --with dev
 
 # Configuration validation
 make test-pulumi

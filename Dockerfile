@@ -14,6 +14,7 @@ ARG GROFF_VERSION=1.22.4-10
 ARG CURL_VERSION=7.88.1-10+deb12u14
 ARG LESS_VERSION=590-2.1~deb12u2
 ARG GIT_VERSION=1:2.39.5-0+deb12u2
+ARG BATS_VERSION=1.11.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install OS dependencies required for Pulumi CLI, AWS CLI, and Python tooling
@@ -26,6 +27,7 @@ RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/ap
         groff="${GROFF_VERSION}" \
         less="${LESS_VERSION}" \
         git="${GIT_VERSION}" \
+        make \
     && rm -rf /var/lib/apt/lists/*
 
 # Create non-root user that mirrors the host developer UID/GID
@@ -63,10 +65,18 @@ RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
 ENV POETRY_VIRTUALENVS_CREATE=false
 ENV POETRY_HTTP_TIMEOUT=60
 
+# Install Bats for CLI-level regression tests
+RUN curl --fail --silent --show-error --location \
+        --retry 5 --retry-delay 5 --retry-all-errors \
+        "https://github.com/bats-core/bats-core/archive/refs/tags/v${BATS_VERSION}.tar.gz" \
+        --output /tmp/bats.tar.gz \
+    && tar --extract --gzip --file /tmp/bats.tar.gz --directory /tmp \
+    && /tmp/bats-core-${BATS_VERSION}/install.sh /usr/local \
+    && rm -rf /tmp/bats.tar.gz /tmp/bats-core-${BATS_VERSION}
+
 COPY --chown=${USERNAME}:${GID} pyproject.toml poetry.lock /workspace/
 
-RUN --mount=type=cache,target=/root/.cache/pip \
-    --mount=type=cache,target=/root/.cache/pypoetry \
+RUN --mount=type=cache,target=/root/.cache/pypoetry \
     cd /workspace \
     && poetry config installer.max-workers 4 \
     && poetry install --no-root --no-interaction --no-ansi --with dev

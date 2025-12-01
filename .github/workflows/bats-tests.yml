@@ -12,10 +12,14 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Ensure .env is available for make targets
-        run: cp -n .env.empty .env
+      - name: Prepare Docker context
+        run: |
+          mkdir -p "${HOME}/.aws"
+          cp -n .env.empty .env || touch .env
+          mkdir -p .pulumi-backend
 
-      - name: Run Bats suite
-        uses: bats-core/bats-action@2.0.0
-        with:
-          test-path: tests/unit
+      - name: Run CLI suite via Make
+        env:
+          PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
+          PULUMI_CONFIG_PASSPHRASE: ""
+        run: make test-cli
