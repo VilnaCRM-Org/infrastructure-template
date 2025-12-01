@@ -66,13 +66,13 @@ ENV POETRY_VIRTUALENVS_CREATE=false
 ENV POETRY_HTTP_TIMEOUT=60
 
 # Install Bats for CLI-level regression tests
-RUN curl --fail --silent --show-error --location \
+RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
         --retry 5 --retry-delay 5 --retry-all-errors \
         "https://github.com/bats-core/bats-core/archive/refs/tags/v${BATS_VERSION}.tar.gz" \
         --output /tmp/bats.tar.gz \
     && tar --extract --gzip --file /tmp/bats.tar.gz --directory /tmp \
     && /tmp/bats-core-${BATS_VERSION}/install.sh /usr/local \
-    && rm -rf /tmp/bats.tar.gz /tmp/bats-core-${BATS_VERSION}
+    && rm -rf /tmp/bats.tar.gz /tmp/bats-core-${BATS_VERSION}'
 
 COPY --chown=${USERNAME}:${GID} pyproject.toml poetry.lock /workspace/
 

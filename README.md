@@ -77,6 +77,7 @@ make test-mutation
 
 You can also execute `make test` to run the structural, unit, and integration checks as a batch.
 
+
 ## Security
 Please disclose any vulnerabilities found responsibly – report security issues to the maintainers privately.
 

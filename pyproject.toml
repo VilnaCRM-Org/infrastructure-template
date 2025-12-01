@@ -2,7 +2,7 @@
 name = "infrastructure-template"
 version = "0.1.0"
 description = "Pulumi-based infrastructure template"
-authors = ["Infrastructure Team <infra@example.com>"]
+authors = ["Yaroslav Kravtsov kravtsov.yar@gmail.com", "Mykyta Mozghovoi n.mozgowoi2017@gmail.com"]
 readme = "README.md"
 package-mode = false
 
