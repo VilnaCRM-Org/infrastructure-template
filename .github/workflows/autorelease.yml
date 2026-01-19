@@ -15,14 +15,15 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           ref: 'main'
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Conventional Changelog Action
         id: changelog
-        uses: TriPSs/conventional-changelog-action@v4
+        uses: TriPSs/conventional-changelog-action@8118086024a5380b05b0d54ed2181516082e090f
         with:
           github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
           output-file: 'CHANGELOG.md'
@@ -30,7 +31,7 @@ jobs:
       - name: Check if release already exists
         id: release_check
         if: ${{ steps.changelog.outputs.skipped == 'false' }}
-        uses: actions/github-script@v7
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b
         env:
           TAG_NAME: ${{ steps.changelog.outputs.tag }}
         with:
@@ -57,7 +58,7 @@ jobs:
             }
 
       - name: Create Release
-        uses: actions/create-release@v1
+        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e
         if: ${{ steps.changelog.outputs.skipped == 'false' && steps.release_check.outputs.exists != 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}

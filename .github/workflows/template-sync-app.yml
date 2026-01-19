@@ -7,6 +7,8 @@ on:
 jobs:
   repo-sync:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
 
     steps:
       - name: Generate token to read from source repo
@@ -20,6 +22,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
         with:
           token: ${{ steps.generate_token.outputs.token }}
+          persist-credentials: false
 
       - name: actions-template-sync
         uses: AndreasAugustin/actions-template-sync@8ec19a5f2721ffb81ff809aa340ddf75e6a85ea6
