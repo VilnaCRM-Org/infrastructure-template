@@ -24,11 +24,10 @@ jobs:
         run: |
           mkdir -p "${HOME}/.aws"
           cp -n .env.empty .env || touch .env
+          mkdir -p .pulumi-backend
 
       - name: Run mutation suite inside Docker
         env:
           PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
           PULUMI_CONFIG_PASSPHRASE: ""
-        run: |
-          mkdir -p .pulumi-backend
-          make test-mutation
+        run: make test-mutation

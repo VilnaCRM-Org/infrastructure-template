@@ -1,6 +1,6 @@
 """Unit tests for the EnvironmentSettings Pulumi component."""
 
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
 
@@ -52,7 +52,7 @@ def _run_pulumi_program(program: Callable[[], None]) -> dict[str, object]:
 @contextmanager
 def mocked_pulumi_context(
     config_values: dict[str, object] | None = None, *, project_name: str | None = None
-) -> None:
+) -> Iterator[None]:
     """Patch Pulumi config/project helpers for deterministic tests."""
     config_values = config_values or {}
     with ExitStack() as stack:

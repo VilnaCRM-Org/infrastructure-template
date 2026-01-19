@@ -34,7 +34,7 @@ def pulumi_automation_environment(tmp_path_factory: pytest.TempPathFactory) -> N
     env["PULUMI_HOME"] = str(backend_dir)
     env["PULUMI_CONFIG_PASSPHRASE"] = env.get("PULUMI_CONFIG_PASSPHRASE", "integration-test-passphrase")
 
-    subprocess.run(["pulumi", "login", backend_uri], check=True, env=env)
+    subprocess.run(["pulumi", "login", backend_uri], check=True, env=env, timeout=30)
 
     os.environ.setdefault("PULUMI_HOME", str(backend_dir))
     os.environ.setdefault("PULUMI_BACKEND_URL", backend_uri)

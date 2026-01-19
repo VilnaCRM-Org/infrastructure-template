@@ -42,27 +42,37 @@ jobs:
               core.setOutput('exists', 'false');
               return;
             }
-            try {
-              await github.rest.repos.getReleaseByTag({
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                tag,
-              });
-              core.setOutput('exists', 'true');
-            } catch (error) {
-              if (error.status === 404) {
-                core.setOutput('exists', 'false');
-              } else {
-                throw error;
+            const retryableStatuses = new Set([429, 500, 502, 503, 504]);
+            const maxAttempts = 3;
+            const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+            for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+              try {
+                await github.rest.repos.getReleaseByTag({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  tag,
+                });
+                core.setOutput('exists', 'true');
+                return;
+              } catch (error) {
+                if (error.status === 404) {
+                  core.setOutput('exists', 'false');
+                  return;
+                }
+                if (!retryableStatuses.has(error.status) || attempt === maxAttempts) {
+                  throw error;
+                }
+                const backoffMs = 1000 * Math.pow(2, attempt);
+                core.warning(`Release lookup failed (attempt ${attempt}/${maxAttempts}). Retrying in ${backoffMs}ms...`);
+                await delay(backoffMs);
               }
             }
 
       - name: Create Release
-        uses: actions/create-release@0cb9c9b65d5d1901c1f53e5e66eaf4afd303e70e
+        uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
         if: ${{ steps.changelog.outputs.skipped == 'false' && steps.release_check.outputs.exists != 'true' }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
         with:
           tag_name: ${{ steps.changelog.outputs.tag }}
-          release_name: ${{ steps.changelog.outputs.tag }}
           body: ${{ steps.changelog.outputs.clean_changelog }}
+          name: ${{ steps.changelog.outputs.tag }}
+          token: ${{ secrets.REPO_GITHUB_TOKEN }}
