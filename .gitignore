@@ -5,3 +5,4 @@ pulumi/.venv/
 __pycache__/
 *.py[cod]
 .mutmut-cache
+.pulumi-backend/

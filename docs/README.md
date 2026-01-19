@@ -64,39 +64,35 @@ Black, Flake8, Pre-commit).
 
 ## CI/CD and Secrets
 
-Two GitHub Actions workflows handle environment parity:
+CI checks are split into focused workflows that run inside the Docker workspace:
 
-- `pulumi-preview.yml` evaluates changes on pull requests.
-- `pulumi-deploy.yml` applies changes to the `dev` stack on `main`.
+- `pulumi-structural.yml` validates Pulumi project metadata.
+- `pulumi-unit.yml` runs unit tests with Pulumi mocks.
+- `pulumi-integration.yml` runs Pulumi Automation tests with a local file backend.
+- `pulumi-mutation.yml` executes mutation testing.
+- `bats-tests.yml` validates the Makefile CLI surface.
 
-Both workflows require AWS and Pulumi credentials. Follow [GitHub Actions Secrets guide](github-actions-secrets.md) to configure:
-
-- `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` **or** a GitHub OIDC role.
-- `PULUMI_ACCESS_TOKEN` for authenticating with the Pulumi Service.
-
-Without these secrets the workflows will fail during the credential configuration stage.
+These checks do not require AWS or Pulumi credentials by default. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
 
 ## Project Structure
 
-- `pulumi/__main__.py` – Minimal Pulumi program that provisions an EC2 instance and exports IDs/IPs.
+- `pulumi/__main__.py` – Minimal Pulumi program that exports environment metadata and tags.
 - `docker-compose.yml` – Local development environment with Pulumi tooling baked in.
-- `Makefile` – Convenience commands for build, preview, deploy, and container management.
-- `.github/workflows` – Automation for previews, deploys, linting, and template synchronization.
+- `Makefile` – Convenience commands for preview, testing, and container management.
+- `.github/workflows` – Automation for CI checks, releases, and template synchronization.
 
 ## Testing and Validation
 
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
-- `make pulumi-preview` to review planned resources.
+- `make test-pulumi`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli` for focused suites.
+- `make test` to run the structural, unit, integration, and CLI checks together.
+- `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
-- `pulumi stack history` (from inside the container) to audit state transitions.
 
 ## Repository Synchronization
 
-This template feeds other VilnaCRM infrastructure projects through [`actions-template-sync`](https://github.com/AndreasAugustin/actions-template-sync). For authentication guidance, see:
-
-- `.github/TEMPLATE_SYNC_PAT.md` for Personal Access Tokens.
-- `.github/TEMPLATE_SYNC_APP.md` for GitHub App credentials.
+This template feeds other VilnaCRM infrastructure projects through [`actions-template-sync`](https://github.com/AndreasAugustin/actions-template-sync). For authentication guidance, see the [Template Sync secrets](github-actions-secrets.md#template-sync-secrets).
 
 Remember to grant least privilege, rotate secrets regularly, and monitor workflow logs.
 
