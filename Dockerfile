@@ -35,14 +35,14 @@ RUN groupadd --gid "${GID}" "${USERNAME}" \
     && useradd --uid "${UID}" --gid "${GID}" --create-home "${USERNAME}"
 
 # Install Pulumi CLI once and expose it on the PATH for all users
-RUN curl --fail --silent --show-error --location \
+RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
         --retry 5 --retry-delay 5 --retry-all-errors \
         "https://get.pulumi.com/releases/sdk/pulumi-v${PULUMI_VERSION}-linux-x64.tar.gz" \
         --output /tmp/pulumi.tar.gz \
     && mkdir -p /opt/pulumi \
     && tar --extract --gzip --file /tmp/pulumi.tar.gz --strip-components=1 --directory /opt/pulumi \
     && ln -sf /opt/pulumi/pulumi /usr/local/bin/pulumi \
-    && rm -rf /tmp/pulumi.tar.gz
+    && rm -rf /tmp/pulumi.tar.gz'
 
 # Install AWS CLI v2
 RUN bash -o pipefail -c "set -euo pipefail \
@@ -76,9 +76,10 @@ RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
 
 COPY --chown=${USERNAME}:${GID} pyproject.toml poetry.lock /workspace/
 
+WORKDIR /workspace
+
 RUN --mount=type=cache,target=/root/.cache/pypoetry \
-    cd /workspace \
-    && poetry config installer.max-workers 4 \
+    poetry config installer.max-workers 4 \
     && poetry install --no-root --no-interaction --no-ansi --with dev
 
 USER "${USERNAME}"

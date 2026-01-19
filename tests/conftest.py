@@ -1,3 +1,5 @@
+"""Shared pytest fixtures for Pulumi automation tests."""
+
 import os
 import shutil
 import subprocess

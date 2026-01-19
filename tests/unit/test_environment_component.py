@@ -1,3 +1,5 @@
+"""Unit tests for the EnvironmentSettings Pulumi component."""
+
 from collections.abc import Callable
 from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
@@ -9,14 +11,19 @@ from pulumi_app.environment import EnvironmentSettings
 
 
 class SimpleMocks(mocks.Mocks):
+    """Pulumi mocks that echo inputs for unit testing."""
+
     def new_resource(self, args: mocks.MockResourceArgs) -> tuple[str, dict]:
+        """Return a synthetic resource ID and echo inputs."""
         return f"{args.name}_id", args.inputs
 
     def call(self, args: mocks.MockCallArgs) -> dict:
+        """Return inputs directly for mocked invoke calls."""
         return args.inputs
 
 
 def _run_pulumi_program(program: Callable[[], None]) -> dict[str, object]:
+    """Execute a Pulumi program with mocks and resolve exported outputs."""
     test_mocks = SimpleMocks()
     monitor = mocks.MockMonitor(test_mocks)
     mocks.set_mocks(
@@ -46,6 +53,7 @@ def _run_pulumi_program(program: Callable[[], None]) -> dict[str, object]:
 def mocked_pulumi_context(
     config_values: dict[str, object] | None = None, *, project_name: str | None = None
 ) -> None:
+    """Patch Pulumi config/project helpers for deterministic tests."""
     config_values = config_values or {}
     with ExitStack() as stack:
         config_patch = stack.enter_context(patch("pulumi_app.environment.pulumi.Config"))
@@ -61,6 +69,7 @@ def mocked_pulumi_context(
 
 
 def test_stack_tag_combines_service_and_environment() -> None:
+    """Combine explicit service/environment into a stack tag."""
     def program() -> None:
         env_settings = EnvironmentSettings(
             "unit", environment="staging", service_name="billing"
@@ -72,6 +81,7 @@ def test_stack_tag_combines_service_and_environment() -> None:
 
 
 def test_default_tags_use_service_and_environment() -> None:
+    """Build default tags from explicit service/environment values."""
     def program() -> None:
         env_settings = EnvironmentSettings(
             "unit", environment="production", service_name="edge"
@@ -83,6 +93,7 @@ def test_default_tags_use_service_and_environment() -> None:
 
 
 def test_environment_falls_back_to_config_value() -> None:
+    """Use the config value when environment is not passed."""
     def program() -> None:
         env_settings = EnvironmentSettings("unit")
         pulumi.export("environment", env_settings.environment)
@@ -103,6 +114,7 @@ def test_environment_falls_back_to_config_value() -> None:
 
 
 def test_environment_defaults_to_dev_when_unset() -> None:
+    """Default environment to dev when no config is set."""
     def program() -> None:
         env_settings = EnvironmentSettings("unit")
         pulumi.export("environment", env_settings.environment)
@@ -123,6 +135,7 @@ def test_environment_defaults_to_dev_when_unset() -> None:
 
 
 def test_service_name_falls_back_to_config_value() -> None:
+    """Use the config value when service name is not passed."""
     def program() -> None:
         env_settings = EnvironmentSettings("unit", environment="qa")
         pulumi.export("serviceName", env_settings.service_name)
@@ -138,6 +151,7 @@ def test_service_name_falls_back_to_config_value() -> None:
 
 
 def test_service_name_defaults_to_project_name() -> None:
+    """Default service name to the Pulumi project name."""
     def program() -> None:
         env_settings = EnvironmentSettings("unit", environment="qa")
         pulumi.export("serviceName", env_settings.service_name)
@@ -153,6 +167,7 @@ def test_service_name_defaults_to_project_name() -> None:
 
 
 def test_component_uses_expected_type_token() -> None:
+    """Expose the expected component type token."""
     captured: dict[str, EnvironmentSettings] = {}
 
     def program() -> None:
@@ -168,6 +183,7 @@ def test_component_uses_expected_type_token() -> None:
 
 
 def test_register_outputs_maps_component_properties() -> None:
+    """Register outputs for component properties consistently."""
     original_register = pulumi.ComponentResource.register_outputs
 
     def program() -> None:

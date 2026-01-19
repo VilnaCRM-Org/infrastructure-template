@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+"""Pulumi Automation API integration tests for stack lifecycle."""
+
 import shutil
 import uuid
 from pathlib import Path
@@ -17,10 +19,12 @@ pytestmark = pytest.mark.skipif(
 
 
 def _stack_name() -> str:
+    """Return a unique stack name for the test run."""
     return f"it-{uuid.uuid4().hex[:8]}"
 
 
 def test_pulumi_stack_preview_and_up_cycle(tmp_path: Path) -> None:
+    """Validate preview/up/destroy behavior for the baseline stack."""
     work_dir = tmp_path / "pulumi-program"
     shutil.copytree(
         PULUMI_WORKDIR,
