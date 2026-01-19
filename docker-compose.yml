@@ -6,7 +6,7 @@ services:
       args:
         UID: "${UID:-1000}"
         GID: "${GID:-1000}"
-        USERNAME: "${USER:-dev}"
+        USERNAME: "dev"
     working_dir: /workspace
     volumes:
       - type: bind
@@ -14,7 +14,7 @@ services:
         target: /workspace
       - type: bind
         source: "${HOME}/.aws"
-        target: "/home/${USER:-dev}/.aws"
+        target: "/home/dev/.aws"
         read_only: true
     env_file:
       - path: .env
