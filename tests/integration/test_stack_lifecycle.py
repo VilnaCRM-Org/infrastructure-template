@@ -47,5 +47,11 @@ def test_pulumi_stack_preview_and_up_cycle(tmp_path: Path) -> None:
         assert up_result.outputs["environment"].value == "integration"
         assert "defaultTags" in up_result.outputs
     finally:
-        stack.destroy(on_output=None)
-        stack.workspace.remove_stack(stack.name)
+        try:
+            stack.destroy(on_output=None)
+        except Exception as exc:  # pragma: no cover - best-effort cleanup
+            print(f"Pulumi destroy failed: {exc}")
+        try:
+            stack.workspace.remove_stack(stack.name)
+        except Exception as exc:  # pragma: no cover - best-effort cleanup
+            print(f"Pulumi stack removal failed: {exc}")

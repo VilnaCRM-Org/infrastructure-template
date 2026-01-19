@@ -71,6 +71,7 @@ def mocked_pulumi_context(
 def test_stack_tag_combines_service_and_environment() -> None:
     """Combine explicit service/environment into a stack tag."""
     def program() -> None:
+        """Export the derived stack tag for assertion."""
         env_settings = EnvironmentSettings(
             "unit", environment="staging", service_name="billing"
         )
@@ -83,6 +84,7 @@ def test_stack_tag_combines_service_and_environment() -> None:
 def test_default_tags_use_service_and_environment() -> None:
     """Build default tags from explicit service/environment values."""
     def program() -> None:
+        """Export default tags for explicit values."""
         env_settings = EnvironmentSettings(
             "unit", environment="production", service_name="edge"
         )
@@ -95,6 +97,7 @@ def test_default_tags_use_service_and_environment() -> None:
 def test_environment_falls_back_to_config_value() -> None:
     """Use the config value when environment is not passed."""
     def program() -> None:
+        """Export resolved fields for config-based environment."""
         env_settings = EnvironmentSettings("unit")
         pulumi.export("environment", env_settings.environment)
         pulumi.export("serviceName", env_settings.service_name)
@@ -116,6 +119,7 @@ def test_environment_falls_back_to_config_value() -> None:
 def test_environment_defaults_to_dev_when_unset() -> None:
     """Default environment to dev when no config is set."""
     def program() -> None:
+        """Export resolved fields for default environment."""
         env_settings = EnvironmentSettings("unit")
         pulumi.export("environment", env_settings.environment)
         pulumi.export("serviceName", env_settings.service_name)
@@ -137,6 +141,7 @@ def test_environment_defaults_to_dev_when_unset() -> None:
 def test_service_name_falls_back_to_config_value() -> None:
     """Use the config value when service name is not passed."""
     def program() -> None:
+        """Export resolved fields for config-based service name."""
         env_settings = EnvironmentSettings("unit", environment="qa")
         pulumi.export("serviceName", env_settings.service_name)
         pulumi.export("stackTag", env_settings.stack_tag)
@@ -153,6 +158,7 @@ def test_service_name_falls_back_to_config_value() -> None:
 def test_service_name_defaults_to_project_name() -> None:
     """Default service name to the Pulumi project name."""
     def program() -> None:
+        """Export resolved fields for project-name fallback."""
         env_settings = EnvironmentSettings("unit", environment="qa")
         pulumi.export("serviceName", env_settings.service_name)
         pulumi.export("stackTag", env_settings.stack_tag)
@@ -171,6 +177,7 @@ def test_component_uses_expected_type_token() -> None:
     captured: dict[str, EnvironmentSettings] = {}
 
     def program() -> None:
+        """Capture the component instance for type checks."""
         env_settings = EnvironmentSettings("unit")
         captured["resource"] = env_settings
         pulumi.export("environment", env_settings.environment)
@@ -187,6 +194,7 @@ def test_register_outputs_maps_component_properties() -> None:
     original_register = pulumi.ComponentResource.register_outputs
 
     def program() -> None:
+        """Export component outputs for register_outputs tracking."""
         env_settings = EnvironmentSettings("unit", environment="qa", service_name="svc")
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
