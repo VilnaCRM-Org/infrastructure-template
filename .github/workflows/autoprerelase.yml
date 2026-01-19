@@ -12,6 +12,7 @@ jobs:
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     env:
       CHANGELOG_BRANCH: ${{ github.head_ref }}
+      RELEASE_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
     permissions:
       contents: write
@@ -27,7 +28,7 @@ jobs:
         id: changelog
         uses: TriPSs/conventional-changelog-action@v3
         with:
-          github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
+          github-token: ${{ env.RELEASE_TOKEN }}
           output-file: "false"
           pre-release: "true"
           git-branch: ${{ env.CHANGELOG_BRANCH }}
@@ -42,7 +43,7 @@ jobs:
         env:
           TAG_NAME: ${{ steps.changelog.outputs.tag }}
         with:
-          github-token: ${{ secrets.REPO_GITHUB_TOKEN }}
+          github-token: ${{ env.RELEASE_TOKEN }}
           script: |
             const tag = process.env.TAG_NAME;
             if (!tag) {
@@ -68,7 +69,7 @@ jobs:
         uses: actions/create-release@v1
         if: ${{ steps.changelog.outputs.skipped == 'false' && steps.release_check.outputs.exists != 'true' }}
         env:
-          GITHUB_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ env.RELEASE_TOKEN }}
         with:
           tag_name: ${{ steps.changelog.outputs.tag }}
           release_name: ${{ steps.changelog.outputs.tag }}

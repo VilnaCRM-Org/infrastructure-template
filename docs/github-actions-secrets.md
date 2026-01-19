@@ -24,7 +24,7 @@ See [Configuring OpenID Connect in cloud providers](https://docs.github.com/en/a
 
 | Secret | Purpose | Notes |
 | --- | --- | --- |
-| `REPO_GITHUB_TOKEN` | Publish changelog-based releases | Use a token with `contents:write` permission. |
+| `REPO_GITHUB_TOKEN` | Publish changelog-based releases | Optional; if unset, workflows fall back to `GITHUB_TOKEN` with `contents:write`. |
 
 ## Template Sync Secrets
 
