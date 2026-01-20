@@ -7,7 +7,7 @@ from unittest.mock import patch
 import pulumi
 from pulumi.runtime import mocks, settings, stack, sync_await
 
-from pulumi_app.environment import EnvironmentSettings
+from app.environment import EnvironmentSettings
 
 
 class SimpleMocks(mocks.Mocks):
@@ -56,13 +56,13 @@ def mocked_pulumi_context(
     """Patch Pulumi config/project helpers for deterministic tests."""
     config_values = config_values or {}
     with ExitStack() as stack:
-        config_patch = stack.enter_context(patch("pulumi_app.environment.pulumi.Config"))
+        config_patch = stack.enter_context(patch("app.environment.pulumi.Config"))
         config_instance = config_patch.return_value
         config_instance.get.side_effect = lambda key, default=None: config_values.get(key, default)
 
         if project_name is not None:
             stack.enter_context(
-                patch("pulumi_app.environment.pulumi.get_project", return_value=project_name)
+                patch("app.environment.pulumi.get_project", return_value=project_name)
             )
 
         yield

@@ -2,7 +2,7 @@
 
 import pulumi
 
-from pulumi_app.environment import EnvironmentSettings
+from app.environment import EnvironmentSettings
 
 
 settings = EnvironmentSettings("environment-settings")

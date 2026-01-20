@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1.7-labs
 
-FROM python:3.11.9-slim-bookworm AS base
+# Debian slim keeps the image small while remaining compatible with AWS CLI v2.
+ARG BASE_IMAGE=python:3.11.9-slim-bookworm
+FROM ${BASE_IMAGE} AS base
 
 ARG USERNAME=dev
 ARG UID=1000
@@ -14,7 +16,6 @@ ARG GROFF_VERSION=1.22.4-10
 ARG CURL_VERSION=7.88.1-10+deb12u14
 ARG LESS_VERSION=590-2.1~deb12u2
 ARG GIT_VERSION=1:2.39.5-0+deb12u2
-ARG BATS_VERSION=1.11.0
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install OS dependencies required for Pulumi CLI, AWS CLI, and Python tooling
@@ -65,14 +66,10 @@ RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
 ENV POETRY_VIRTUALENVS_CREATE=false
 ENV POETRY_HTTP_TIMEOUT=60
 
-# Install Bats for CLI-level regression tests
-RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
-        --retry 5 --retry-delay 5 --retry-all-errors \
-        "https://github.com/bats-core/bats-core/archive/refs/tags/v${BATS_VERSION}.tar.gz" \
-        --output /tmp/bats.tar.gz \
-    && tar --extract --gzip --file /tmp/bats.tar.gz --directory /tmp \
-    && /tmp/bats-core-${BATS_VERSION}/install.sh /usr/local \
-    && rm -rf /tmp/bats.tar.gz /tmp/bats-core-${BATS_VERSION}'
+FROM base AS dev
+
+ARG USERNAME=dev
+ARG GID=1000
 
 COPY --chown=${USERNAME}:${GID} pyproject.toml poetry.lock /workspace/
 
@@ -89,3 +86,21 @@ WORKDIR /workspace
 ENV HOME=/home/${USERNAME}
 
 CMD ["bash"]
+
+FROM dev AS test
+
+ARG BATS_VERSION=1.11.0
+ARG USERNAME=dev
+
+USER root
+
+# Install Bats for CLI-level regression tests
+RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
+        --retry 5 --retry-delay 5 --retry-all-errors \
+        "https://github.com/bats-core/bats-core/archive/refs/tags/v${BATS_VERSION}.tar.gz" \
+        --output /tmp/bats.tar.gz \
+    && tar --extract --gzip --file /tmp/bats.tar.gz --directory /tmp \
+    && /tmp/bats-core-${BATS_VERSION}/install.sh /usr/local \
+    && rm -rf /tmp/bats.tar.gz /tmp/bats-core-${BATS_VERSION}'
+
+USER "${USERNAME}"

@@ -19,5 +19,5 @@ if ! command -v "${POETRY_BIN}" >/dev/null 2>&1; then
 fi
 
 "${POETRY_BIN}" run mutmut run \
-  --paths-to-mutate pulumi/pulumi_app \
+  --paths-to-mutate pulumi/app \
   --runner "${POETRY_BIN} run pytest -q tests/unit tests/integration"
