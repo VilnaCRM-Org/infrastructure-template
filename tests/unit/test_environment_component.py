@@ -25,22 +25,22 @@ class SimpleMocks(mocks.Mocks):
 
 def _run_pulumi_program(program: Callable[[], None]) -> None:
     """Execute a Pulumi program with mocks."""
-    test_mocks = SimpleMocks()
-    monitor = mocks.MockMonitor(test_mocks)
-    mocks.set_mocks(
-        test_mocks,
-        project="infrastructure-template",
-        stack="unit",
-        monitor=monitor,
-    )
-
-    async def run_program() -> None:
-        await stack.run_pulumi_func(program)
-
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
     try:
-        asyncio.run(run_program())
+        test_mocks = SimpleMocks()
+        monitor = mocks.MockMonitor(test_mocks)
+        mocks.set_mocks(
+            test_mocks,
+            project="infrastructure-template",
+            stack="unit",
+            monitor=monitor,
+        )
+        loop.run_until_complete(stack.run_pulumi_func(program))
     finally:
         settings.reset_options(project=None, stack=None)
+        loop.close()
+        asyncio.set_event_loop(None)
 
 
 def _assert_output_value(output: pulumi.Output, expected: object) -> None:
