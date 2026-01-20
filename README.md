@@ -48,6 +48,9 @@ Community Q&A lives under the [`vilnacrm` tag on Stack Overflow](https://stackov
 
 ## Local Pulumi test suites
 
+Docker Compose CLI 2.24.0+ is required because `docker-compose.yml` uses the
+`env_file.required` flag (older Compose releases fail to parse it).
+
 Install development dependencies via Poetry and then use the `make` targets to run the different Pulumi-focused suites:
 
 ```sh

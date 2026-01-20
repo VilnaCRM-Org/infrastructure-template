@@ -19,7 +19,9 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 ## Quick Start
 
 1. **Use this template** or clone the repository locally.
-2. Install [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/).
+2. Install [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
+   (Docker Compose CLI 2.24.0+ is required because `docker-compose.yml` uses
+   `env_file.required`).
 3. (Optional) Install the [Pulumi CLI](https://www.pulumi.com/docs/install/) if you plan to run commands outside the container.
 4. Launch the local environment:
 
