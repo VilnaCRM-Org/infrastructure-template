@@ -1,11 +1,12 @@
 """Unit tests for the EnvironmentSettings Pulumi component."""
 
+import asyncio
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
 from unittest.mock import patch
 
 import pulumi
-from pulumi.runtime import mocks, settings, stack, sync_await
+from pulumi.runtime import mocks, settings, stack
 
 from app.environment import EnvironmentSettings
 
@@ -22,8 +23,8 @@ class SimpleMocks(mocks.Mocks):
         return args.inputs
 
 
-def _run_pulumi_program(program: Callable[[], None]) -> dict[str, object]:
-    """Execute a Pulumi program with mocks and resolve exported outputs."""
+def _run_pulumi_program(program: Callable[[], None]) -> None:
+    """Execute a Pulumi program with mocks."""
     test_mocks = SimpleMocks()
     monitor = mocks.MockMonitor(test_mocks)
     mocks.set_mocks(
@@ -33,20 +34,21 @@ def _run_pulumi_program(program: Callable[[], None]) -> dict[str, object]:
         monitor=monitor,
     )
 
-    try:
-        sync_await._sync_await(stack.run_pulumi_func(program))
-        root = settings.get_root_resource()
-        assert root is not None, "Pulumi Stack was not initialised"
+    async def run_program() -> None:
+        await stack.run_pulumi_func(program)
 
-        resolved: dict[str, object] = {}
-        for name, value in root.outputs.items():
-            if isinstance(value, pulumi.Output):
-                resolved[name] = sync_await._sync_await(value.future())
-            else:
-                resolved[name] = value
-        return resolved
+    try:
+        asyncio.run(run_program())
     finally:
         settings.reset_options(project=None, stack=None)
+
+
+def _assert_output_value(output: pulumi.Output, expected: object) -> None:
+    """Assert a Pulumi Output resolves to the expected value."""
+    def check(value: object) -> None:
+        assert value == expected
+
+    output.apply(check)
 
 
 @contextmanager
@@ -76,9 +78,9 @@ def test_stack_tag_combines_service_and_environment() -> None:
             "unit", environment="staging", service_name="billing"
         )
         pulumi.export("stackTag", env_settings.stack_tag)
+        _assert_output_value(env_settings.stack_tag, "billing-staging")
 
-    outputs = _run_pulumi_program(program)
-    assert outputs["stackTag"] == "billing-staging"
+    _run_pulumi_program(program)
 
 
 def test_default_tags_use_service_and_environment() -> None:
@@ -89,9 +91,12 @@ def test_default_tags_use_service_and_environment() -> None:
             "unit", environment="production", service_name="edge"
         )
         pulumi.export("defaultTags", env_settings.default_tags)
+        _assert_output_value(
+            env_settings.default_tags,
+            {"Project": "edge", "Environment": "production"},
+        )
 
-    outputs = _run_pulumi_program(program)
-    assert outputs["defaultTags"] == {"Project": "edge", "Environment": "production"}
+    _run_pulumi_program(program)
 
 
 def test_environment_falls_back_to_config_value() -> None:
@@ -103,17 +108,16 @@ def test_environment_falls_back_to_config_value() -> None:
         pulumi.export("serviceName", env_settings.service_name)
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
+        _assert_output_value(env_settings.environment, "qa")
+        _assert_output_value(env_settings.service_name, "infrastructure-template")
+        _assert_output_value(env_settings.stack_tag, "infrastructure-template-qa")
+        _assert_output_value(
+            env_settings.default_tags,
+            {"Project": "infrastructure-template", "Environment": "qa"},
+        )
 
     with mocked_pulumi_context({"environment": "qa"}):
-        outputs = _run_pulumi_program(program)
-
-    assert outputs["environment"] == "qa"
-    assert outputs["serviceName"] == "infrastructure-template"
-    assert outputs["stackTag"] == "infrastructure-template-qa"
-    assert outputs["defaultTags"] == {
-        "Project": "infrastructure-template",
-        "Environment": "qa",
-    }
+        _run_pulumi_program(program)
 
 
 def test_environment_defaults_to_dev_when_unset() -> None:
@@ -125,17 +129,16 @@ def test_environment_defaults_to_dev_when_unset() -> None:
         pulumi.export("serviceName", env_settings.service_name)
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
+        _assert_output_value(env_settings.environment, "dev")
+        _assert_output_value(env_settings.service_name, "infrastructure-template")
+        _assert_output_value(env_settings.stack_tag, "infrastructure-template-dev")
+        _assert_output_value(
+            env_settings.default_tags,
+            {"Project": "infrastructure-template", "Environment": "dev"},
+        )
 
     with mocked_pulumi_context():
-        outputs = _run_pulumi_program(program)
-
-    assert outputs["environment"] == "dev"
-    assert outputs["serviceName"] == "infrastructure-template"
-    assert outputs["stackTag"] == "infrastructure-template-dev"
-    assert outputs["defaultTags"] == {
-        "Project": "infrastructure-template",
-        "Environment": "dev",
-    }
+        _run_pulumi_program(program)
 
 
 def test_service_name_falls_back_to_config_value() -> None:
@@ -146,13 +149,12 @@ def test_service_name_falls_back_to_config_value() -> None:
         pulumi.export("serviceName", env_settings.service_name)
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
+        _assert_output_value(env_settings.service_name, "billing")
+        _assert_output_value(env_settings.stack_tag, "billing-qa")
+        _assert_output_value(env_settings.default_tags, {"Project": "billing", "Environment": "qa"})
 
     with mocked_pulumi_context({"serviceName": "billing"}):
-        outputs = _run_pulumi_program(program)
-
-    assert outputs["serviceName"] == "billing"
-    assert outputs["stackTag"] == "billing-qa"
-    assert outputs["defaultTags"] == {"Project": "billing", "Environment": "qa"}
+        _run_pulumi_program(program)
 
 
 def test_service_name_defaults_to_project_name() -> None:
@@ -163,13 +165,15 @@ def test_service_name_defaults_to_project_name() -> None:
         pulumi.export("serviceName", env_settings.service_name)
         pulumi.export("stackTag", env_settings.stack_tag)
         pulumi.export("defaultTags", env_settings.default_tags)
+        _assert_output_value(env_settings.service_name, "project-fallback")
+        _assert_output_value(env_settings.stack_tag, "project-fallback-qa")
+        _assert_output_value(
+            env_settings.default_tags,
+            {"Project": "project-fallback", "Environment": "qa"},
+        )
 
     with mocked_pulumi_context(project_name="project-fallback"):
-        outputs = _run_pulumi_program(program)
-
-    assert outputs["serviceName"] == "project-fallback"
-    assert outputs["stackTag"] == "project-fallback-qa"
-    assert outputs["defaultTags"] == {"Project": "project-fallback", "Environment": "qa"}
+        _run_pulumi_program(program)
 
 
 def test_component_uses_expected_type_token() -> None:
