@@ -3,6 +3,7 @@ PROJECT            = infrastructure-template
 ENV_FILE           = .env
 EMPTY_ENV_FILE     = .env.empty
 COMPOSE_SERVICE   ?= pulumi
+PULUMI_DIR        ?= pulumi
 EFFECTIVE_ENV_FILE := $(firstword $(wildcard $(ENV_FILE)) $(wildcard $(EMPTY_ENV_FILE)))
 
 export COMPOSE_ENV_FILE := $(if $(EFFECTIVE_ENV_FILE),$(EFFECTIVE_ENV_FILE),$(EMPTY_ENV_FILE))
@@ -18,6 +19,7 @@ export USER
 DOCKER_COMPOSE    = docker compose
 COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
 COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
+PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
 
 # Misc
 .DEFAULT_GOAL     = help
@@ -35,16 +37,16 @@ start: ## Initialize and start the Pulumi development environment.
 	$(COMPOSE) up -d
 
 pulumi-preview: ## Preview infrastructure changes from inside the Pulumi container.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi preview
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) preview
 
 pulumi-up: ## Apply the current Pulumi infrastructure plan.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi up
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) up
 
 pulumi-refresh: ## Sync the Pulumi stack with live cloud resources.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi refresh
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) refresh
 
 pulumi-destroy: ## Tear down the Pulumi stack (irreversible; use with caution).
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi destroy
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) destroy
 
 sh: ## Open a shell inside the Pulumi container.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) sh
