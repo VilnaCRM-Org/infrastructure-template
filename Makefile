@@ -20,7 +20,11 @@ DOCKER_COMPOSE    = docker compose
 COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
 COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
-COVERAGE_OPTS    ?= --cov=./pulumi --cov-report=term-missing --cov-fail-under=100
+COVERAGE_OPTS            ?= --cov=./pulumi --cov-report=term-missing
+UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS) --cov-fail-under=100
+INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
+	-e COVERAGE_PROCESS_START=/workspace/.coveragerc \
+	-e COVERAGE_RCFILE=/workspace/.coveragerc
 
 # Misc
 .DEFAULT_GOAL     = help
@@ -56,11 +60,18 @@ down: ## Stop the Docker Compose environment.
 	$(DOCKER_COMPOSE) down
 
 test-unit: ## Execute fast unit tests for the Pulumi application layer.
-	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(COVERAGE_OPTS)" \
+	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
 		$(COMPOSE_SERVICE) poetry run pytest -q tests/unit
 
 test-integration: ## Execute Pulumi automation-based integration tests.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/integration
+	$(COMPOSE) run --rm $(INTEGRATION_COVERAGE_ENV) \
+		$(COMPOSE_SERVICE) poetry run pytest -q tests/integration
+	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
+		-e COVERAGE_RCFILE=/workspace/.coveragerc \
+		$(COMPOSE_SERVICE) poetry run coverage combine
+	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
+		-e COVERAGE_RCFILE=/workspace/.coveragerc \
+		$(COMPOSE_SERVICE) poetry run coverage report --show-missing
 
 test-pulumi: ## Perform structural checks on Pulumi project configuration.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/pulumi

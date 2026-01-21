@@ -10,6 +10,7 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 PULUMI_PROGRAM_ROOT = PROJECT_ROOT / "pulumi"
+_COVERAGE_CONFIG = PROJECT_ROOT / ".coveragerc"
 
 if str(PULUMI_PROGRAM_ROOT) not in sys.path:
     sys.path.insert(0, str(PULUMI_PROGRAM_ROOT))
@@ -22,7 +23,15 @@ def pulumi_automation_environment(tmp_path_factory: pytest.TempPathFactory) -> N
         return
 
     os.environ.setdefault("PULUMI_SKIP_UPDATE_CHECK", "true")
-    os.environ.setdefault("PULUMI_PYTHON_CMD", sys.executable)
+    python_cmd = sys.executable
+    coverage_wrapper = PROJECT_ROOT / "scripts" / "pulumi_python_with_coverage.sh"
+
+    if _COVERAGE_CONFIG.exists() and coverage_wrapper.exists():
+        os.environ.setdefault("COVERAGE_PROCESS_START", str(_COVERAGE_CONFIG))
+        os.environ.setdefault("COVERAGE_FILE", str(PROJECT_ROOT / ".coverage"))
+        python_cmd = str(coverage_wrapper)
+
+    os.environ.setdefault("PULUMI_PYTHON_CMD", python_cmd)
 
     if os.environ.get("PULUMI_ACCESS_TOKEN") or os.environ.get("PULUMI_BACKEND_URL"):
         return

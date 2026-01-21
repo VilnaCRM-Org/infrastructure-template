@@ -6,3 +6,5 @@ __pycache__/
 *.py[cod]
 .mutmut-cache
 .pulumi-backend/
+.coverage*
+!.coveragerc
