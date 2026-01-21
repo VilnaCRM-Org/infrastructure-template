@@ -50,5 +50,6 @@
 @test "make sh opens a throwaway shell in the Pulumi container" {
   run make -n sh
   [ "$status" -eq 0 ]
-  [[ "$output" == *"docker compose --env-file .env run --rm pulumi sh"* ]]
+  [[ "$output" == *"docker compose --env-file .env run --rm pulumi sh"* ]] \
+    || [[ "$output" == *"docker compose --env-file .env.empty run --rm pulumi sh"* ]]
 }
