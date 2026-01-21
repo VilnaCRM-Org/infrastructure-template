@@ -20,6 +20,7 @@ DOCKER_COMPOSE    = docker compose
 COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
 COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
+COVERAGE_OPTS    ?= --cov=./pulumi --cov-report=term-missing --cov-fail-under=100
 
 # Misc
 .DEFAULT_GOAL     = help
@@ -55,7 +56,8 @@ down: ## Stop the Docker Compose environment.
 	$(DOCKER_COMPOSE) down
 
 test-unit: ## Execute fast unit tests for the Pulumi application layer.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/unit
+	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(COVERAGE_OPTS)" \
+		$(COMPOSE_SERVICE) poetry run pytest -q tests/unit
 
 test-integration: ## Execute Pulumi automation-based integration tests.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/integration

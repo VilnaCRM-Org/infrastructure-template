@@ -1,8 +1,11 @@
 """Unit tests for the EnvironmentSettings Pulumi component."""
 
 import asyncio
+import runpy
+import sys
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
+from pathlib import Path
 from unittest.mock import patch
 
 import pulumi
@@ -10,6 +13,8 @@ from pulumi.runtime import mocks, settings, stack
 
 from app.environment import EnvironmentSettings
 
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PULUMI_MAIN = PROJECT_ROOT / "pulumi" / "__main__.py"
 
 class SimpleMocks(mocks.Mocks):
     """Pulumi mocks that echo inputs for unit testing."""
@@ -191,6 +196,29 @@ def test_component_uses_expected_type_token() -> None:
     resource = captured.get("resource")
     assert resource is not None, "EnvironmentSettings instance was not created"
     assert getattr(resource, "_type", None) == "infrastructure-template:core:EnvironmentSettings"
+
+
+def test_main_exports_expected_outputs() -> None:
+    """Execute the Pulumi entrypoint and validate exported outputs."""
+    def program() -> None:
+        """Run the pulumi __main__ module inside the mocked runtime."""
+        sys.path.insert(0, str(PROJECT_ROOT / "pulumi"))
+        try:
+            module_globals = runpy.run_path(str(PULUMI_MAIN))
+        finally:
+            sys.path.pop(0)
+
+        env_settings = module_globals["settings"]
+        _assert_output_value(env_settings.environment, "dev")
+        _assert_output_value(env_settings.service_name, "infrastructure-template")
+        _assert_output_value(env_settings.stack_tag, "infrastructure-template-dev")
+        _assert_output_value(
+            env_settings.default_tags,
+            {"Project": "infrastructure-template", "Environment": "dev"},
+        )
+
+    with mocked_pulumi_context():
+        _run_pulumi_program(program)
 
 
 def test_register_outputs_maps_component_properties() -> None:
