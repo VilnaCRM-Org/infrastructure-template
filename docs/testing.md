@@ -92,7 +92,9 @@ Coverage:
 - `make test`
 - `make clean`
 
-These tests use dry-run output, so they do not require Docker to launch real containers.
+These tests validate command behavior with dry-run assertions, but `make test-cli`
+still runs inside the Docker test container and therefore requires Docker
+locally.
 
 ## Full local run
 
