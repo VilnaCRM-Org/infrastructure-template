@@ -181,21 +181,36 @@ def test_service_name_defaults_to_project_name() -> None:
         _run_pulumi_program(program)
 
 
-def test_component_exposes_environment_settings_instance() -> None:
-    """Create an EnvironmentSettings component instance."""
-    captured: dict[str, EnvironmentSettings] = {}
+def test_component_registers_expected_type_token() -> None:
+    """Pass the expected type token into the public ComponentResource API."""
+    captured: dict[str, tuple[str, str]] = {}
+    original_init = pulumi.ComponentResource.__init__
+
+    def tracked_init(
+        self: pulumi.ComponentResource,
+        type_token: str,
+        name: str,
+        props: object = None,
+        opts: object = None,
+        *args: object,
+        **kwargs: object,
+    ) -> None:
+        if isinstance(self, EnvironmentSettings):
+            captured["component"] = (type_token, name)
+        original_init(self, type_token, name, props, opts, *args, **kwargs)
 
     def program() -> None:
         """Capture the component instance for type checks."""
         env_settings = EnvironmentSettings("unit")
-        captured["resource"] = env_settings
         pulumi.export("environment", env_settings.environment)
 
-    _run_pulumi_program(program)
+    with patch.object(pulumi.ComponentResource, "__init__", new=tracked_init):
+        _run_pulumi_program(program)
 
-    resource = captured.get("resource")
-    assert resource is not None, "EnvironmentSettings instance was not created"
-    assert isinstance(resource, EnvironmentSettings)
+    assert captured.get("component") == (
+        "infrastructure-template:core:EnvironmentSettings",
+        "unit",
+    )
 
 
 def test_main_exports_expected_outputs() -> None:
