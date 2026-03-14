@@ -16,18 +16,28 @@ def _triggers(workflow: dict) -> dict:
     return workflow.get("on", workflow.get(True, {}))
 
 
+def _release_job(workflow: dict) -> dict:
+    for job in workflow["jobs"].values():
+        step_names = {step.get("name") for step in job.get("steps", [])}
+        if "Create Release" in step_names:
+            return job
+    raise AssertionError("Create Release step not found in autorelease workflow")
+
+
 def test_autorelease_uses_repo_token_with_github_token_fallback() -> None:
     """Keep the workflow aligned with the documented release secret contract."""
     workflow = yaml.safe_load(
         (WORKFLOWS_DIR / "autorelease.yml").read_text(encoding="utf-8")
     )
-    steps = workflow["jobs"]["build"]["steps"]
+    release_job = _release_job(workflow)
+    steps = release_job["steps"]
     secrets_doc = SECRETS_DOC.read_text(encoding="utf-8")
 
     assert (
-        workflow["jobs"]["build"]["env"]["RELEASE_TOKEN"]
+        release_job["env"]["RELEASE_TOKEN"]
         == "${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
     )
+    assert release_job["timeout-minutes"] == 10
     assert "fall back to `GITHUB_TOKEN`" in secrets_doc
     assert any(step.get("name") == "Create Release" for step in steps)
 
