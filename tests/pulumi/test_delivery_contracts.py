@@ -10,36 +10,42 @@ WORKFLOWS_DIR = PROJECT_ROOT / ".github" / "workflows"
 DOCKERFILE = PROJECT_ROOT / "Dockerfile"
 SECRETS_DOC = PROJECT_ROOT / "docs" / "github-actions-secrets.md"
 BATS_FILE = PROJECT_ROOT / "tests" / "unit" / "make_targets.bats"
+RELEASE_WORKFLOWS = ("autorelease.yml", "autoprerelase.yml")
 
 
 def _triggers(workflow: dict) -> dict:
     return workflow.get("on", workflow.get(True, {}))
 
 
-def _release_job(workflow: dict) -> dict:
+def _release_job(workflow: dict, *, workflow_name: str) -> dict:
     for job in workflow["jobs"].values():
         step_names = {step.get("name") for step in job.get("steps", [])}
         if "Create Release" in step_names:
             return job
-    raise AssertionError("Create Release step not found in autorelease workflow")
+    raise AssertionError(f"Create Release step not found in {workflow_name}")
 
 
-def test_autorelease_uses_repo_token_with_github_token_fallback() -> None:
-    """Keep the workflow aligned with the documented release secret contract."""
-    workflow = yaml.safe_load(
-        (WORKFLOWS_DIR / "autorelease.yml").read_text(encoding="utf-8")
-    )
-    release_job = _release_job(workflow)
-    steps = release_job["steps"]
+def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
+    """Keep the release workflows aligned with the documented secret contract."""
     secrets_doc = SECRETS_DOC.read_text(encoding="utf-8")
 
-    assert (
-        release_job["env"]["RELEASE_TOKEN"]
-        == "${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
-    )
-    assert release_job["timeout-minutes"] == 10
     assert "fall back to `GITHUB_TOKEN`" in secrets_doc
-    assert any(step.get("name") == "Create Release" for step in steps)
+
+    for workflow_name in RELEASE_WORKFLOWS:
+        workflow = yaml.safe_load(
+            (WORKFLOWS_DIR / workflow_name).read_text(encoding="utf-8")
+        )
+        release_job = _release_job(workflow, workflow_name=workflow_name)
+        steps = release_job["steps"]
+
+        assert (
+            release_job["env"]["RELEASE_TOKEN"]
+            == "${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
+        )
+        assert any(step.get("name") == "Create Release" for step in steps)
+
+        if workflow_name == "autorelease.yml":
+            assert release_job["timeout-minutes"] == 10
 
 
 def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
