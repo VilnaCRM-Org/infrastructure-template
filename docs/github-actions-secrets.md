@@ -10,8 +10,8 @@ The structural, unit, integration, mutation, and CLI workflows are local-only an
 | `AWS_ACCESS_KEY_ID` | Static AWS credential for GitHub Actions | Optional when you use GitHub OIDC instead. |
 | `AWS_SECRET_ACCESS_KEY` | Secret paired with the access key above | Optional when you use GitHub OIDC instead. |
 | `AWS_SESSION_TOKEN` | Session credential for temporary IAM sessions | Optional; only needed when your static credential flow requires it. |
-| `AWS_REGION` | Default AWS region for preview/deploy workflows | Optional; defaults to `eu-central-1`. |
-| `AWS_ROLE_TO_ASSUME` | IAM role ARN for GitHub OIDC | Preferred over long-lived static keys. |
+| `AWS_REGION` | Default AWS region for preview/deploy workflows | Optional; defaults to `eu-central-1`. Prefer a repository or organization variable when possible. |
+| `AWS_ROLE_TO_ASSUME` | IAM role ARN for GitHub OIDC | Preferred over long-lived static keys. The workflows read it from either `vars.AWS_ROLE_TO_ASSUME` or `secrets.AWS_ROLE_TO_ASSUME`. |
 
 ## Preferred setup: GitHub OIDC
 
@@ -47,3 +47,4 @@ Choose one authentication strategy:
 2. Add only the secrets required for the workflows you actually use.
 3. Prefer repository or organization variables for non-sensitive values such as `AWS_REGION`.
 4. Rotate IAM users, GitHub App keys, and PATs regularly.
+5. Audit workflow runs for unexpected credential use.
