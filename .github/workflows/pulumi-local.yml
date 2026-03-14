@@ -1,25 +1,22 @@
-name: CLI testing
+name: Pulumi Local Test Battery
 
 on:
   push:
     branches:
       - main
   pull_request:
-    branches:
-      - main
 
 permissions:
   contents: read
 
 jobs:
-  bats_tests:
+  local_battery:
+    name: Local Battery
     runs-on: ubuntu-latest
-    name: Run Bats Tests
     env:
       PULUMI_SKIP_UPDATE_CHECK: "true"
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
 
@@ -28,5 +25,5 @@ jobs:
           mkdir -p "${HOME}/.aws"
           cp -n .env.empty .env || touch .env
 
-      - name: Run CLI suite via Make
-        run: make test-cli
+      - name: Run aggregate local battery inside Docker
+        run: make test

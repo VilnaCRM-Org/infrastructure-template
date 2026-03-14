@@ -8,10 +8,15 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR = PROJECT_ROOT / ".github" / "workflows"
 DOCKERFILE = PROJECT_ROOT / "Dockerfile"
+BATS_FILE = PROJECT_ROOT / "tests" / "unit" / "make_targets.bats"
 
 
 def _workflow(name: str) -> dict:
     return yaml.safe_load((WORKFLOWS_DIR / name).read_text(encoding="utf-8"))
+
+
+def _triggers(workflow: dict) -> dict:
+    return workflow.get("on", workflow.get(True, {}))
 
 
 def test_preview_workflow_supports_oidc_and_static_credentials() -> None:
@@ -52,6 +57,57 @@ def test_super_linter_workflow_stays_read_only() -> None:
     assert "FIX_" not in workflow_text
     assert "git commit" not in workflow_text
     assert "persist-credentials: false" in workflow_text
+
+
+def test_bats_suite_covers_every_public_make_target() -> None:
+    """Keep every public make target locked down by the CLI regression suite."""
+    bats_text = BATS_FILE.read_text(encoding="utf-8")
+    expected_invocations = [
+        "make help",
+        "make all",
+        "make -n start",
+        'make -n pulumi ARGS="version"',
+        "make -n pulumi-preview",
+        "make -n pulumi-up",
+        "make -n pulumi-refresh",
+        "make -n pulumi-destroy",
+        "make -n sh",
+        "make -n down",
+        "make -n test-unit",
+        "make -n test-integration",
+        "make -n test-pulumi",
+        "make -n test-mutation",
+        "make -n test-cli",
+        "make -n test",
+        "make -n clean",
+    ]
+
+    for invocation in expected_invocations:
+        assert invocation in bats_text
+
+
+def test_local_battery_workflow_mirrors_make_test() -> None:
+    """Ensure GitHub Actions exercises the aggregate local validation command."""
+    workflow = _workflow("pulumi-local.yml")
+    triggers = _triggers(workflow)
+    step_names = [
+        step.get("name") for step in workflow["jobs"]["local_battery"]["steps"]
+    ]
+
+    assert triggers["push"]["branches"] == ["main"]
+    assert "pull_request" in triggers
+    assert "Prepare Docker context" in step_names
+    assert "Run aggregate local battery inside Docker" in step_names
+    assert workflow["jobs"]["local_battery"]["steps"][-1]["run"] == "make test"
+
+
+def test_bats_workflow_runs_on_push_and_pull_request() -> None:
+    """Keep the CLI regression suite aligned with other local-only checks."""
+    workflow = _workflow("bats-tests.yml")
+    triggers = _triggers(workflow)
+
+    assert triggers["push"]["branches"] == ["main"]
+    assert "pull_request" in triggers
 
 
 def test_dockerfile_verifies_downloaded_artifacts() -> None:

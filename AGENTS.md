@@ -8,7 +8,7 @@ This repository is a Pulumi infrastructure template for AWS. Agents should keep 
 2. Prefer updating tests, docs, or examples before broad workflow refactors.
 3. Run the narrowest useful validation for the files you touched.
 4. Use `pulumi -C pulumi ...` for direct Pulumi CLI commands.
-5. Keep CI credential-free by default. Structural, unit, integration-smoke, mutation, and CLI checks should not require live AWS access.
+5. Keep CI credential-free by default. Structural, unit, integration-smoke, mutation, CLI, and aggregate local-battery checks should not require live AWS access.
 
 ## Secret handling
 

@@ -12,6 +12,7 @@ make test-pulumi
 
 Coverage:
 
+- Every public Make target is exercised through dry-run or help-output assertions
 - `pulumi/Pulumi.yaml` and `pulumi/Pulumi.example.yaml`
 - GitHub Actions workflow contracts for preview, deploy, and linting
 - Dockerfile checksum and pinned-download safeguards
@@ -74,12 +75,22 @@ make test-cli
 Coverage:
 
 - `make help`
+- `make all`
 - `make start`
+- `make pulumi ARGS="version"`
 - `make pulumi-preview`
 - `make pulumi-up`
 - `make pulumi-refresh`
 - `make pulumi-destroy`
 - `make sh`
+- `make down`
+- `make test-unit`
+- `make test-integration`
+- `make test-pulumi`
+- `make test-mutation`
+- `make test-cli`
+- `make test`
+- `make clean`
 
 These tests use dry-run output, so they do not require Docker to launch real containers.
 
@@ -91,5 +102,7 @@ Run the complete local validation battery with:
 make test
 make test-mutation
 ```
+
+GitHub Actions now mirrors the aggregate `make test` command through the `Pulumi Local Test Battery` workflow, while `Pulumi Mutation Tests` keeps mutation analysis isolated as a separate check.
 
 Use `make pulumi-preview` before any real cloud deployment.
