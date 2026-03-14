@@ -10,6 +10,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import pulumi_policy
+import pytest
 from pulumi_policy import EnforcementLevel
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -17,31 +18,37 @@ POLICY_DIR = PROJECT_ROOT / "policy"
 POLICY_MAIN = POLICY_DIR / "__main__.py"
 
 
-def _load_module(module_name: str, path: Path):
-    """Load a policy module directly from disk without relying on cwd hacks."""
-    spec = importlib.util.spec_from_file_location(module_name, path)
-    assert spec is not None
-    assert spec.loader is not None
+@pytest.fixture
+def policy_runtime(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
+    """Import the policy modules through the package path without leaking globals."""
+    for module_name in ("guardrails", "pack", "policy.guardrails", "policy.pack"):
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
 
-    module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
-    spec.loader.exec_module(module)
-    return module
+    def load_module(module_name: str, path: Path):
+        """Load a policy module from disk without leaving global imports behind."""
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        assert spec is not None
+        assert spec.loader is not None
 
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return module
 
-guardrails = _load_module("guardrails", POLICY_DIR / "guardrails.py")
-pack = _load_module("pack", POLICY_DIR / "pack.py")
+    guardrails = load_module("guardrails", POLICY_DIR / "guardrails.py")
+    pack = load_module("pack", POLICY_DIR / "pack.py")
 
-extract_tags = guardrails.extract_tags
-has_public_s3_acl = guardrails.has_public_s3_acl
-missing_required_tags = guardrails.missing_required_tags
-open_admin_ports = guardrails.open_admin_ports
-
-POLICY_PACK_NAME = pack.POLICY_PACK_NAME
-block_open_admin_ports = pack.block_open_admin_ports
-block_public_s3_acls = pack.block_public_s3_acls
-build_policies = pack.build_policies
-require_default_tags = pack.require_default_tags
+    yield SimpleNamespace(
+        extract_tags=guardrails.extract_tags,
+        has_public_s3_acl=guardrails.has_public_s3_acl,
+        missing_required_tags=guardrails.missing_required_tags,
+        open_admin_ports=guardrails.open_admin_ports,
+        POLICY_PACK_NAME=pack.POLICY_PACK_NAME,
+        block_open_admin_ports=pack.block_open_admin_ports,
+        block_public_s3_acls=pack.block_public_s3_acls,
+        build_policies=pack.build_policies,
+        require_default_tags=pack.require_default_tags,
+    )
 
 
 def _policy_args(resource_type: str, props: dict[str, Any]) -> SimpleNamespace:
@@ -58,36 +65,65 @@ def _collect_violations(
     return violations
 
 
-def test_extract_tags_prefers_tags_and_falls_back_to_tags_all() -> None:
+def test_extract_tags_prefers_tags_and_falls_back_to_tags_all(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Support both provider tag shapes without guessing."""
-    assert extract_tags({"tags": {"Project": "svc"}}) == {"Project": "svc"}
-    assert extract_tags({"tags": "invalid", "tagsAll": {"Environment": "dev"}}) == {
-        "Environment": "dev"
+    assert policy_runtime.extract_tags({"tags": {"Project": "svc"}}) == {
+        "Project": "svc"
     }
-    assert extract_tags({}) is None
+    assert policy_runtime.extract_tags(
+        {"tags": "invalid", "tagsAll": {"Environment": "dev"}}
+    ) == {"Environment": "dev"}
+    assert policy_runtime.extract_tags({}) is None
 
 
-def test_missing_required_tags_reports_blank_or_missing_values() -> None:
+def test_missing_required_tags_reports_blank_or_missing_values(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Detect blank or absent required default tags."""
-    assert missing_required_tags(None) == []
-    assert missing_required_tags({"Project": "svc", "Environment": "dev"}) == []
-    assert missing_required_tags({"Project": " ", "Environment": "dev"}) == ["Project"]
-    assert missing_required_tags({"Project": "svc"}) == ["Environment"]
+    assert policy_runtime.missing_required_tags(None) == []
+    assert (
+        policy_runtime.missing_required_tags({"Project": "svc", "Environment": "dev"})
+        == []
+    )
+    assert policy_runtime.missing_required_tags(
+        {"Project": " ", "Environment": "dev"}
+    ) == ["Project"]
+    assert policy_runtime.missing_required_tags({"Project": "svc"}) == ["Environment"]
 
 
-def test_has_public_s3_acl_detects_public_acls_only() -> None:
+def test_has_public_s3_acl_detects_public_acls_only(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Only public S3 ACLs should trigger the guardrail."""
     assert (
-        has_public_s3_acl("aws:s3/bucket:Bucket", {"acl": "public-read-write"}) is True
+        policy_runtime.has_public_s3_acl(
+            "aws:s3/bucket:Bucket", {"acl": "public-read-write"}
+        )
+        is True
     )
-    assert has_public_s3_acl("tests:s3/bucket:Bucket", {"acl": "public-read"}) is True
-    assert has_public_s3_acl("aws:s3/bucket:Bucket", {"acl": "private"}) is False
-    assert has_public_s3_acl("aws:s3/object:Object", {"acl": "public-read"}) is False
+    assert (
+        policy_runtime.has_public_s3_acl(
+            "tests:s3/bucket:Bucket", {"acl": "public-read"}
+        )
+        is True
+    )
+    assert (
+        policy_runtime.has_public_s3_acl("aws:s3/bucket:Bucket", {"acl": "private"})
+        is False
+    )
+    assert (
+        policy_runtime.has_public_s3_acl("aws:s3/object:Object", {"acl": "public-read"})
+        is False
+    )
 
 
-def test_open_admin_ports_detects_public_security_group_rules() -> None:
+def test_open_admin_ports_detects_public_security_group_rules(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Catch admin ports exposed through standalone security-group rules."""
-    assert open_admin_ports(
+    assert policy_runtime.open_admin_ports(
         "aws:ec2/securityGroupRule:SecurityGroupRule",
         {
             "type": "ingress",
@@ -96,7 +132,7 @@ def test_open_admin_ports_detects_public_security_group_rules() -> None:
             "cidrBlocks": ["0.0.0.0/0"],
         },
     ) == [22]
-    assert open_admin_ports(
+    assert policy_runtime.open_admin_ports(
         "tests:ec2/securityGroupRule:SecurityGroupRule",
         {
             "type": "ingress",
@@ -107,9 +143,11 @@ def test_open_admin_ports_detects_public_security_group_rules() -> None:
     ) == [3389]
 
 
-def test_open_admin_ports_detects_public_inline_security_group_rules() -> None:
+def test_open_admin_ports_detects_public_inline_security_group_rules(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Catch inline ingress rules that expose RDP publicly."""
-    assert open_admin_ports(
+    assert policy_runtime.open_admin_ports(
         "aws:ec2/securityGroup:SecurityGroup",
         {
             "ingress": [
@@ -123,10 +161,12 @@ def test_open_admin_ports_detects_public_inline_security_group_rules() -> None:
     ) == [3389]
 
 
-def test_open_admin_ports_ignores_safe_or_malformed_rules() -> None:
+def test_open_admin_ports_ignores_safe_or_malformed_rules(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Ignore private or malformed rule shapes instead of crashing."""
     assert (
-        open_admin_ports(
+        policy_runtime.open_admin_ports(
             "aws:ec2/securityGroupRule:SecurityGroupRule",
             {
                 "type": "egress",
@@ -138,7 +178,7 @@ def test_open_admin_ports_ignores_safe_or_malformed_rules() -> None:
         == []
     )
     assert (
-        open_admin_ports(
+        policy_runtime.open_admin_ports(
             "aws:ec2/securityGroupRule:SecurityGroupRule",
             {
                 "type": "ingress",
@@ -149,14 +189,19 @@ def test_open_admin_ports_ignores_safe_or_malformed_rules() -> None:
         )
         == []
     )
-    assert open_admin_ports("aws:s3/bucket:Bucket", {"acl": "private"}) == []
+    assert (
+        policy_runtime.open_admin_ports("aws:s3/bucket:Bucket", {"acl": "private"})
+        == []
+    )
 
 
-def test_require_default_tags_validator_reports_missing_tags() -> None:
+def test_require_default_tags_validator_reports_missing_tags(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Require the template's default tags on tagged AWS resources."""
     assert (
         _collect_violations(
-            require_default_tags,
+            policy_runtime.require_default_tags,
             resource_type="kubernetes:core/v1:Namespace",
             props={"metadata": {"name": "dev"}},
         )
@@ -164,7 +209,7 @@ def test_require_default_tags_validator_reports_missing_tags() -> None:
     )
     assert (
         _collect_violations(
-            require_default_tags,
+            policy_runtime.require_default_tags,
             resource_type="aws:s3/bucket:Bucket",
             props={},
         )
@@ -172,7 +217,7 @@ def test_require_default_tags_validator_reports_missing_tags() -> None:
     )
     assert (
         _collect_violations(
-            require_default_tags,
+            policy_runtime.require_default_tags,
             resource_type="aws:s3/bucket:Bucket",
             props={"tags": {"Project": "svc", "Environment": "dev"}},
         )
@@ -180,7 +225,7 @@ def test_require_default_tags_validator_reports_missing_tags() -> None:
     )
 
     violations = _collect_violations(
-        require_default_tags,
+        policy_runtime.require_default_tags,
         resource_type="aws:ec2/instance:Instance",
         props={"tags": {"Project": "svc"}},
     )
@@ -190,11 +235,13 @@ def test_require_default_tags_validator_reports_missing_tags() -> None:
     ]
 
 
-def test_block_public_s3_acls_validator_reports_public_buckets() -> None:
+def test_block_public_s3_acls_validator_reports_public_buckets(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Reject public ACLs while leaving other resources alone."""
     assert (
         _collect_violations(
-            block_public_s3_acls,
+            policy_runtime.block_public_s3_acls,
             resource_type="aws:s3/bucket:Bucket",
             props={"acl": "private"},
         )
@@ -202,7 +249,7 @@ def test_block_public_s3_acls_validator_reports_public_buckets() -> None:
     )
 
     violations = _collect_violations(
-        block_public_s3_acls,
+        policy_runtime.block_public_s3_acls,
         resource_type="aws:s3/bucket:Bucket",
         props={"acl": "public-read"},
     )
@@ -212,11 +259,13 @@ def test_block_public_s3_acls_validator_reports_public_buckets() -> None:
     ]
 
 
-def test_block_open_admin_ports_validator_reports_public_admin_access() -> None:
+def test_block_open_admin_ports_validator_reports_public_admin_access(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Reject world-open SSH and RDP rules."""
     assert (
         _collect_violations(
-            block_open_admin_ports,
+            policy_runtime.block_open_admin_ports,
             resource_type="aws:ec2/securityGroup:SecurityGroup",
             props={
                 "ingress": [
@@ -232,7 +281,7 @@ def test_block_open_admin_ports_validator_reports_public_admin_access() -> None:
     )
 
     violations = _collect_violations(
-        block_open_admin_ports,
+        policy_runtime.block_open_admin_ports,
         resource_type="aws:ec2/securityGroupRule:SecurityGroupRule",
         props={
             "type": "ingress",
@@ -247,9 +296,11 @@ def test_block_open_admin_ports_validator_reports_public_admin_access() -> None:
     ]
 
 
-def test_build_policies_returns_mandatory_guardrails() -> None:
+def test_build_policies_returns_mandatory_guardrails(
+    policy_runtime: SimpleNamespace,
+) -> None:
     """Expose the expected mandatory guardrails in the policy pack."""
-    policies = build_policies()
+    policies = policy_runtime.build_policies()
 
     assert [policy.name for policy in policies] == [
         "aws-resource-required-default-tags",
@@ -261,7 +312,9 @@ def test_build_policies_returns_mandatory_guardrails() -> None:
     )
 
 
-def test_policy_entrypoint_registers_expected_policy_pack(monkeypatch) -> None:
+def test_policy_entrypoint_registers_expected_policy_pack(
+    monkeypatch: pytest.MonkeyPatch, policy_runtime: SimpleNamespace
+) -> None:
     """Wire the guardrail list into a PolicyPack at import time."""
     captured: dict[str, Any] = {}
 
@@ -274,7 +327,7 @@ def test_policy_entrypoint_registers_expected_policy_pack(monkeypatch) -> None:
 
     runpy.run_path(str(POLICY_MAIN), run_name="__main__")
 
-    assert captured["name"] == POLICY_PACK_NAME
+    assert captured["name"] == policy_runtime.POLICY_PACK_NAME
     assert [policy.name for policy in captured["policies"]] == [
         "aws-resource-required-default-tags",
         "s3-no-public-acls",

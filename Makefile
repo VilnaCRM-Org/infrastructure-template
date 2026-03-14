@@ -94,6 +94,7 @@ down: ## Stop the Docker Compose environment.
 	$(DOCKER_COMPOSE) down
 
 test-unit: ## Execute fast unit tests for the Pulumi application layer.
+	rm -f .coverage.unit .coverage.unit.*
 	$(COMPOSE) run --rm $(UNIT_COVERAGE_ENV) -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
 		$(COMPOSE_SERVICE) uv run pytest -q tests/unit
 	$(COMPOSE) run --rm $(UNIT_COVERAGE_ENV) \

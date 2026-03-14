@@ -117,6 +117,6 @@ def test_policy_pack_blocks_public_bucket_acl(tmp_path: Path) -> None:
     result = _preview_with_policy_pack(_write_program(tmp_path, acl="public-read"))
     combined_output = f"{result.stdout}\n{result.stderr}"
 
-    assert result.returncode != 0
+    assert result.returncode != 0, combined_output
     assert "s3-no-public-acls" in combined_output
     assert "public-read or public-read-write ACLs" in combined_output

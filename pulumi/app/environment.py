@@ -5,6 +5,8 @@ from typing import Optional
 import pulumi
 from app.guardrails import validate_environment_name, validate_service_name
 
+__all__ = ["EnvironmentSettings", "resolve_config_value"]
+
 
 def _stack_parts_from_outputs(parts: list[str]) -> tuple[str, str]:
     """Narrow Pulumi's list-shaped Output.all result to a stable tuple."""
@@ -21,7 +23,7 @@ def _default_tags_from_parts(parts: tuple[str, str]) -> dict[str, str]:
     return {"Project": parts[0], "Environment": parts[1]}
 
 
-def _resolve_config_value(
+def resolve_config_value(
     explicit: str | None, configured: str | None, *, default: str
 ) -> str:
     """Preserve intentionally empty config values so guardrails can reject them."""
@@ -51,7 +53,7 @@ class EnvironmentSettings(pulumi.ComponentResource):
         config = pulumi.Config()
 
         resolved_environment = validate_environment_name(
-            _resolve_config_value(
+            resolve_config_value(
                 environment,
                 config.get("environment"),
                 default="dev",
@@ -59,7 +61,7 @@ class EnvironmentSettings(pulumi.ComponentResource):
         )
 
         resolved_service = validate_service_name(
-            _resolve_config_value(
+            resolve_config_value(
                 service_name,
                 config.get("serviceName"),
                 default=pulumi.get_project(),

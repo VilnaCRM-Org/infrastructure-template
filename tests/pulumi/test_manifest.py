@@ -21,6 +21,8 @@ def test_manifest_declares_python_runtime() -> None:
 def test_policy_pack_manifest_declares_python_runtime() -> None:
     """Ensure the policy pack advertises the expected Python runtime contract."""
     manifest = yaml.safe_load(POLICY_MANIFEST.read_text(encoding="utf-8"))
+    content = POLICY_REQUIREMENTS.read_text(encoding="utf-8")
+    lines = {line.strip() for line in content.splitlines() if line.strip()}
 
     assert manifest["runtime"]["name"] == "python"
     assert (
@@ -28,5 +30,5 @@ def test_policy_pack_manifest_declares_python_runtime() -> None:
         == "/home/dev/.venvs/infrastructure-template"
     )
     assert "guardrails" in manifest["description"]
-    assert "pulumi>=" in POLICY_REQUIREMENTS.read_text(encoding="utf-8")
-    assert "pulumi-policy" in POLICY_REQUIREMENTS.read_text(encoding="utf-8")
+    assert "pulumi>=3.138,<4" in lines
+    assert "pulumi-policy>=1.20.0,<2" in lines

@@ -91,4 +91,4 @@ def _ports_in_range(props: Mapping[str, Any]) -> set[int]:
     if not isinstance(from_port, int) or not isinstance(to_port, int):
         return set()
 
-    return {port for port in SENSITIVE_PORTS if from_port <= port and port <= to_port}
+    return {port for port in SENSITIVE_PORTS if from_port <= port <= to_port}

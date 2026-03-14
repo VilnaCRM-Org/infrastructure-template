@@ -52,6 +52,15 @@ def _release_job(workflow: dict, *, workflow_name: str) -> dict:
     raise AssertionError(f"Create Release step not found in {workflow_name}")
 
 
+def _checkout_step(steps: list[dict], *, workflow_name: str) -> dict:
+    """Return the checkout step without depending on step ordering."""
+    for step in steps:
+        uses = step.get("uses", "")
+        if uses.startswith("actions/checkout@"):
+            return step
+    raise AssertionError(f"actions/checkout not found in {workflow_name}")
+
+
 def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
     """Keep the release workflows aligned with the documented secret contract."""
     secrets_doc = SECRETS_DOC.read_text(encoding="utf-8")
@@ -348,6 +357,12 @@ def test_actions_are_pinned_to_full_commit_shas() -> None:
         workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
 
         for job in workflow.get("jobs", {}).values():
+            uses = job.get("uses")
+            if uses and not uses.startswith("./"):
+                assert ACTION_SHA_REF.match(uses), (
+                    f"{workflow_path.name} must pin reusable workflow `{uses}` "
+                    "to a full commit SHA"
+                )
             for step in job.get("steps", []):
                 uses = step.get("uses")
                 if not uses or uses.startswith("./"):
@@ -378,7 +393,10 @@ def test_template_sync_workflows_keep_guardrails() -> None:
 
     assert app_workflow["jobs"]["repo-sync"]["permissions"] == {"contents": "read"}
     assert (
-        app_workflow["jobs"]["repo-sync"]["steps"][1]["with"]["persist-credentials"]
+        _checkout_step(
+            app_workflow["jobs"]["repo-sync"]["steps"],
+            workflow_name="template-sync-app.yml",
+        )["with"]["persist-credentials"]
         is False
     )
     assert pat_workflow["jobs"]["repo-sync"]["permissions"] == {
@@ -386,7 +404,10 @@ def test_template_sync_workflows_keep_guardrails() -> None:
         "pull-requests": "write",
     }
     assert (
-        pat_workflow["jobs"]["repo-sync"]["steps"][0]["with"]["persist-credentials"]
+        _checkout_step(
+            pat_workflow["jobs"]["repo-sync"]["steps"],
+            workflow_name="template-sync-pat.yml",
+        )["with"]["persist-credentials"]
         is False
     )
 
@@ -420,8 +441,8 @@ def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
-    assert "make test-ruff" in ruff_runs
-    assert "make test-ty" in ty_runs
+    assert any(run and "make test-ruff" in run for run in ruff_runs)
+    assert any(run and "make test-ty" in run for run in ty_runs)
 
 
 def test_policy_workflow_runs_on_push_and_pull_request() -> None:
@@ -435,7 +456,7 @@ def test_policy_workflow_runs_on_push_and_pull_request() -> None:
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
-    assert "make test-policy" in runs
+    assert any(run and "make test-policy" in run for run in runs)
 
 
 def test_operator_docs_are_present_and_indexed() -> None:

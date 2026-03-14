@@ -92,6 +92,12 @@ def test_invalid_stack_config_fails_preview(
     stack = auto.create_or_select_stack(
         stack_name=_stack_name(), work_dir=str(work_dir)
     )
+    baseline = {
+        "environment": "integration",
+        "serviceName": "integration-test",
+    }
+    for key, value in baseline.items():
+        stack.set_config(key, auto.ConfigValue(value=value))
     stack.set_config(config_key, auto.ConfigValue(value=config_value))
 
     try:
