@@ -37,6 +37,7 @@ All project docs live under `docs/` to keep everything version controlled. Start
 - [Development Environment](docs/README.md#development)
 - [PyCharm Autocomplete](docs/pycharm-autocomplete.md)
 - [CI/CD and Secrets](docs/README.md#cicd-and-secrets)
+- [uv and Rust-native tooling roadmap](docs/uv-rust-python-tooling-plan.md)
 - [Testing and Validation](docs/README.md#testing-and-validation)
 - [Security](docs/README.md#security)
 - [Contributing](docs/README.md#contributing)

@@ -10,6 +10,7 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 - [CI/CD and Secrets](#cicd-and-secrets)
 - [Project Structure](#project-structure)
 - [Testing and Validation](#testing-and-validation)
+- [Planned Follow-ups](#planned-follow-ups)
 - [Repository Synchronization](#repository-synchronization)
 - [Security](#security)
 - [Contributing](#contributing)
@@ -90,6 +91,10 @@ Continuous integration runs automatically on every pull request. You can also va
 - `make pulumi-preview` to review planned resources.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
 - `pulumi stack history` (from inside the container) to audit state transitions.
+
+## Planned Follow-ups
+
+- [uv and Rust-native Python tooling roadmap](uv-rust-python-tooling-plan.md) tracks the next Python tooling upgrade after the Pulumi migration lands.
 
 ## Repository Synchronization
 
