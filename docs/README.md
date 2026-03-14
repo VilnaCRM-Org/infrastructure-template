@@ -10,6 +10,7 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 - [CI/CD and Secrets](#cicd-and-secrets)
 - [Project Structure](#project-structure)
 - [Testing and Validation](#testing-and-validation)
+- [Detailed Test Matrix](#detailed-test-matrix)
 - [Repository Synchronization](#repository-synchronization)
 - [Security](#security)
 - [Contributing](#contributing)
@@ -92,6 +93,10 @@ Continuous integration runs automatically on every pull request. You can also va
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
 
+## Detailed Test Matrix
+
+Use the dedicated [testing guide](testing.md) when you need to know exactly what each suite covers or which local command maps to which CI workflow.
+
 ## Repository Synchronization
 
 This template feeds other VilnaCRM infrastructure projects through [`actions-template-sync`](https://github.com/AndreasAugustin/actions-template-sync). For authentication guidance, see the [Template Sync secrets](github-actions-secrets.md#template-sync-secrets).
@@ -117,5 +122,6 @@ Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard c
 1. Add or edit Markdown inside `docs/`.
 2. Cross-link the new material from `README.md` or other docs so it is discoverable.
 3. Include documentation updates in the same PR as related code changes whenever possible.
+4. Keep `AGENTS.md` aligned with any workflow or secret-handling changes that affect coding agents.
 
 You can organize content as it grows by creating subdirectories (e.g., `docs/pulumi/`).

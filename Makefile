@@ -80,7 +80,7 @@ test-mutation: ## Run mutation testing suite against Pulumi components.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
 
 test-cli: ## Validate Makefile front-ends via Bats.
-	COMPOSE_TARGET=test $(COMPOSE) run --rm $(COMPOSE_SERVICE) bats tests/unit
+	COMPOSE_TARGET=test $(COMPOSE) run --build --rm $(COMPOSE_SERVICE) bats tests/unit
 
 test: ## Run the complete Pulumi-focused test battery.
 	$(MAKE) test-pulumi
