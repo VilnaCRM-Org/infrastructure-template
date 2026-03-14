@@ -175,6 +175,7 @@ assert_compose_env_file() {
 @test "make test runs the aggregate local battery" {
   run make -n test
   [ "$status" -eq 0 ]
+  [[ "$output" == *"make doctor"* ]]
   [[ "$output" == *"make test-pulumi"* ]]
   [[ "$output" == *"make test-quality"* ]]
   [[ "$output" == *"make test-unit"* ]]
@@ -185,6 +186,7 @@ assert_compose_env_file() {
 @test "make ci runs the full local equivalent of the pull-request CI battery" {
   run make -n ci
   [ "$status" -eq 0 ]
+  [[ "$output" == *"make doctor"* ]]
   [[ "$output" == *"make build"* ]]
   [[ "$output" == *"make test-pulumi"* ]]
   [[ "$output" == *"make test-quality"* ]]

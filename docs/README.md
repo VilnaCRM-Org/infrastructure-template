@@ -89,9 +89,9 @@ uv, Ruff, Ty).
 The repository now uses `uv` for locking, syncing, and command execution, with
 Ruff and Ty as fast Rust-based quality gates.
 
-- The Docker workspace keeps its `uv` environment at
-  `/home/dev/.venvs/infrastructure-template` so host bind mounts cannot replace
-  the interpreter seen by Pulumi.
+- The Docker workspace keeps its `uv` environment outside the bind-mounted
+  workspace so host mounts cannot replace the interpreter seen by Pulumi
+  (see `docker-compose.yml` for the canonical workspace layout).
 - If you want a local virtual environment outside Docker, seed it once before
   syncing:
 
@@ -147,8 +147,8 @@ Continuous integration runs automatically on every pull request. You can also va
 
 - Start with `make doctor` if you need a quick sanity check of Docker, Compose, and the effective env file.
 - Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`.
-- Run `make test` to execute the faster structural, quality, unit, integration, and CLI checks together.
-- Execute `make ci` to run the full local equivalent of the pull-request battery, including the image build and mutation suite.
+- Run `make test` to execute the faster structural, quality, unit, integration, and CLI checks together after a prerequisite sanity check.
+- Execute `make ci` to run the full local equivalent of the pull-request battery, including the prerequisite check, image build, and mutation suite.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
 - GitHub Actions mirrors the full `make ci` command through the `Pulumi Local Test Battery` workflow.

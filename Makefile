@@ -124,6 +124,7 @@ test-cli: ## Validate Makefile front-ends via Bats.
 	COMPOSE_TARGET=test $(COMPOSE) run --build --rm $(COMPOSE_SERVICE) bats tests/unit
 
 test: ## Run the faster developer battery without the image build or mutation suite.
+	$(MAKE) doctor
 	$(MAKE) test-pulumi
 	$(MAKE) test-quality
 	$(MAKE) test-unit
@@ -131,6 +132,7 @@ test: ## Run the faster developer battery without the image build or mutation su
 	$(MAKE) test-cli
 
 ci: ## Run the full local equivalent of the pull-request CI battery.
+	$(MAKE) doctor
 	$(MAKE) build
 	$(MAKE) test-pulumi
 	$(MAKE) test-quality

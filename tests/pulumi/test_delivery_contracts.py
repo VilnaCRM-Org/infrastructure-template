@@ -1,5 +1,9 @@
-"""Structural tests for release automation and Dockerfile hardening."""
+"""Structural tests for release automation and repository hardening."""
 
+import os
+import re
+import stat
+import subprocess
 from pathlib import Path
 
 import yaml
@@ -7,10 +11,12 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR = PROJECT_ROOT / ".github" / "workflows"
 DOCKERFILE = PROJECT_ROOT / "Dockerfile"
+DOCKER_COMPOSE = PROJECT_ROOT / "docker-compose.yml"
 SECRETS_DOC = PROJECT_ROOT / "docs" / "github-actions-secrets.md"
 BATS_FILE = PROJECT_ROOT / "tests" / "unit" / "make_targets.bats"
 UV_LOCKFILE = PROJECT_ROOT / "uv.lock"
 RELEASE_WORKFLOWS = ("autorelease.yml", "autoprerelase.yml")
+TEMPLATE_SYNC_WORKFLOWS = ("template-sync-app.yml", "template-sync-pat.yml")
 PULL_REQUEST_WORKFLOW_TIMEOUTS = {
     "bats-tests.yml": {"bats_tests": 15},
     "pulumi-integration.yml": {"integration": 20},
@@ -28,6 +34,7 @@ DETAILED_DOCS = (
     "security-baseline.md",
     "sre-operations.md",
 )
+ACTION_SHA_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
 
 
 def _triggers(workflow: dict) -> dict:
@@ -92,6 +99,96 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     assert "/opt/pulumi/pulumi-language-dotnet" in dockerfile_text
     assert "/usr/local/aws-cli/v2/current/dist/awscli/examples" in dockerfile_text
     assert dockerfile_text.count("sha256sum -c -") >= 4
+
+
+def test_docker_compose_keeps_workspace_and_credentials_contract() -> None:
+    """Keep the local container contract stable for developers and CI."""
+    compose = yaml.safe_load(DOCKER_COMPOSE.read_text(encoding="utf-8"))
+    service = compose["services"]["pulumi"]
+
+    assert service["build"]["context"] == "."
+    assert service["build"]["dockerfile"] == "Dockerfile"
+    assert service["build"]["target"] == "${COMPOSE_TARGET:-dev}"
+    assert service["build"]["args"]["UID"] == "${UID:-1000}"
+    assert service["build"]["args"]["GID"] == "${GID:-1000}"
+    assert service["build"]["args"]["USERNAME"] == "dev"
+    assert service["working_dir"] == "/workspace"
+    assert service["tty"] is True
+    assert service["stdin_open"] is True
+
+    volumes = service["volumes"]
+    assert any(
+        volume["source"] == "." and volume["target"] == "/workspace"
+        for volume in volumes
+    )
+    assert any(
+        volume["source"] == "${HOME}/.aws"
+        and volume["target"] == "/home/dev/.aws"
+        and volume["read_only"] is True
+        for volume in volumes
+    )
+
+    assert service["env_file"] == [{"path": ".env", "required": False}]
+    assert service["environment"] == [
+        "PULUMI_ACCESS_TOKEN",
+        "PULUMI_BACKEND_URL",
+        "PULUMI_CONFIG_PASSPHRASE",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_SESSION_TOKEN",
+        "AWS_PROFILE",
+        "PYTHONPATH=/workspace/pulumi",
+    ]
+
+
+def test_prepare_docker_context_script_creates_expected_files(tmp_path: Path) -> None:
+    """Keep the shared CI/local bootstrap script idempotent and predictable."""
+    home_dir = tmp_path / "home"
+    repo_dir = tmp_path / "repo"
+    home_dir.mkdir()
+    repo_dir.mkdir()
+    (repo_dir / ".env.empty").write_text(
+        "PULUMI_SKIP_UPDATE_CHECK=true\n",
+        encoding="utf-8",
+    )
+
+    subprocess.run(
+        ["bash", str(PREPARE_SCRIPT)],
+        check=True,
+        cwd=repo_dir,
+        env={**os.environ, "HOME": str(home_dir)},
+        timeout=30,
+    )
+
+    aws_dir = home_dir / ".aws"
+    assert aws_dir.is_dir()
+    assert stat.S_IMODE(aws_dir.stat().st_mode) == 0o700
+    assert (repo_dir / ".env").read_text(encoding="utf-8") == (
+        "PULUMI_SKIP_UPDATE_CHECK=true\n"
+    )
+    assert (repo_dir / ".pulumi-backend").is_dir()
+
+
+def test_prepare_docker_context_script_preserves_existing_env_file(
+    tmp_path: Path,
+) -> None:
+    """Avoid overwriting developer-specific env files during bootstrap."""
+    home_dir = tmp_path / "home"
+    repo_dir = tmp_path / "repo"
+    home_dir.mkdir()
+    repo_dir.mkdir()
+    (repo_dir / ".env.empty").write_text("DEFAULT=value\n", encoding="utf-8")
+    (repo_dir / ".env").write_text("LOCAL=value\n", encoding="utf-8")
+
+    subprocess.run(
+        ["bash", str(PREPARE_SCRIPT)],
+        check=True,
+        cwd=repo_dir,
+        env={**os.environ, "HOME": str(home_dir)},
+        timeout=30,
+    )
+
+    assert (repo_dir / ".env").read_text(encoding="utf-8") == "LOCAL=value\n"
 
 
 def test_bats_suite_covers_every_public_make_target() -> None:
@@ -206,6 +303,55 @@ def test_ci_workflows_use_guardrails_and_shared_bootstrap() -> None:
             ), f"{workflow_name}:{job_name} must use the shared Docker bootstrap"
 
 
+def test_actions_are_pinned_to_full_commit_shas() -> None:
+    """Keep GitHub Actions dependencies pinned to immutable refs."""
+    for workflow_path in sorted(WORKFLOWS_DIR.glob("*.yml")):
+        workflow = yaml.safe_load(workflow_path.read_text(encoding="utf-8"))
+
+        for job in workflow.get("jobs", {}).values():
+            for step in job.get("steps", []):
+                uses = step.get("uses")
+                if not uses or uses.startswith("./"):
+                    continue
+
+                assert ACTION_SHA_REF.match(uses), (
+                    f"{workflow_path.name} must pin `{uses}` to a full commit SHA"
+                )
+
+
+def test_template_sync_workflows_keep_guardrails() -> None:
+    """Lock down template sync permissions, concurrency, and schedules."""
+    app_workflow = yaml.safe_load(
+        (WORKFLOWS_DIR / "template-sync-app.yml").read_text(encoding="utf-8")
+    )
+    pat_workflow = yaml.safe_load(
+        (WORKFLOWS_DIR / "template-sync-pat.yml").read_text(encoding="utf-8")
+    )
+
+    for workflow_name in TEMPLATE_SYNC_WORKFLOWS:
+        workflow = yaml.safe_load(
+            (WORKFLOWS_DIR / workflow_name).read_text(encoding="utf-8")
+        )
+        assert "schedule" in _triggers(workflow)
+        assert "workflow_dispatch" in _triggers(workflow)
+        assert workflow["concurrency"]["cancel-in-progress"] is True
+        assert workflow["jobs"]["repo-sync"]["timeout-minutes"] == 20
+
+    assert app_workflow["jobs"]["repo-sync"]["permissions"] == {"contents": "read"}
+    assert (
+        app_workflow["jobs"]["repo-sync"]["steps"][1]["with"]["persist-credentials"]
+        is False
+    )
+    assert pat_workflow["jobs"]["repo-sync"]["permissions"] == {
+        "contents": "write",
+        "pull-requests": "write",
+    }
+    assert (
+        pat_workflow["jobs"]["repo-sync"]["steps"][0]["with"]["persist-credentials"]
+        is False
+    )
+
+
 def test_bats_workflow_runs_on_push_and_pull_request() -> None:
     """Keep the CLI regression suite aligned with other local-only checks."""
     workflow = yaml.safe_load(
@@ -228,8 +374,8 @@ def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
     assert "ruff" in jobs, "python-quality.yml missing 'ruff' job"
     assert "ty" in jobs, "python-quality.yml missing 'ty' job"
 
-    ruff_runs = [step.get("run") for step in jobs["ruff"]["steps"]]
-    ty_runs = [step.get("run") for step in jobs["ty"]["steps"]]
+    ruff_runs = [step.get("run") for step in jobs.get("ruff", {}).get("steps", [])]
+    ty_runs = [step.get("run") for step in jobs.get("ty", {}).get("steps", [])]
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
@@ -246,3 +392,8 @@ def test_operator_docs_are_present_and_indexed() -> None:
         assert (PROJECT_ROOT / "docs" / doc_name).exists()
         assert doc_name in docs_index
         assert f"docs/{doc_name}" in root_readme
+
+    assert "/home/dev/.venvs/infrastructure-template" not in docs_index
+    assert "/home/dev/.venvs/infrastructure-template" not in root_readme
+    assert "docker-compose.yml" in docs_index
+    assert "docker-compose.yml" in root_readme
