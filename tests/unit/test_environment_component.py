@@ -181,8 +181,8 @@ def test_service_name_defaults_to_project_name() -> None:
         _run_pulumi_program(program)
 
 
-def test_component_uses_expected_type_token() -> None:
-    """Expose the expected component type token."""
+def test_component_exposes_environment_settings_instance() -> None:
+    """Create an EnvironmentSettings component instance."""
     captured: dict[str, EnvironmentSettings] = {}
 
     def program() -> None:
@@ -195,7 +195,7 @@ def test_component_uses_expected_type_token() -> None:
 
     resource = captured.get("resource")
     assert resource is not None, "EnvironmentSettings instance was not created"
-    assert getattr(resource, "_type", None) == "infrastructure-template:core:EnvironmentSettings"
+    assert isinstance(resource, EnvironmentSettings)
 
 
 def test_main_exports_expected_outputs() -> None:

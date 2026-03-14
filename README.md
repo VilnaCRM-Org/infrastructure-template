@@ -51,6 +51,19 @@ Community Q&A lives under the [`vilnacrm` tag on Stack Overflow](https://stackov
 Docker Compose CLI 2.24.0+ is required because `docker-compose.yml` uses the
 `env_file.required` flag (older Compose releases fail to parse it).
 
+## Environment files
+
+The Makefile resolves the effective env file as the first existing file from
+`.env` and `.env.empty`.
+
+- `.env` is git-ignored and should hold local secrets or developer-specific overrides.
+- `.env.empty` is committed and acts as the minimal fallback so Docker Compose and `make` targets still run in a fresh clone.
+- `.env.dist` remains an optional example/template file you can copy from when you want a fuller starting point; unlike `.env.empty`, it is not the automatic fallback used by the Makefile.
+
+For onboarding, create or update `.env` with any local overrides you need, keep
+`.env.empty` safe to commit, and refresh `.env.dist` only when the example
+values or documented setup flow changes.
+
 Install development dependencies via Poetry and then use the `make` targets to run the different Pulumi-focused suites:
 
 ```sh
