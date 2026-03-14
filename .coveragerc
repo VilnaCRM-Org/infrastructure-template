@@ -4,12 +4,11 @@ parallel = True
 [paths]
 source =
     pulumi
+    policy
     */pulumi-program
 
 [report]
 show_missing = True
-include =
-    pulumi/*
 omit =
     */site-packages/*
     pulumi/sitecustomize.py

@@ -22,6 +22,7 @@ PULL_REQUEST_WORKFLOW_TIMEOUTS = {
     "pulumi-integration.yml": {"integration": 20},
     "pulumi-local.yml": {"local_battery": 30},
     "pulumi-mutation.yml": {"mutation": 45},
+    "pulumi-policy.yml": {"policy": 15},
     "pulumi-structural.yml": {"structural": 15},
     "pulumi-unit.yml": {"unit": 15},
     "python-quality.yml": {"ruff": 15, "ty": 15},
@@ -29,8 +30,10 @@ PULL_REQUEST_WORKFLOW_TIMEOUTS = {
 DOCS_INDEX = PROJECT_ROOT / "docs" / "README.md"
 ROOT_README = PROJECT_ROOT / "README.md"
 PREPARE_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_docker_context.sh"
+PREPARE_POLICY_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_policy_pack.sh"
 DETAILED_DOCS = (
     "ci-architecture.md",
+    "pulumi-guardrails.md",
     "security-baseline.md",
     "sre-operations.md",
 )
@@ -68,7 +71,7 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         )
         assert any(step.get("name") == "Create Release" for step in steps)
         assert release_job["timeout-minutes"] == 10
-        assert workflow["concurrency"]["cancel-in-progress"] is True
+        assert workflow["concurrency"]["cancel-in-progress"] is False
 
 
 def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
@@ -166,6 +169,7 @@ def test_prepare_docker_context_script_creates_expected_files(tmp_path: Path) ->
     assert (repo_dir / ".env").read_text(encoding="utf-8") == (
         "PULUMI_SKIP_UPDATE_CHECK=true\n"
     )
+    assert stat.S_IMODE((repo_dir / ".env").stat().st_mode) == 0o600
     assert (repo_dir / ".pulumi-backend").is_dir()
 
 
@@ -189,6 +193,7 @@ def test_prepare_docker_context_script_preserves_existing_env_file(
     )
 
     assert (repo_dir / ".env").read_text(encoding="utf-8") == "LOCAL=value\n"
+    assert stat.S_IMODE((repo_dir / ".env").stat().st_mode) == 0o600
 
 
 def test_prepare_docker_context_script_requires_env_template(tmp_path: Path) -> None:
@@ -210,6 +215,17 @@ def test_prepare_docker_context_script_requires_env_template(tmp_path: Path) -> 
 
     assert result.returncode != 0
     assert "error: .env.empty not found" in result.stderr
+
+
+def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
+    """Keep policy-pack bootstrap aligned with the shared uv-managed interpreter."""
+    script_text = PREPARE_POLICY_SCRIPT.read_text(encoding="utf-8")
+
+    assert PREPARE_POLICY_SCRIPT.exists()
+    assert "/home/dev/.venvs/infrastructure-template" in script_text
+    assert "uv sync --frozen --all-groups" in script_text
+    assert "import pulumi" in script_text
+    assert "import pulumi_policy" in script_text
 
 
 def test_bats_suite_covers_every_public_make_target() -> None:
@@ -235,6 +251,7 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make -n test-unit",
         "make -n test-integration",
         "make -n test-pulumi",
+        "make -n test-policy",
         "make -n test-mutation",
         "make -n test-cli",
         "make -n test",
@@ -272,6 +289,7 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
         "pulumi-integration.yml": ["make test-integration"],
         "pulumi-local.yml": ["make ci-pr"],
         "pulumi-mutation.yml": ["make test-mutation"],
+        "pulumi-policy.yml": ["make test-policy"],
         "pulumi-structural.yml": ["make test-pulumi"],
         "pulumi-unit.yml": ["make test-unit"],
         "python-quality.yml": ["make test-ruff", "make test-ty"],
@@ -404,6 +422,20 @@ def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
     assert "pull_request" in triggers
     assert "make test-ruff" in ruff_runs
     assert "make test-ty" in ty_runs
+
+
+def test_policy_workflow_runs_on_push_and_pull_request() -> None:
+    """Keep Pulumi policy validation wired into the PR check surface."""
+    workflow = yaml.safe_load(
+        (WORKFLOWS_DIR / "pulumi-policy.yml").read_text(encoding="utf-8")
+    )
+    triggers = _triggers(workflow)
+    steps = workflow["jobs"]["policy"]["steps"]
+    runs = [step.get("run") for step in steps if step.get("run")]
+
+    assert triggers["push"]["branches"] == ["main"]
+    assert "pull_request" in triggers
+    assert "make test-policy" in runs
 
 
 def test_operator_docs_are_present_and_indexed() -> None:

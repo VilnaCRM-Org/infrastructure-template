@@ -9,7 +9,9 @@ if [[ ! -f .env ]]; then
     echo "error: .env.empty not found; cannot bootstrap .env" >&2
     exit 1
   fi
-  cp .env.empty .env
+  install -m 600 .env.empty .env
+else
+  chmod 600 .env
 fi
 
 mkdir -p .pulumi-backend

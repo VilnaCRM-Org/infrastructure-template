@@ -16,6 +16,7 @@ Every pull request check is driven by the same Docker workspace and the same
 | Workflow | Primary command | Purpose |
 | --- | --- | --- |
 | `pulumi-structural.yml` | `make test-pulumi` | Validates Pulumi metadata, workflow contracts, and Dockerfile safeguards |
+| `pulumi-policy.yml` | `make test-policy` | Validates the Pulumi policy pack and AWS guardrail coverage |
 | `python-quality.yml` | `make test-ruff`, `make test-ty` | Fast Rust-based linting, formatting, and type diagnostics |
 | `pulumi-unit.yml` | `make test-unit` | Mock-based Pulumi component tests with full coverage |
 | `pulumi-integration.yml` | `make test-integration` | Automation API lifecycle tests against a local file backend |
@@ -32,6 +33,7 @@ That script standardizes the expected local state:
 
 - creates `${HOME}/.aws` with restrictive permissions
 - materializes `.env` from `.env.empty` when needed
+- enforces owner-only permissions on `.env`
 - prepares the `.pulumi-backend` directory used by local-backend test flows
 
 Centralizing the setup keeps workflows consistent and reduces drift between
@@ -60,7 +62,7 @@ releases, or pull requests.
 The repository intentionally avoids workflow-only logic for the core validation
 battery.
 
-- `make test` is the fast inner-loop command.
+- `make test` is the fast inner-loop command for structural, policy, quality, unit, integration, and CLI checks.
 - `make ci-pr` matches the non-mutation GitHub pull-request battery.
 - `make ci` is the full local superset, including the dedicated mutation suite.
 - `make doctor` provides a quick prerequisite check before developers start

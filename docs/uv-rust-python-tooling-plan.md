@@ -26,7 +26,8 @@ If you need a local host-side environment outside Docker, create it the same
 way:
 
 ```bash
-uv venv --seed
+export UV_PROJECT_ENVIRONMENT="${HOME}/.venvs/infrastructure-template"
+uv venv --seed "${UV_PROJECT_ENVIRONMENT}"
 uv sync --all-groups
 ```
 

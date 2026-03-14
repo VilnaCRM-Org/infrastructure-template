@@ -5,6 +5,7 @@
 [![Pulumi Unit Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-unit.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-unit.yml)
 [![Pulumi Integration Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-integration.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-integration.yml)
 [![Pulumi Structural Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-structural.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-structural.yml)
+[![Pulumi Policy Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-policy.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-policy.yml)
 [![Pulumi Mutation Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-mutation.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-mutation.yml)
 [![CLI Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/bats-tests.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/bats-tests.yml)
 [![Python Quality Checks](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/python-quality.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/python-quality.yml)
@@ -15,7 +16,7 @@ Production-ready scaffold for teams that want to ship infrastructure-as-code wit
 
 - Pulumi (Python) starter that exports environment metadata and tagging helpers.
 - Reproducible Docker Compose workspace with a Pulumi-ready container and helper `make` tasks.
-- CI pipelines for structural, unit, integration, mutation, and CLI-level checks.
+- CI pipelines for structural, policy, unit, integration, mutation, and CLI-level checks.
 - Release and template-sync automations to keep downstream repos aligned.
 - Documentation on AWS credential management for secure automation using GitHub OIDC or static secrets.
 
@@ -25,7 +26,7 @@ Spin up consistent project infrastructure without wiring every component manuall
 
 - Encodes best practices from VilnaCRM’s production stack.
 - Works out-of-the-box with AWS and Pulumi.
-- Keeps infrastructure changes reviewable with local Pulumi previews and CI test suites before deploying.
+- Keeps infrastructure changes reviewable with local Pulumi previews, policy-pack guardrails, and CI test suites before deploying.
 
 ## License
 
@@ -42,6 +43,7 @@ All project docs live under `docs/` to keep everything version controlled. Start
 - [CI/CD and Secrets](docs/README.md#cicd-and-secrets)
 - [CI Architecture](docs/ci-architecture.md)
 - [Security Baseline](docs/security-baseline.md)
+- [Pulumi Guardrails](docs/pulumi-guardrails.md)
 - [uv and Rust-native Python tooling](docs/uv-rust-python-tooling-plan.md)
 - [SRE Operations](docs/sre-operations.md)
 - [Testing and Validation](docs/README.md#testing-and-validation)
@@ -73,7 +75,8 @@ If you want a local `uv` environment outside Docker, seed it once so Pulumi's
 Automation API can still use `pip` for package discovery:
 
 ```sh
-uv venv --seed
+export UV_PROJECT_ENVIRONMENT="${HOME}/.venvs/infrastructure-template"
+uv venv --seed "${UV_PROJECT_ENVIRONMENT}"
 uv sync --all-groups
 ```
 
@@ -92,6 +95,9 @@ make test-pulumi
 # Rust-based quality gates
 make test-quality
 
+# Pulumi policy and guardrail validation
+make test-policy
+
 # Unit tests (pure Pulumi runtime with mocks)
 make test-unit
 
@@ -102,10 +108,15 @@ make test-integration
 make test-mutation
 ```
 
-Use `make test` for the faster structural, quality, unit, integration, and CLI battery during day-to-day development. Use `make ci-pr` when you want the same non-mutation battery that GitHub runs in `pulumi-local.yml`. Use `make ci` when you want the full local superset, including the prerequisite check, image build, and mutation suite.
+Use `make test` for the faster structural, policy, quality, unit, integration, and CLI battery during day-to-day development. Use `make ci-pr` when you want the same non-mutation battery that GitHub runs in `pulumi-local.yml`. Use `make ci` when you want the full local superset, including the prerequisite check, image build, and mutation suite.
 
 Run `make doctor` when you need a fast prerequisite check before debugging local
 Docker or Compose behavior.
+
+`make pulumi-preview` and `make pulumi-up` automatically enable the repository
+policy pack. If the shared `uv` environment inside the container is missing the
+policy runtime dependencies, the bootstrap helper resyncs it from `uv.lock`
+before Pulumi starts.
 
 ## Security
 

@@ -20,10 +20,17 @@ DOCKER_COMPOSE    = docker compose
 COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
 COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
+POLICY_PACK_DIR   = /workspace/policy
+POLICY_PACK_FLAG  = --policy-pack $(POLICY_PACK_DIR)
 COVERAGE_OPTS            ?= --cov=./pulumi --cov-report=term-missing
-UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS) --cov-fail-under=100
+UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS)
+POLICY_COVERAGE_OPTS     ?= --cov=./policy --cov-report=
 INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 	-e COVERAGE_PROCESS_START=/workspace/.coveragerc \
+	-e COVERAGE_RCFILE=/workspace/.coveragerc
+UNIT_COVERAGE_ENV         = -e COVERAGE_FILE=/workspace/.coverage.unit \
+	-e COVERAGE_RCFILE=/workspace/.coveragerc
+POLICY_COVERAGE_ENV       = -e COVERAGE_FILE=/workspace/.coverage.policy \
 	-e COVERAGE_RCFILE=/workspace/.coveragerc
 
 # Misc
@@ -31,8 +38,8 @@ INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 .RECIPEPREFIX    +=
 .PHONY: help doctor build start pulumi-preview pulumi-up pulumi-refresh \
         pulumi-destroy sh down ci ci-pr test-quality test-ruff test-ty \
-        test-unit test-integration test-pulumi test-mutation test-cli \
-        test all clean
+        test-unit test-integration test-pulumi test-policy test-mutation \
+        test-cli test all clean
 
 all: help ## Display help (default goal).
 
@@ -69,10 +76,10 @@ start: ## Initialize and start the Pulumi development environment.
 	$(COMPOSE) up -d
 
 pulumi-preview: ## Preview infrastructure changes from inside the Pulumi container.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) preview
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/prepare_policy_pack.sh && pulumi $(PULUMI_CWD_FLAG) preview $(POLICY_PACK_FLAG)"
 
 pulumi-up: ## Apply the current Pulumi infrastructure plan.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) up
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/prepare_policy_pack.sh && pulumi $(PULUMI_CWD_FLAG) up $(POLICY_PACK_FLAG)"
 
 pulumi-refresh: ## Sync the Pulumi stack with live cloud resources.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) refresh
@@ -87,10 +94,13 @@ down: ## Stop the Docker Compose environment.
 	$(DOCKER_COMPOSE) down
 
 test-unit: ## Execute fast unit tests for the Pulumi application layer.
-	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
+	$(COMPOSE) run --rm $(UNIT_COVERAGE_ENV) -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
 		$(COMPOSE_SERVICE) uv run pytest -q tests/unit
+	$(COMPOSE) run --rm $(UNIT_COVERAGE_ENV) \
+		$(COMPOSE_SERVICE) uv run coverage report --show-missing --include='pulumi/*' --fail-under=100
 
 test-integration: ## Execute Pulumi automation-based integration tests.
+	rm -f .coverage.integration .coverage.integration.*
 	$(COMPOSE) run --rm $(INTEGRATION_COVERAGE_ENV) \
 		$(COMPOSE_SERVICE) uv run pytest -q tests/integration
 	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
@@ -98,21 +108,28 @@ test-integration: ## Execute Pulumi automation-based integration tests.
 		$(COMPOSE_SERVICE) uv run coverage combine
 	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
 		-e COVERAGE_RCFILE=/workspace/.coveragerc \
-		$(COMPOSE_SERVICE) uv run coverage report --show-missing
+		$(COMPOSE_SERVICE) uv run coverage report --show-missing --fail-under=100 --include='pulumi/*'
 
 test-pulumi: ## Perform structural checks on Pulumi project configuration.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run pytest -q tests/pulumi
 
+test-policy: ## Execute Pulumi policy-pack tests and guardrail coverage.
+	$(COMPOSE) run --rm $(POLICY_COVERAGE_ENV) -e PYTEST_ADDOPTS="$(POLICY_COVERAGE_OPTS)" \
+		$(COMPOSE_SERVICE) uv run pytest -q tests/policies
+	$(COMPOSE) run --rm $(POLICY_COVERAGE_ENV) \
+		$(COMPOSE_SERVICE) uv run coverage report --show-missing --include='policy/*' --fail-under=100
+
 test-ruff: ## Run Ruff lint and format checks against Python sources.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff check pulumi tests
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff format --check pulumi tests
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff check pulumi policy tests
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff format --check pulumi policy tests
 
 test-ty: ## Run the Ty static type checker against Python sources.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ty check \
+		--extra-search-path policy \
 		--ignore missing-argument \
 		--ignore invalid-argument-type \
 		--ignore conflicting-declarations \
-		pulumi
+		pulumi policy
 
 test-quality: ## Run Rust-based Python quality gates.
 	$(MAKE) test-ruff
@@ -127,6 +144,7 @@ test-cli: ## Validate Makefile front-ends via Bats.
 test: ## Run the faster developer battery without the image build or mutation suite.
 	$(MAKE) doctor
 	$(MAKE) test-pulumi
+	$(MAKE) test-policy
 	$(MAKE) test-quality
 	$(MAKE) test-unit
 	$(MAKE) test-integration
@@ -136,6 +154,7 @@ ci-pr: ## Run the GitHub PR battery except the dedicated mutation workflow.
 	$(MAKE) doctor
 	$(MAKE) build
 	$(MAKE) test-pulumi
+	$(MAKE) test-policy
 	$(MAKE) test-quality
 	$(MAKE) test-unit
 	$(MAKE) test-integration

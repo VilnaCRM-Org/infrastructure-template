@@ -10,6 +10,7 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 - [Python Tooling](#python-tooling)
 - [CI/CD and Secrets](#cicd-and-secrets)
 - [CI Architecture](#ci-architecture)
+- [Pulumi Guardrails](#pulumi-guardrails)
 - [Security Baseline](#security-baseline)
 - [Project Structure](#project-structure)
 - [Testing and Validation](#testing-and-validation)
@@ -55,14 +56,15 @@ ci-pr             Run the non-mutation GitHub pull-request battery locally.
 doctor            Check local prerequisites and effective paths without printing secrets.
 help              Print the available make targets.
 start             Initialize and start the Pulumi development environment.
-pulumi-preview    Preview infrastructure changes from inside the container.
-pulumi-up         Apply the current infrastructure plan.
+pulumi-preview    Preview infrastructure changes with the policy pack enforced.
+pulumi-up         Apply the current infrastructure plan with the policy pack enforced.
 pulumi-refresh    Sync the Pulumi stack with live cloud resources.
 pulumi-destroy    Tear down the stack (irreversible; use with caution).
 sh                Open a shell inside the Pulumi container.
 down              Stop the Docker Compose environment.
 test              Run the aggregate structural, quality, unit, integration, and CLI battery.
 test-pulumi       Structural validation for manifests, workflows, and supply-chain guards.
+test-policy       Pulumi policy-pack tests and guardrail coverage.
 test-quality      Rust-based linting, formatting, and typing checks.
 test-ruff         Ruff lint and format drift checks.
 test-ty           Ty static typing diagnostics for the Pulumi layer.
@@ -97,7 +99,8 @@ Ruff and Ty as fast Rust-based quality gates.
   syncing:
 
   ```bash
-  uv venv --seed
+  export UV_PROJECT_ENVIRONMENT="${HOME}/.venvs/infrastructure-template"
+  uv venv --seed "${UV_PROJECT_ENVIRONMENT}"
   uv sync --all-groups
   ```
 
@@ -111,6 +114,7 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `pulumi-structural.yml` validates Pulumi project metadata.
 - `pulumi-unit.yml` runs unit tests with Pulumi mocks.
 - `pulumi-integration.yml` runs Pulumi Automation tests with a local file backend.
+- `pulumi-policy.yml` executes the Pulumi policy-pack suite.
 - `pulumi-mutation.yml` executes mutation testing.
 - `python-quality.yml` runs Ruff and Ty as dedicated quality checks.
 - `bats-tests.yml` validates the Makefile CLI surface.
@@ -135,6 +139,12 @@ Use the [security baseline](security-baseline.md) for the template's enforced
 controls, extension checklist, and guidance on secrets, token scope, and
 supply-chain hygiene.
 
+## Pulumi Guardrails
+
+Use the [Pulumi guardrails guide](pulumi-guardrails.md) for the runtime
+identifier rules, policy-pack guardrails, and the local/CI commands that keep
+them enforced.
+
 ## Project Structure
 
 - `pulumi/__main__.py` – Minimal Pulumi program that exports environment metadata and tags.
@@ -147,9 +157,11 @@ supply-chain hygiene.
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
 - Start with `make doctor` if you need a quick sanity check of Docker, Compose, and the effective env file.
-- Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`.
+- Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-policy`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`.
+- Use `make test-policy` when you are changing guardrails or adding new AWS resource types that should be covered by the policy pack.
+- `make pulumi-preview` and `make pulumi-up` sync the shared `uv` environment if needed and then run Pulumi with the repository policy pack enabled.
 - Run `make test` to execute the faster structural, quality, unit, integration, and CLI checks together after a prerequisite sanity check.
-- Execute `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check and image build.
+- Execute `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check, image build, and policy suite.
 - Execute `make ci` to run the full local equivalent of all GitHub checks, including the prerequisite check, image build, and mutation suite.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.

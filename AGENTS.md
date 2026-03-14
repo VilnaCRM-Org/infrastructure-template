@@ -9,11 +9,12 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 3. Run the narrowest useful validation for the files you touched.
 4. Use `pulumi -C pulumi ...` for direct Pulumi CLI commands.
 5. Use `uv run ...` for Python CLI commands instead of invoking tools directly from the global environment.
-6. Seed local `uv` environments with `uv venv --seed` before syncing if you need to run Pulumi Automation outside Docker.
-7. Keep the structural, quality, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
+6. Seed local `uv` environments with `export UV_PROJECT_ENVIRONMENT="${HOME}/.venvs/infrastructure-template"; uv venv --seed "${UV_PROJECT_ENVIRONMENT}"` before syncing if you need to run Pulumi Automation outside Docker.
+7. Keep the structural, policy, quality, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
 8. Use `make ci-pr` when you want the non-mutation GitHub PR battery, `make ci` for the full local superset including mutation, and `make test` for the faster non-mutation developer battery.
 9. Use `make doctor` before debugging local Docker or Compose issues.
 10. Reuse `./scripts/prepare_docker_context.sh` when changing Docker-backed CI jobs so setup remains consistent across workflows.
+11. Keep `./scripts/prepare_policy_pack.sh`, `policy/PulumiPolicy.yaml`, and the shared `uv` environment contract aligned when changing Pulumi policy-pack behavior.
 
 ## Secret handling
 
@@ -44,3 +45,4 @@ These rules are mandatory for AI coding agents in this repository.
 3. Keep refactors minimal and directly tied to review feedback.
 4. Update `docs/` whenever the developer workflow, CI surface, or credential contract changes.
 5. Re-run the relevant checks before pushing.
+6. Keep the Pulumi policy pack under `policy/` aligned with the runtime guardrails in `pulumi/app/`.

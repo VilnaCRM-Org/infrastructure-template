@@ -1,0 +1,6 @@
+runtime:
+  name: python
+  options:
+    virtualenv: /home/dev/.venvs/infrastructure-template
+version: 0.1.0
+description: Pulumi policy pack for infrastructure-template guardrails.

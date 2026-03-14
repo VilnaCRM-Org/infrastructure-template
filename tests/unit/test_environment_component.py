@@ -1,6 +1,7 @@
 """Unit tests for the EnvironmentSettings Pulumi component."""
 
 import asyncio
+import re
 import runpy
 import sys
 from collections.abc import Callable, Iterator
@@ -8,6 +9,7 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
+import pytest
 from app.environment import EnvironmentSettings
 from pulumi.runtime import mocks, settings, stack
 
@@ -203,6 +205,39 @@ def test_service_name_defaults_to_project_name() -> None:
 
     with mocked_pulumi_context(project_name="project-fallback"):
         _run_pulumi_program(program)
+
+
+def _assert_config_error(config_values: dict[str, object], message: str) -> None:
+    """Assert invalid config is rejected inside the mocked Pulumi runtime."""
+
+    def program() -> None:
+        """Instantiate the component to trigger config validation."""
+        EnvironmentSettings("unit")
+
+    with mocked_pulumi_context(config_values):
+        with pytest.raises(ValueError, match=rf"^{re.escape(message)}\.$"):
+            _run_pulumi_program(program)
+
+
+def test_environment_rejects_blank_config_value() -> None:
+    """Reject empty environment config instead of silently defaulting."""
+    _assert_config_error({"environment": ""}, "environment must not be empty")
+
+
+def test_environment_rejects_padded_config_value() -> None:
+    """Reject padded environment config to keep exported identifiers stable."""
+    _assert_config_error(
+        {"environment": " qa "},
+        "environment must not contain surrounding whitespace",
+    )
+
+
+def test_service_name_rejects_invalid_config_value() -> None:
+    """Reject service config that would produce invalid stack metadata."""
+    _assert_config_error(
+        {"serviceName": "Billing_API"},
+        "service name must use lowercase letters, digits, and hyphens only",
+    )
 
 
 def test_component_registers_expected_type_token() -> None:

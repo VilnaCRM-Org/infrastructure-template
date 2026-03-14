@@ -29,6 +29,7 @@ assert_compose_env_file() {
   [[ "$output" == *"test-cli"* ]]
   [[ "$output" == *"test-integration"* ]]
   [[ "$output" == *"test-mutation"* ]]
+  [[ "$output" == *"test-policy"* ]]
   [[ "$output" == *"test-pulumi"* ]]
   [[ "$output" == *"test-quality"* ]]
   [[ "$output" == *"test-ruff"* ]]
@@ -70,14 +71,16 @@ assert_compose_env_file() {
   run make -n pulumi-preview
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"pulumi --cwd pulumi preview"* ]]
+  [[ "$output" == *"./scripts/prepare_policy_pack.sh"* ]]
+  [[ "$output" == *"pulumi --cwd pulumi preview --policy-pack /workspace/policy"* ]]
 }
 
 @test "make pulumi-up executes deployment inside container" {
   run make -n pulumi-up
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"pulumi --cwd pulumi up"* ]]
+  [[ "$output" == *"./scripts/prepare_policy_pack.sh"* ]]
+  [[ "$output" == *"pulumi --cwd pulumi up --policy-pack /workspace/policy"* ]]
 }
 
 @test "make pulumi-refresh executes refresh inside container" {
@@ -123,6 +126,7 @@ assert_compose_env_file() {
   [[ "$output" == *"pytest -q tests/integration"* ]]
   [[ "$output" == *"coverage combine"* ]]
   [[ "$output" == *"coverage report --show-missing"* ]]
+  [[ "$output" == *"--fail-under=100"* ]]
 }
 
 @test "make test-pulumi executes the structural suite" {
@@ -132,12 +136,22 @@ assert_compose_env_file() {
   [[ "$output" == *"pytest -q tests/pulumi"* ]]
 }
 
+@test "make test-policy executes the policy suite with full coverage" {
+  run make -n test-policy
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"pytest -q tests/policies"* ]]
+  [[ "$output" == *"--cov=./policy"* ]]
+  [[ "$output" == *".coverage.policy"* ]]
+  [[ "$output" == *"coverage report --show-missing --include='policy/*' --fail-under=100"* ]]
+}
+
 @test "make test-ruff executes Ruff lint and formatting checks" {
   run make -n test-ruff
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"uv run ruff check pulumi tests"* ]]
-  [[ "$output" == *"uv run ruff format --check pulumi tests"* ]]
+  [[ "$output" == *"uv run ruff check pulumi policy tests"* ]]
+  [[ "$output" == *"uv run ruff format --check pulumi policy tests"* ]]
 }
 
 @test "make test-ty executes the Ty type checker" {
@@ -149,6 +163,7 @@ assert_compose_env_file() {
   [[ "$output" == *"--ignore invalid-argument-type"* ]]
   [[ "$output" == *"--ignore conflicting-declarations"* ]]
   [[ "$output" == *"pulumi"* ]]
+  [[ "$output" == *"policy"* ]]
 }
 
 @test "make test-quality delegates to the Rust-based quality suite" {
@@ -178,6 +193,7 @@ assert_compose_env_file() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"make doctor"* ]]
   [[ "$output" == *"make test-pulumi"* ]]
+  [[ "$output" == *"make test-policy"* ]]
   [[ "$output" == *"make test-quality"* ]]
   [[ "$output" == *"make test-unit"* ]]
   [[ "$output" == *"make test-integration"* ]]
@@ -197,6 +213,7 @@ assert_compose_env_file() {
   [[ "$output" == *"make doctor"* ]]
   [[ "$output" == *"make build"* ]]
   [[ "$output" == *"make test-pulumi"* ]]
+  [[ "$output" == *"make test-policy"* ]]
   [[ "$output" == *"make test-quality"* ]]
   [[ "$output" == *"make test-unit"* ]]
   [[ "$output" == *"make test-integration"* ]]

@@ -38,9 +38,9 @@ When you also want the dedicated mutation suite locally:
 make ci
 ```
 
-Use `make ci-pr` to catch the same structural, quality, unit, integration, and
-CLI regressions that GitHub runs before merge. Use `make ci` when you also want
-the mutation suite before the branch reaches GitHub Actions.
+Use `make ci-pr` to catch the same structural, policy, quality, unit,
+integration, and CLI regressions that GitHub runs before merge. Use `make ci`
+when you also want the mutation suite before the branch reaches GitHub Actions.
 
 ## Preview and Apply
 
@@ -50,12 +50,18 @@ Use previews as the default gate for real infrastructure changes:
 make pulumi-preview
 ```
 
+The preview target syncs the shared `uv` environment if necessary and enables
+the repository policy pack automatically, so guardrail drift is caught before
+the Pulumi plan is shown.
+
 Apply only after the preview is understood and reviewed:
 
 ```bash
 make pulumi-up
 pulumi -C pulumi stack output
 ```
+
+`make pulumi-up` uses the same policy-pack enforcement path as preview.
 
 For drift reconciliation without applying a fresh plan:
 
@@ -98,6 +104,7 @@ When something looks wrong:
 Map failures back to their local commands:
 
 - `Structural` -> `make test-pulumi`
+- `Policy` -> `make test-policy`
 - `Ruff` -> `make test-ruff`
 - `Ty` -> `make test-ty`
 - `Unit` -> `make test-unit`

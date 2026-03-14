@@ -13,6 +13,7 @@ The main risks for this repository are:
 - supply-chain drift in the Docker workspace and GitHub Actions automation
 - over-privileged automation tokens in release or deployment workflows
 - non-reproducible infrastructure changes that bypass preview and review
+- unsafe infrastructure defaults that slip past code review without enforceable guardrails
 
 The template does not try to eliminate all operational risk. It does aim to make
 the safe path the easy path for normal day-to-day infrastructure work.
@@ -36,16 +37,31 @@ the safe path the easy path for normal day-to-day infrastructure work.
 - CI workflows use least-privilege `permissions` blocks.
 - PR validation workflows use concurrency groups with
   `cancel-in-progress: true` so stale runs do not compete for runners.
+- Release workflows serialize runs with `cancel-in-progress: false` so tag and
+  changelog publication cannot be interrupted mid-run.
 - CI jobs define timeouts so hung runs fail fast instead of silently burning
   minutes.
 - `actions/checkout` runs with `persist-credentials: false` to avoid leaving a
   writable Git credential behind in the workspace.
+
+### Pulumi Guardrails
+
+- Runtime guardrails validate `environment` and `serviceName` before the Pulumi
+  program exports stack metadata.
+- A Pulumi policy pack under `policy/` enforces mandatory default tags for
+  tagged AWS resources.
+- The same policy pack blocks public S3 bucket ACLs and public SSH/RDP exposure
+  in security groups.
+- Policy validation has a dedicated CI workflow and a focused local command:
+  `make test-policy`.
 
 ### Secrets and Identity
 
 - Local developer overrides belong in `.env`, which stays git-ignored.
 - `.env.empty` is the committed fallback used to keep the Docker and Make flows
   runnable without real credentials.
+- The shared Docker bootstrap script materializes `.env` with owner-only
+  permissions to avoid leaving fallback configuration world-readable.
 - The CI battery is intentionally local-backend-friendly and does not require
   live AWS credentials by default.
 - Release automation falls back to `GITHUB_TOKEN` when
@@ -87,6 +103,8 @@ When you extend this template, verify all of the following:
 - new workflows define `permissions`, `concurrency`, and `timeout-minutes`
 - new Make targets do not print secrets or require live credentials unless that
   behavior is explicitly documented
+- new AWS resource types are checked against the Pulumi policy pack when they
+  should inherit the repository guardrails
 - new secrets are added to [GitHub Actions Secrets](github-actions-secrets.md)
   and referenced from the relevant operator guide
 - structural tests are updated so the security contract stays enforced
