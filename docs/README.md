@@ -11,6 +11,7 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 - [Project Structure](#project-structure)
 - [Testing and Validation](#testing-and-validation)
 - [Planned Follow-ups](#planned-follow-ups)
+- [Detailed Test Matrix](#detailed-test-matrix)
 - [Repository Synchronization](#repository-synchronization)
 - [Security](#security)
 - [Contributing](#contributing)
@@ -20,7 +21,9 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 ## Quick Start
 
 1. **Use this template** or clone the repository locally.
-2. Install [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/).
+2. Install [Docker](https://docs.docker.com/engine/install/) and [Docker Compose](https://docs.docker.com/compose/install/)
+   (Docker Compose CLI 2.24.0+ is required because `docker-compose.yml` uses
+   `env_file.required`).
 3. (Optional) Install the [Pulumi CLI](https://www.pulumi.com/docs/install/) if you plan to run commands outside the container.
 4. Launch the local environment:
 
@@ -42,6 +45,8 @@ That is all you need to begin iterating on the sample AWS instance or adapting t
 `make help` prints the available tasks. Most common targets:
 
 ```text
+all               Display help (default goal).
+help              Print the available make targets.
 start             Initialize and start the Pulumi development environment.
 pulumi-preview    Preview infrastructure changes from inside the container.
 pulumi-up         Apply the current infrastructure plan.
@@ -49,6 +54,13 @@ pulumi-refresh    Sync the Pulumi stack with live cloud resources.
 pulumi-destroy    Tear down the stack (irreversible; use with caution).
 sh                Open a shell inside the Pulumi container.
 down              Stop the Docker Compose environment.
+test              Run the aggregate structural, unit, integration, and CLI battery.
+test-pulumi       Structural validation for manifests, workflows, and supply-chain guards.
+test-unit         Pulumi component tests with mocks.
+test-integration  Pulumi Automation smoke tests with a local backend.
+test-mutation     Mutation analysis of the component layer.
+test-cli          Bats-based checks for the Makefile interface.
+clean             Remove Docker Compose artifacts and Python build caches.
 ```
 
 ## Development
@@ -65,32 +77,36 @@ Black, Flake8, Pre-commit).
 
 ## CI/CD and Secrets
 
-Two GitHub Actions workflows handle environment parity:
+CI checks are split into focused workflows that run inside the Docker workspace:
 
-- `pulumi-preview.yml` evaluates changes on pull requests.
-- `pulumi-deploy.yml` applies changes to the `dev` stack on `main`.
+- `pulumi-structural.yml` validates Pulumi project metadata.
+- `pulumi-unit.yml` runs unit tests with Pulumi mocks.
+- `pulumi-integration.yml` runs Pulumi Automation tests with a local file backend.
+- `pulumi-mutation.yml` executes mutation testing.
+- `bats-tests.yml` validates the Makefile CLI surface.
 
-Both workflows require AWS and Pulumi credentials. Follow [GitHub Actions Secrets guide](github-actions-secrets.md) to configure:
-
-- `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY` **or** a GitHub OIDC role.
-- `PULUMI_ACCESS_TOKEN` for authenticating with the Pulumi Service.
-
-Without these secrets the workflows will fail during the credential configuration stage.
+These checks do not require AWS or Pulumi credentials by default. The `pulumi-local.yml` workflow also reruns the aggregate `make test` battery used during local development. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
 
 ## Project Structure
 
-- `pulumi/__main__.py` – Minimal Pulumi program that provisions an EC2 instance and exports IDs/IPs.
+- `pulumi/__main__.py` – Minimal Pulumi program that exports environment metadata and tags.
 - `docker-compose.yml` – Local development environment with Pulumi tooling baked in.
-- `Makefile` – Convenience commands for build, preview, deploy, and container management.
-- `.github/workflows` – Automation for previews, deploys, linting, and template synchronization.
+- `Makefile` – Convenience commands for preview, testing, and container management.
+- `.github/workflows` – Automation for CI checks, releases, and template synchronization.
 
 ## Testing and Validation
 
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
-- `make pulumi-preview` to review planned resources.
+- `make test-pulumi`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli` for focused suites.
+- `make test` to run the structural, unit, integration, and CLI checks together.
+- `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
-- `pulumi stack history` (from inside the container) to audit state transitions.
+- GitHub Actions mirrors the aggregate `make test` command through the `Pulumi Local Test Battery` workflow.
+
+## Detailed Test Matrix
+
+Use the dedicated [testing guide](testing.md) when you need to know exactly what each suite covers or which local command maps to which CI workflow.
 
 ## Planned Follow-ups
 
@@ -98,10 +114,7 @@ Continuous integration runs automatically on every pull request. You can also va
 
 ## Repository Synchronization
 
-This template feeds other VilnaCRM infrastructure projects through [`actions-template-sync`](https://github.com/AndreasAugustin/actions-template-sync). For authentication guidance, see:
-
-- `.github/TEMPLATE_SYNC_PAT.md` for Personal Access Tokens.
-- `.github/TEMPLATE_SYNC_APP.md` for GitHub App credentials.
+This template feeds other VilnaCRM infrastructure projects through [`actions-template-sync`](https://github.com/AndreasAugustin/actions-template-sync). For authentication guidance, see the [Template Sync secrets](github-actions-secrets.md#template-sync-secrets).
 
 Remember to grant least privilege, rotate secrets regularly, and monitor workflow logs.
 
@@ -124,5 +137,6 @@ Donations are very welcome, whether in beer 🍺, T-shirts 👕, or cold, hard c
 1. Add or edit Markdown inside `docs/`.
 2. Cross-link the new material from `README.md` or other docs so it is discoverable.
 3. Include documentation updates in the same PR as related code changes whenever possible.
+4. Keep `AGENTS.md` aligned with any workflow or secret-handling changes that affect coding agents.
 
 You can organize content as it grows by creating subdirectories (e.g., `docs/pulumi/`).
