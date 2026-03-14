@@ -124,9 +124,9 @@ These checks do not require AWS or Pulumi credentials by default. The `pulumi-lo
 
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
-- `make build`, `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli` for focused suites.
-- `make test` to run the faster structural, quality, unit, integration, and CLI checks together.
-- `make ci` to run the full local equivalent of the pull-request battery, including the image build and mutation suite.
+- Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`.
+- Run `make test` to execute the faster structural, quality, unit, integration, and CLI checks together.
+- Execute `make ci` to run the full local equivalent of the pull-request battery, including the image build and mutation suite.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
 - GitHub Actions mirrors the full `make ci` command through the `Pulumi Local Test Battery` workflow.

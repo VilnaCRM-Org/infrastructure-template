@@ -53,6 +53,8 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     dockerfile_text = DOCKERFILE.read_text(encoding="utf-8")
 
     assert "python:3.11.9-slim-bookworm@" in dockerfile_text
+    assert "FROM ${BASE_IMAGE} AS tooling" in dockerfile_text
+    assert "FROM ${BASE_IMAGE} AS runtime-base" in dockerfile_text
     assert "TARGETARCH=amd64" in dockerfile_text
     assert "PULUMI_SHA256_AMD64" in dockerfile_text
     assert "PULUMI_SHA256_ARM64" in dockerfile_text
@@ -66,6 +68,8 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     assert "uv venv --seed" in dockerfile_text
     assert UV_LOCKFILE.exists()
     assert dockerfile_text.count('case "${TARGETARCH}" in') == 3
+    assert "/opt/pulumi/pulumi-language-dotnet" in dockerfile_text
+    assert "/usr/local/aws-cli/v2/current/dist/awscli/examples" in dockerfile_text
     assert dockerfile_text.count("sha256sum -c -") >= 4
 
 
