@@ -6,10 +6,12 @@ import pulumi
 
 
 def _stack_tag_from_parts(parts: list[str]) -> str:
+    """Build the exported stack tag from the service and environment names."""
     return f"{parts[0]}-{parts[1]}"
 
 
 def _default_tags_from_parts(parts: list[str]) -> dict[str, str]:
+    """Build the default Pulumi tags shared by stack resources."""
     return {"Project": parts[0], "Environment": parts[1]}
 
 
