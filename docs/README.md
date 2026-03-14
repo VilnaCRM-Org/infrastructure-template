@@ -111,7 +111,7 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `bats-tests.yml` validates the Makefile CLI surface.
 - `pulumi-local.yml` runs `make ci`, the full local equivalent of the pull-request battery.
 
-These checks do not require AWS or Pulumi credentials by default. The `pulumi-local.yml` workflow runs `make ci`, which is the full local equivalent of the pull-request battery. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
+These checks do not require AWS or Pulumi credentials by default. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
 
 ## Project Structure
 

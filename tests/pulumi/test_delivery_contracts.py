@@ -171,8 +171,13 @@ def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
         (WORKFLOWS_DIR / "python-quality.yml").read_text(encoding="utf-8")
     )
     triggers = _triggers(workflow)
-    ruff_runs = [step.get("run") for step in workflow["jobs"]["ruff"]["steps"]]
-    ty_runs = [step.get("run") for step in workflow["jobs"]["ty"]["steps"]]
+    jobs = workflow.get("jobs", {})
+
+    assert "ruff" in jobs, "python-quality.yml missing 'ruff' job"
+    assert "ty" in jobs, "python-quality.yml missing 'ty' job"
+
+    ruff_runs = [step.get("run") for step in jobs["ruff"]["steps"]]
+    ty_runs = [step.get("run") for step in jobs["ty"]["steps"]]
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers

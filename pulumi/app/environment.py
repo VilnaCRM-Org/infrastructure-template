@@ -1,16 +1,21 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+from typing import Optional
 
 import pulumi
 
 
-def _stack_tag_from_parts(parts: list[str]) -> str:
+def _stack_parts_from_outputs(parts: list[str]) -> tuple[str, str]:
+    """Narrow Pulumi's list-shaped Output.all result to a stable tuple."""
+    return parts[0], parts[1]
+
+
+def _stack_tag_from_parts(parts: tuple[str, str]) -> str:
     """Build the exported stack tag from the service and environment names."""
     return f"{parts[0]}-{parts[1]}"
 
 
-def _default_tags_from_parts(parts: list[str]) -> dict[str, str]:
+def _default_tags_from_parts(parts: tuple[str, str]) -> dict[str, str]:
     """Build the default Pulumi tags shared by stack resources."""
     return {"Project": parts[0], "Environment": parts[1]}
 
@@ -42,7 +47,9 @@ class EnvironmentSettings(pulumi.ComponentResource):
         self.environment = pulumi.Output.from_input(resolved_environment)
         self.service_name = pulumi.Output.from_input(resolved_service)
 
-        stack_parts: Any = pulumi.Output.all(self.service_name, self.environment)
+        stack_parts: pulumi.Output[tuple[str, str]] = pulumi.Output.all(
+            self.service_name, self.environment
+        ).apply(_stack_parts_from_outputs)
         self.stack_tag = stack_parts.apply(_stack_tag_from_parts)
 
         self.default_tags = stack_parts.apply(_default_tags_from_parts)
