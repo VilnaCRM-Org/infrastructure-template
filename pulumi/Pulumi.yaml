@@ -1,5 +1,5 @@
-name: vilnacrm
-description: A reusable infrastructure template for AWS cloud resources using Python and Pulumi
+name: infrastructure-template
+description: Reusable Pulumi infrastructure template for AWS cloud resources.
 runtime:
   name: python
   options:

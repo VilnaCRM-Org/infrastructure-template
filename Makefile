@@ -1,53 +1,90 @@
 # Parameters
-PROJECT        = infrastructure-template
-ENV_FILE       = .env
+PROJECT            = infrastructure-template
+ENV_FILE           = .env
+EMPTY_ENV_FILE     = .env.empty
+COMPOSE_SERVICE   ?= pulumi
+PULUMI_DIR        ?= pulumi
+EFFECTIVE_ENV_FILE := $(firstword $(wildcard $(ENV_FILE)) $(wildcard $(EMPTY_ENV_FILE)))
 
-# Executables: local only
-DOCKER_COMPOSE = docker compose
-DOCKER         = docker
+COMPOSE_ENV_FILE := $(if $(EFFECTIVE_ENV_FILE),$(EFFECTIVE_ENV_FILE),$(EMPTY_ENV_FILE))
+UID ?= $(shell id -u 2>/dev/null || echo 1000)
+GID ?= $(shell id -g 2>/dev/null || echo 1000)
+USER ?= $(shell id -un 2>/dev/null || echo dev)
+
+export UID
+export GID
+export USER
 
 # Executables
-PULUMI         = pulumi
-EXEC_APP       = $(DOCKER_COMPOSE) exec app
+DOCKER_COMPOSE    = docker compose
+COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
+COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
+PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
+POETRY            = poetry -C $(PULUMI_DIR)
+COVERAGE_OPTS            ?= --cov --cov-config=.coveragerc --cov-report=term-missing
+UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS) --cov-fail-under=100
 
 # Misc
-.DEFAULT_GOAL  = help
-.RECIPEPREFIX  +=
-.PHONY: $(filter-out vendor node_modules,$(MAKECMDGOALS))
+.DEFAULT_GOAL     = help
+.RECIPEPREFIX    +=
+.PHONY: help start pulumi pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
+        sh down test-unit test-integration test-pulumi test-mutation test-cli test all clean
+
+all: help ## Display help (default goal).
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
 	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
 
-start: ## Initialize and start Pulumi development environment
-	${DOCKER_COMPOSE} up -d --build
+start: ## Initialize and start the Pulumi development environment.
+	$(COMPOSE) up -d
 
-health: ## Check if containers are healthy
-	@$(DOCKER_COMPOSE) ps --format json | python3 -c "import json, sys; data=json.load(sys.stdin); sys.exit(0 if all((svc.get('Health') in (None, '', 'healthy')) for svc in data) else 1)"
+pulumi: ## Proxy arbitrary Pulumi commands (usage: make pulumi ARGS="version").
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) $(ARGS)
 
-up: ## Start the container for development
-	$(DOCKER_COMPOSE) up --detach && $(MAKE) health
+pulumi-preview: ## Preview infrastructure changes from inside the Pulumi container.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) preview
 
-build: ## Builds the Pulumi development container images
-	$(DOCKER_COMPOSE) build --pull --no-cache
+pulumi-up: ## Apply the current Pulumi infrastructure plan.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) up
 
-down: ## Stop the docker hub
-	$(DOCKER_COMPOSE) down --remove-orphans
+pulumi-refresh: ## Sync the Pulumi stack with live cloud resources.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) refresh
 
-sh: ## Log to the docker container
-	@$(EXEC_APP) sh
+pulumi-destroy: ## Tear down the Pulumi stack (irreversible; use with caution).
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) destroy
 
-pulumi: ## Pulumi command proxy (usage: make pulumi ARGS="version")
-	@$(EXEC_APP) ${PULUMI} $(ARGS)
+sh: ## Open a shell inside the Pulumi container.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) sh
 
-pulumi-preview: ## Preview infrastructure changes
-	@$(EXEC_APP) ${PULUMI} preview
+down: ## Stop the Docker Compose environment.
+	$(DOCKER_COMPOSE) down
 
-pulumi-up: ## Apply infrastructure changes
-	@$(EXEC_APP) ${PULUMI} up
+test-unit: ## Execute fast unit tests for the Pulumi application layer.
+	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
+		$(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/unit
 
-pulumi-refresh: ## Refresh stack state
-	@$(EXEC_APP) ${PULUMI} refresh
+test-integration: ## Execute stack-level smoke tests with Pulumi mocks.
+	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(COVERAGE_OPTS)" \
+		$(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/integration
 
-pulumi-destroy: ## Destroy infrastructure (use with caution)
-	@$(EXEC_APP) ${PULUMI} destroy
+test-pulumi: ## Perform structural checks on Pulumi project configuration and CI contracts.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/pulumi
+
+test-mutation: ## Run mutation testing suite against the Pulumi component layer.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
+
+test-cli: ## Validate Makefile front-ends via Bats.
+	COMPOSE_TARGET=test $(COMPOSE) run --build --rm $(COMPOSE_SERVICE) bats tests/unit
+
+test: ## Run the complete Pulumi-focused test battery.
+	$(MAKE) test-pulumi
+	$(MAKE) test-unit
+	$(MAKE) test-integration
+	$(MAKE) test-cli
+
+clean: ## Remove Docker Compose artifacts, Python caches, and build artifacts.
+	$(DOCKER_COMPOSE) down -v 2>/dev/null || true
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	rm -rf .pulumi-backend .venv htmlcov .pytest_cache 2>/dev/null || true

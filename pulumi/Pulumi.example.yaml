@@ -1,5 +1,5 @@
-encryptionsalt: <your-encryption-salt-here>
 config:
   aws:region: eu-central-1
-  vilnacrm:amiId: ami-xxxxxxxxxxxxxxxxx
-  vilnacrm:instanceType: t2.micro
+  infrastructure-template:amiId: ami-xxxxxxxxxxxxxxxxx
+  infrastructure-template:instanceType: t3.micro
+  infrastructure-template:nameTag: ExampleAppServerInstance
