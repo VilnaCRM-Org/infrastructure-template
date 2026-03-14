@@ -6,7 +6,7 @@ The structural, unit, integration, mutation, and CLI workflows are local-only an
 
 | Secret | Purpose | Notes |
 | --- | --- | --- |
-| `PULUMI_ACCESS_TOKEN` | Authenticate against the Pulumi Service backend | Optional when using a local backend. Required for the preview/deploy workflows as currently configured. |
+| `PULUMI_ACCESS_TOKEN` | Authenticate against the Pulumi Service backend | Optional when using a local backend. Required for preview/deploy to perform real cloud operations; otherwise those jobs skip after the credential preflight. |
 | `AWS_ACCESS_KEY_ID` | Static AWS credential for GitHub Actions | Optional when you use GitHub OIDC instead. |
 | `AWS_SECRET_ACCESS_KEY` | Secret paired with the access key above | Optional when you use GitHub OIDC instead. |
 | `AWS_SESSION_TOKEN` | Session credential for temporary IAM sessions | Optional; only needed when your static credential flow requires it. |
@@ -22,7 +22,7 @@ The preview and deploy workflows support GitHub OIDC already.
 3. Store the role ARN as `AWS_ROLE_TO_ASSUME`.
 4. Optionally set `AWS_REGION` as a repository variable or secret.
 
-If `AWS_ROLE_TO_ASSUME` is not set, the workflows fall back to static IAM credentials.
+If `AWS_ROLE_TO_ASSUME` is not set, the workflows fall back to static IAM credentials. If neither OIDC nor static AWS credentials are configured, the preview/deploy jobs exit successfully after the preflight skip instead of failing the template repository.
 
 ## Release automation secrets
 

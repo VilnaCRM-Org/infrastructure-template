@@ -22,18 +22,24 @@ def test_preview_workflow_supports_oidc_and_static_credentials() -> None:
 
     assert workflow["permissions"]["id-token"] == "write"
     assert workflow["concurrency"]["cancel-in-progress"] is True
+    assert "Detect automation credentials" in step_names
+    assert "Skip preview when credentials are not configured" in step_names
     assert "Configure AWS Credentials via OIDC" in step_names
     assert "Configure AWS Credentials via static keys" in step_names
     assert job["env"]["AWS_ROLE_TO_ASSUME"] == "${{ vars.AWS_ROLE_TO_ASSUME || secrets.AWS_ROLE_TO_ASSUME }}"
+    assert job["steps"][-1]["if"] == "${{ steps.credentials.outputs.ready == 'true' }}"
 
 
 def test_deploy_workflow_serializes_stack_updates() -> None:
     """Prevent concurrent deploys against the same Pulumi stack."""
     workflow = _workflow("pulumi-deploy.yml")
+    step_names = [step.get("name") for step in workflow["jobs"]["deploy"]["steps"]]
 
     assert workflow["permissions"]["id-token"] == "write"
     assert workflow["concurrency"]["cancel-in-progress"] is False
     assert "pulumi-deploy" in workflow["concurrency"]["group"]
+    assert "Detect automation credentials" in step_names
+    assert "Skip deploy when credentials are not configured" in step_names
 
 
 def test_super_linter_workflow_stays_read_only() -> None:

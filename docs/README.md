@@ -72,6 +72,7 @@ The repository uses two cloud-facing workflows and five local-only validation su
 - Structural, unit, integration, mutation, and CLI workflows run without cloud credentials.
 
 Preview and deploy workflows support GitHub OIDC and static IAM credentials. Read [GitHub Actions secrets](github-actions-secrets.md) before configuring repository credentials.
+When the repository has no cloud credentials configured, those workflows skip cleanly after a preflight check so template pull requests can still validate the local-only suites.
 
 ## Project Structure
 
