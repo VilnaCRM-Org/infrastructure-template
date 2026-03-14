@@ -29,8 +29,8 @@ INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 # Misc
 .DEFAULT_GOAL     = help
 .RECIPEPREFIX    +=
-.PHONY: help start pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
-        sh down test-quality test-ruff test-ty test-unit test-integration \
+.PHONY: help build start pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
+        sh down ci test-quality test-ruff test-ty test-unit test-integration \
         test-pulumi test-mutation test-cli test all clean
 
 all: help ## Display help (default goal).
@@ -38,6 +38,9 @@ all: help ## Display help (default goal).
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
 	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
+
+build: ## Build the Pulumi development image used by local and CI checks.
+	$(COMPOSE) build $(COMPOSE_SERVICE)
 
 start: ## Initialize and start the Pulumi development environment.
 	$(COMPOSE) up -d
@@ -98,11 +101,20 @@ test-mutation: ## Run mutation testing suite against Pulumi components.
 test-cli: ## Validate Makefile front-ends via Bats.
 	COMPOSE_TARGET=test $(COMPOSE) run --build --rm $(COMPOSE_SERVICE) bats tests/unit
 
-test: ## Run the complete Pulumi-focused test battery.
+test: ## Run the faster developer battery without the image build or mutation suite.
 	$(MAKE) test-pulumi
 	$(MAKE) test-quality
 	$(MAKE) test-unit
 	$(MAKE) test-integration
+	$(MAKE) test-cli
+
+ci: ## Run the full local equivalent of the pull-request CI battery.
+	$(MAKE) build
+	$(MAKE) test-pulumi
+	$(MAKE) test-quality
+	$(MAKE) test-unit
+	$(MAKE) test-integration
+	$(MAKE) test-mutation
 	$(MAKE) test-cli
 
 clean: ## Remove Docker Compose artifacts, Python caches, and build artifacts.

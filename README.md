@@ -79,6 +79,9 @@ The Docker workspace already ships with an isolated seeded environment at
 recommended way to run the different Pulumi-focused suites:
 
 ```sh
+# Build the dev image used by the local and CI batteries
+make build
+
 # Configuration validation
 make test-pulumi
 
@@ -95,7 +98,7 @@ make test-integration
 make test-mutation
 ```
 
-You can also execute `make test` to run the structural, quality, unit, integration, and CLI checks as a batch.
+Use `make test` for the faster structural, quality, unit, integration, and CLI battery during day-to-day development. Use `make ci` when you want the full local equivalent of the pull-request checks, including the image build and mutation suite.
 
 ## Security
 

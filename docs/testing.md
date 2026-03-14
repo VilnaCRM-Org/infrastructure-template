@@ -118,10 +118,12 @@ Run the standard local validation battery with:
 
 ```bash
 make test
-make test-mutation
+make ci
 ```
 
-GitHub Actions now mirrors the aggregate `make test` command through the `Pulumi Local Test Battery` workflow, while `Pulumi Mutation Tests` keeps mutation analysis isolated as a separate check.
+Use `make test` during normal iteration when you want the fast structural, quality, unit, integration, and CLI suites. Use `make ci` before pushing when you want the full local equivalent of the pull-request checks, including the Docker build and mutation suite.
+
+GitHub Actions now mirrors the aggregate `make ci` command through the `Pulumi Local Test Battery` workflow, while `Pulumi Mutation Tests` keeps mutation analysis isolated as a separate check.
 The `Python Quality Checks` workflow runs Ruff and Ty as dedicated quality gates.
 
 Use `make pulumi-preview` before any real cloud deployment.

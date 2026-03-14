@@ -12,6 +12,8 @@ assert_compose_env_file() {
   run make help
   [ "$status" -eq 0 ]
   [[ "$output" == *"all"* ]]
+  [[ "$output" == *"build"* ]]
+  [[ "$output" == *"ci"* ]]
   [[ "$output" == *"clean"* ]]
   [[ "$output" == *"down"* ]]
   [[ "$output" == *"help"* ]]
@@ -44,6 +46,13 @@ assert_compose_env_file() {
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"up -d"* ]]
+}
+
+@test "make build builds the Pulumi development image" {
+  run make -n build
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"build pulumi"* ]]
 }
 
 @test "make pulumi-preview executes preview inside container" {
@@ -160,6 +169,18 @@ assert_compose_env_file() {
   [[ "$output" == *"make test-quality"* ]]
   [[ "$output" == *"make test-unit"* ]]
   [[ "$output" == *"make test-integration"* ]]
+  [[ "$output" == *"make test-cli"* ]]
+}
+
+@test "make ci runs the full local equivalent of the pull-request CI battery" {
+  run make -n ci
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make build"* ]]
+  [[ "$output" == *"make test-pulumi"* ]]
+  [[ "$output" == *"make test-quality"* ]]
+  [[ "$output" == *"make test-unit"* ]]
+  [[ "$output" == *"make test-integration"* ]]
+  [[ "$output" == *"make test-mutation"* ]]
   [[ "$output" == *"make test-cli"* ]]
 }
 

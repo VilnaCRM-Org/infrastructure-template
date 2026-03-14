@@ -46,6 +46,8 @@ That is all you need to begin iterating on the sample AWS instance or adapting t
 
 ```text
 all               Display help (default goal).
+build             Build the Pulumi development image used by local and CI checks.
+ci                Run the full local equivalent of the pull-request CI battery.
 help              Print the available make targets.
 start             Initialize and start the Pulumi development environment.
 pulumi-preview    Preview infrastructure changes from inside the container.
@@ -54,7 +56,7 @@ pulumi-refresh    Sync the Pulumi stack with live cloud resources.
 pulumi-destroy    Tear down the stack (irreversible; use with caution).
 sh                Open a shell inside the Pulumi container.
 down              Stop the Docker Compose environment.
-test              Run the aggregate structural, unit, integration, and CLI battery.
+test              Run the aggregate structural, quality, unit, integration, and CLI battery.
 test-pulumi       Structural validation for manifests, workflows, and supply-chain guards.
 test-quality      Rust-based linting, formatting, and typing checks.
 test-ruff         Ruff lint and format drift checks.
@@ -107,8 +109,9 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `pulumi-mutation.yml` executes mutation testing.
 - `python-quality.yml` runs Ruff and Ty as dedicated quality checks.
 - `bats-tests.yml` validates the Makefile CLI surface.
+- `pulumi-local.yml` runs `make ci`, the full local equivalent of the pull-request battery.
 
-These checks do not require AWS or Pulumi credentials by default. The `pulumi-local.yml` workflow also reruns the aggregate `make test` battery used during local development. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
+These checks do not require AWS or Pulumi credentials by default. The `pulumi-local.yml` workflow runs `make ci`, which is the full local equivalent of the pull-request battery. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
 
 ## Project Structure
 
@@ -121,11 +124,12 @@ These checks do not require AWS or Pulumi credentials by default. The `pulumi-lo
 
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
-- `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli` for focused suites.
-- `make test` to run the structural, quality, unit, integration, and CLI checks together.
+- `make build`, `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli` for focused suites.
+- `make test` to run the faster structural, quality, unit, integration, and CLI checks together.
+- `make ci` to run the full local equivalent of the pull-request battery, including the image build and mutation suite.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
-- GitHub Actions mirrors the aggregate `make test` command through the `Pulumi Local Test Battery` workflow.
+- GitHub Actions mirrors the full `make ci` command through the `Pulumi Local Test Battery` workflow.
 
 ## Detailed Test Matrix
 

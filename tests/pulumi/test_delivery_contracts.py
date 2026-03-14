@@ -53,14 +53,19 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     dockerfile_text = DOCKERFILE.read_text(encoding="utf-8")
 
     assert "python:3.11.9-slim-bookworm@" in dockerfile_text
-    assert "PULUMI_SHA256" in dockerfile_text
-    assert "AWSCLI_SHA256" in dockerfile_text
-    assert "UV_SHA256" in dockerfile_text
+    assert "TARGETARCH=amd64" in dockerfile_text
+    assert "PULUMI_SHA256_AMD64" in dockerfile_text
+    assert "PULUMI_SHA256_ARM64" in dockerfile_text
+    assert "AWSCLI_SHA256_AMD64" in dockerfile_text
+    assert "AWSCLI_SHA256_ARM64" in dockerfile_text
+    assert "UV_SHA256_AMD64" in dockerfile_text
+    assert "UV_SHA256_ARM64" in dockerfile_text
     assert "BATS_SHA256" in dockerfile_text
     assert "UV_PROJECT_ENVIRONMENT" in dockerfile_text
     assert "PULUMI_PYTHON_CMD" in dockerfile_text
     assert "uv venv --seed" in dockerfile_text
     assert UV_LOCKFILE.exists()
+    assert dockerfile_text.count('case "${TARGETARCH}" in') == 3
     assert dockerfile_text.count("sha256sum -c -") >= 4
 
 
@@ -70,6 +75,8 @@ def test_bats_suite_covers_every_public_make_target() -> None:
     expected_invocations = [
         "make help",
         "make all",
+        "make -n build",
+        "make -n ci",
         "make -n start",
         "make -n pulumi-preview",
         "make -n pulumi-up",
@@ -93,8 +100,8 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         assert invocation in bats_text
 
 
-def test_local_battery_workflow_mirrors_make_test() -> None:
-    """Ensure GitHub Actions exercises the aggregate local validation command."""
+def test_local_battery_workflow_mirrors_make_ci() -> None:
+    """Ensure GitHub Actions exercises the full PR-equivalent local command."""
     workflow = yaml.safe_load(
         (WORKFLOWS_DIR / "pulumi-local.yml").read_text(encoding="utf-8")
     )
@@ -105,10 +112,42 @@ def test_local_battery_workflow_mirrors_make_test() -> None:
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
-    assert workflow["jobs"]["local_battery"]["timeout-minutes"] == 30
+    assert workflow["jobs"]["local_battery"]["timeout-minutes"] == 45
     assert "Prepare Docker context" in step_names
-    assert "Run aggregate local battery inside Docker" in step_names
-    assert workflow["jobs"]["local_battery"]["steps"][-1]["run"] == "make test"
+    assert "Run full CI-equivalent battery inside Docker" in step_names
+    assert any(
+        step.get("run") == "make ci"
+        for step in workflow["jobs"]["local_battery"]["steps"]
+    )
+
+
+def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
+    """Keep each PR validation workflow wired to its corresponding make target."""
+    expected_runs = {
+        "bats-tests.yml": ["make test-cli"],
+        "pulumi-integration.yml": ["make test-integration"],
+        "pulumi-local.yml": ["make ci"],
+        "pulumi-mutation.yml": ["make test-mutation"],
+        "pulumi-structural.yml": ["make test-pulumi"],
+        "pulumi-unit.yml": ["make test-unit"],
+        "python-quality.yml": ["make test-ruff", "make test-ty"],
+    }
+
+    for workflow_name, commands in expected_runs.items():
+        workflow = yaml.safe_load(
+            (WORKFLOWS_DIR / workflow_name).read_text(encoding="utf-8")
+        )
+        runs = [
+            step.get("run")
+            for job in workflow["jobs"].values()
+            for step in job.get("steps", [])
+            if step.get("run")
+        ]
+
+        for command in commands:
+            assert any(command in run for run in runs), (
+                f"{workflow_name} is missing `{command}`"
+            )
 
 
 def test_bats_workflow_runs_on_push_and_pull_request() -> None:
@@ -128,8 +167,10 @@ def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
         (WORKFLOWS_DIR / "python-quality.yml").read_text(encoding="utf-8")
     )
     triggers = _triggers(workflow)
+    ruff_runs = [step.get("run") for step in workflow["jobs"]["ruff"]["steps"]]
+    ty_runs = [step.get("run") for step in workflow["jobs"]["ty"]["steps"]]
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
-    assert workflow["jobs"]["ruff"]["steps"][-1]["run"] == "make test-ruff"
-    assert workflow["jobs"]["ty"]["steps"][-1]["run"] == "make test-ty"
+    assert "make test-ruff" in ruff_runs
+    assert "make test-ty" in ty_runs

@@ -4,14 +4,16 @@
 ARG BASE_IMAGE=python:3.11.9-slim-bookworm@sha256:8fb099199b9f2d70342674bd9dbccd3ed03a258f26bbd1d556822c6dfc60c317
 FROM ${BASE_IMAGE} AS base
 
+ARG TARGETARCH=amd64
 ARG USERNAME=dev
 ARG UID=1000
 ARG GID=1000
 ARG PULUMI_VERSION=3.138.0
-ARG PULUMI_SHA256=00245ee263285ee05ff33ec96c889aa4d1171e0c8eb0366a64205b45eafd6ed8
+ARG PULUMI_SHA256_AMD64=00245ee263285ee05ff33ec96c889aa4d1171e0c8eb0366a64205b45eafd6ed8
+ARG PULUMI_SHA256_ARM64=905106b80be34963361737b6c4d471b45d77461c3455b137cefd66b2c470566c
 ARG AWSCLI_VERSION=2.16.9
-ARG AWSCLI_ARCH=linux-x86_64
-ARG AWSCLI_SHA256=8c09f0aa7743fb04a28ac7a6f3c2822d6ffcc58bcace2beaf55258ee0f67c4cb
+ARG AWSCLI_SHA256_AMD64=8c09f0aa7743fb04a28ac7a6f3c2822d6ffcc58bcace2beaf55258ee0f67c4cb
+ARG AWSCLI_SHA256_ARM64=82636f7ec20c57beeed19a14f8684113e0edfb30e79f1a615809de2dfb482712
 ARG CA_CERTIFICATES_VERSION=20230311
 ARG UNZIP_VERSION=6.0-28
 ARG GROFF_VERSION=1.22.4-10
@@ -19,8 +21,8 @@ ARG CURL_VERSION=7.88.1-10+deb12u14
 ARG LESS_VERSION=590-2.1~deb12u2
 ARG GIT_VERSION=1:2.39.5-0+deb12u2
 ARG UV_VERSION=0.9.21
-ARG UV_ARCH=x86_64-unknown-linux-gnu
-ARG UV_SHA256=0a1ab27383c28ef1c041f85cbbc609d8e3752dfb4b238d2ad97b208a52232baf
+ARG UV_SHA256_AMD64=0a1ab27383c28ef1c041f85cbbc609d8e3752dfb4b238d2ad97b208a52232baf
+ARG UV_SHA256_ARM64=416984484783a357170c43f98e7d2d203f1fb595d6b3b95131513c53e50986ef
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install OS dependencies required for Pulumi CLI, AWS CLI, and Python tooling
@@ -41,39 +43,56 @@ RUN groupadd --gid "${GID}" "${USERNAME}" \
     && useradd --uid "${UID}" --gid "${GID}" --create-home "${USERNAME}"
 
 # Install Pulumi CLI once and expose it on the PATH for all users
-RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
+RUN bash -o pipefail -c 'set -euo pipefail \
+    && case "${TARGETARCH}" in \
+        amd64) pulumi_arch="x64"; pulumi_sha256="${PULUMI_SHA256_AMD64}" ;; \
+        arm64) pulumi_arch="arm64"; pulumi_sha256="${PULUMI_SHA256_ARM64}" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && curl --fail --silent --show-error --location \
         --retry 5 --retry-delay 5 --retry-all-errors \
-        "https://get.pulumi.com/releases/sdk/pulumi-v${PULUMI_VERSION}-linux-x64.tar.gz" \
+        "https://get.pulumi.com/releases/sdk/pulumi-v${PULUMI_VERSION}-linux-${pulumi_arch}.tar.gz" \
         --output /tmp/pulumi.tar.gz \
-    && echo "${PULUMI_SHA256}  /tmp/pulumi.tar.gz" | sha256sum -c - \
+    && echo "${pulumi_sha256}  /tmp/pulumi.tar.gz" | sha256sum -c - \
     && mkdir -p /opt/pulumi \
     && tar --extract --gzip --file /tmp/pulumi.tar.gz --strip-components=1 --directory /opt/pulumi \
     && ln -sf /opt/pulumi/pulumi /usr/local/bin/pulumi \
     && rm -rf /tmp/pulumi.tar.gz'
 
 # Install AWS CLI v2
-RUN bash -o pipefail -c "set -euo pipefail \
+RUN bash -o pipefail -c 'set -euo pipefail \
+    && case "${TARGETARCH}" in \
+        amd64) awscli_arch="linux-x86_64"; awscli_sha256="${AWSCLI_SHA256_AMD64}" ;; \
+        arm64) awscli_arch="linux-aarch64"; awscli_sha256="${AWSCLI_SHA256_ARM64}" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
     && curl --fail --silent --show-error --location \
         --retry 5 --retry-delay 5 --retry-all-errors \
-        \"https://awscli.amazonaws.com/awscli-exe-${AWSCLI_ARCH}-${AWSCLI_VERSION}.zip\" \
-        --output \"/tmp/awscliv2.zip\" \
-    && echo \"${AWSCLI_SHA256}  /tmp/awscliv2.zip\" | sha256sum -c - \
+        "https://awscli.amazonaws.com/awscli-exe-${awscli_arch}-${AWSCLI_VERSION}.zip" \
+        --output "/tmp/awscliv2.zip" \
+    && echo "${awscli_sha256}  /tmp/awscliv2.zip" | sha256sum -c - \
     && unzip /tmp/awscliv2.zip -d /tmp \
     && /tmp/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
-    && rm -rf /tmp/aws /tmp/awscliv2.zip"
+    && rm -rf /tmp/aws /tmp/awscliv2.zip'
 
 # Install uv for dependency management and command execution
 ENV PATH="/opt/pulumi:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
 ENV UV_LINK_MODE=copy
-RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
+RUN bash -o pipefail -c 'set -euo pipefail \
+    && case "${TARGETARCH}" in \
+        amd64) uv_arch="x86_64-unknown-linux-gnu"; uv_sha256="${UV_SHA256_AMD64}" ;; \
+        arm64) uv_arch="aarch64-unknown-linux-gnu"; uv_sha256="${UV_SHA256_ARM64}" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && curl --fail --silent --show-error --location \
         --retry 5 --retry-delay 5 --retry-all-errors \
-        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${UV_ARCH}.tar.gz" \
+        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${uv_arch}.tar.gz" \
         --output /tmp/uv.tar.gz \
-    && echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum -c - \
+    && echo "${uv_sha256}  /tmp/uv.tar.gz" | sha256sum -c - \
     && tar --extract --gzip --file /tmp/uv.tar.gz --directory /tmp \
-    && install -m 0755 "/tmp/uv-${UV_ARCH}/uv" /usr/local/bin/uv \
-    && install -m 0755 "/tmp/uv-${UV_ARCH}/uvx" /usr/local/bin/uvx \
-    && rm -rf /tmp/uv.tar.gz "/tmp/uv-${UV_ARCH}"'
+    && install -m 0755 "/tmp/uv-${uv_arch}/uv" /usr/local/bin/uv \
+    && install -m 0755 "/tmp/uv-${uv_arch}/uvx" /usr/local/bin/uvx \
+    && rm -rf /tmp/uv.tar.gz "/tmp/uv-${uv_arch}"'
 
 FROM base AS dev
 
