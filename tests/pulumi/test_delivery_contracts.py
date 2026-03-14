@@ -92,6 +92,7 @@ def test_local_battery_workflow_mirrors_make_test() -> None:
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
+    assert workflow["jobs"]["local_battery"]["timeout-minutes"] == 30
     assert "Prepare Docker context" in step_names
     assert "Run aggregate local battery inside Docker" in step_names
     assert workflow["jobs"]["local_battery"]["steps"][-1]["run"] == "make test"

@@ -15,6 +15,8 @@ from app.environment import EnvironmentSettings
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PULUMI_MAIN = PROJECT_ROOT / "pulumi" / "__main__.py"
+_PENDING_OUTPUT_ASSERTIONS: list[Callable[[], None]] = []
+
 
 class SimpleMocks(mocks.Mocks):
     """Pulumi mocks that echo inputs for unit testing."""
@@ -42,7 +44,11 @@ def _run_pulumi_program(program: Callable[[], None]) -> None:
             monitor=monitor,
         )
         loop.run_until_complete(stack.run_pulumi_func(program))
+        loop.run_until_complete(asyncio.sleep(0))
+        for assertion in _PENDING_OUTPUT_ASSERTIONS:
+            assertion()
     finally:
+        _PENDING_OUTPUT_ASSERTIONS.clear()
         settings.reset_options(project=None, stack=None)
         loop.close()
         asyncio.set_event_loop(None)
@@ -50,10 +56,18 @@ def _run_pulumi_program(program: Callable[[], None]) -> None:
 
 def _assert_output_value(output: pulumi.Output, expected: object) -> None:
     """Assert a Pulumi Output resolves to the expected value."""
+    called = False
+
     def check(value: object) -> None:
-        assert value == expected
+        nonlocal called
+        called = True
+        assert value == expected, f"Expected {expected!r}, got {value!r}"
+
+    def verify_called() -> None:
+        assert called, "Expected Output.apply callback to run under Pulumi mocks"
 
     output.apply(check)
+    _PENDING_OUTPUT_ASSERTIONS.append(verify_called)
 
 
 @contextmanager
@@ -65,7 +79,9 @@ def mocked_pulumi_context(
     with ExitStack() as stack:
         config_patch = stack.enter_context(patch("app.environment.pulumi.Config"))
         config_instance = config_patch.return_value
-        config_instance.get.side_effect = lambda key, default=None: config_values.get(key, default)
+        config_instance.get.side_effect = lambda key, default=None: config_values.get(
+            key, default
+        )
 
         if project_name is not None:
             stack.enter_context(
@@ -77,6 +93,7 @@ def mocked_pulumi_context(
 
 def test_stack_tag_combines_service_and_environment() -> None:
     """Combine explicit service/environment into a stack tag."""
+
     def program() -> None:
         """Export the derived stack tag for assertion."""
         env_settings = EnvironmentSettings(
@@ -90,6 +107,7 @@ def test_stack_tag_combines_service_and_environment() -> None:
 
 def test_default_tags_use_service_and_environment() -> None:
     """Build default tags from explicit service/environment values."""
+
     def program() -> None:
         """Export default tags for explicit values."""
         env_settings = EnvironmentSettings(
@@ -106,6 +124,7 @@ def test_default_tags_use_service_and_environment() -> None:
 
 def test_environment_falls_back_to_config_value() -> None:
     """Use the config value when environment is not passed."""
+
     def program() -> None:
         """Export resolved fields for config-based environment."""
         env_settings = EnvironmentSettings("unit")
@@ -127,6 +146,7 @@ def test_environment_falls_back_to_config_value() -> None:
 
 def test_environment_defaults_to_dev_when_unset() -> None:
     """Default environment to dev when no config is set."""
+
     def program() -> None:
         """Export resolved fields for default environment."""
         env_settings = EnvironmentSettings("unit")
@@ -148,6 +168,7 @@ def test_environment_defaults_to_dev_when_unset() -> None:
 
 def test_service_name_falls_back_to_config_value() -> None:
     """Use the config value when service name is not passed."""
+
     def program() -> None:
         """Export resolved fields for config-based service name."""
         env_settings = EnvironmentSettings("unit", environment="qa")
@@ -156,7 +177,9 @@ def test_service_name_falls_back_to_config_value() -> None:
         pulumi.export("defaultTags", env_settings.default_tags)
         _assert_output_value(env_settings.service_name, "billing")
         _assert_output_value(env_settings.stack_tag, "billing-qa")
-        _assert_output_value(env_settings.default_tags, {"Project": "billing", "Environment": "qa"})
+        _assert_output_value(
+            env_settings.default_tags, {"Project": "billing", "Environment": "qa"}
+        )
 
     with mocked_pulumi_context({"serviceName": "billing"}):
         _run_pulumi_program(program)
@@ -164,6 +187,7 @@ def test_service_name_falls_back_to_config_value() -> None:
 
 def test_service_name_defaults_to_project_name() -> None:
     """Default service name to the Pulumi project name."""
+
     def program() -> None:
         """Export resolved fields for project-name fallback."""
         env_settings = EnvironmentSettings("unit", environment="qa")
@@ -215,6 +239,7 @@ def test_component_registers_expected_type_token() -> None:
 
 def test_main_exports_expected_outputs() -> None:
     """Execute the Pulumi entrypoint and validate exported outputs."""
+
     def program() -> None:
         """Run the pulumi __main__ module inside the mocked runtime."""
         sys.path.insert(0, str(PROJECT_ROOT / "pulumi"))
@@ -262,7 +287,12 @@ def test_register_outputs_maps_component_properties() -> None:
     assert env_calls, "EnvironmentSettings.register_outputs was not invoked"
 
     resource, outputs = env_calls[0].args
-    assert set(outputs.keys()) == {"environment", "serviceName", "stackTag", "defaultTags"}
+    assert set(outputs.keys()) == {
+        "environment",
+        "serviceName",
+        "stackTag",
+        "defaultTags",
+    }
     assert outputs["environment"] is resource.environment
     assert outputs["serviceName"] is resource.service_name
     assert outputs["stackTag"] is resource.stack_tag
