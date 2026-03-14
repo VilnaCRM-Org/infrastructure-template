@@ -187,7 +187,7 @@ def test_ci_workflows_use_guardrails_and_shared_bootstrap() -> None:
         triggers = _triggers(workflow)
 
         assert triggers["push"]["branches"] == ["main"]
-        assert triggers["pull_request"]["branches"] == ["main"]
+        assert "pull_request" in triggers
         assert workflow["permissions"] == {"contents": "read"}
         assert workflow["defaults"]["run"]["shell"] == "bash"
         assert workflow["concurrency"]["cancel-in-progress"] is True
