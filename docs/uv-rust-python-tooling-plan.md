@@ -51,5 +51,6 @@ GitHub Actions now includes a dedicated `python-quality.yml` workflow that runs:
 - `make test-ty`
 
 The aggregate `pulumi-local.yml` workflow also covers the quality gates by
-running `make test`, which now includes structural, quality, unit, integration,
-and CLI checks.
+running `make ci-pr`, which includes the non-mutation structural, quality, unit,
+integration, and CLI checks while keeping mutation isolated in its dedicated
+workflow.

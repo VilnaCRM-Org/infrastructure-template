@@ -30,8 +30,9 @@ INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 .DEFAULT_GOAL     = help
 .RECIPEPREFIX    +=
 .PHONY: help doctor build start pulumi-preview pulumi-up pulumi-refresh \
-        pulumi-destroy sh down ci test-quality test-ruff test-ty test-unit \
-        test-integration test-pulumi test-mutation test-cli test all clean
+        pulumi-destroy sh down ci ci-pr test-quality test-ruff test-ty \
+        test-unit test-integration test-pulumi test-mutation test-cli \
+        test all clean
 
 all: help ## Display help (default goal).
 
@@ -131,15 +132,18 @@ test: ## Run the faster developer battery without the image build or mutation su
 	$(MAKE) test-integration
 	$(MAKE) test-cli
 
-ci: ## Run the full local equivalent of the pull-request CI battery.
+ci-pr: ## Run the GitHub PR battery except the dedicated mutation workflow.
 	$(MAKE) doctor
 	$(MAKE) build
 	$(MAKE) test-pulumi
 	$(MAKE) test-quality
 	$(MAKE) test-unit
 	$(MAKE) test-integration
-	$(MAKE) test-mutation
 	$(MAKE) test-cli
+
+ci: ## Run the full local equivalent of all GitHub checks, including mutation.
+	$(MAKE) ci-pr
+	$(MAKE) test-mutation
 
 clean: ## Remove Docker Compose artifacts, Python caches, and build artifacts.
 	$(DOCKER_COMPOSE) down -v 2>/dev/null || true

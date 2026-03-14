@@ -102,7 +102,7 @@ make test-integration
 make test-mutation
 ```
 
-Use `make test` for the faster structural, quality, unit, integration, and CLI battery during day-to-day development. Use `make ci` when you want the full local equivalent of the pull-request checks, including the prerequisite check, image build, and mutation suite.
+Use `make test` for the faster structural, quality, unit, integration, and CLI battery during day-to-day development. Use `make ci-pr` when you want the same non-mutation battery that GitHub runs in `pulumi-local.yml`. Use `make ci` when you want the full local superset, including the prerequisite check, image build, and mutation suite.
 
 Run `make doctor` when you need a fast prerequisite check before debugging local
 Docker or Compose behavior.

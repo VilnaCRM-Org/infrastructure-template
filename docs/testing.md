@@ -121,12 +121,13 @@ Run the standard local validation battery with:
 
 ```bash
 make test
+make ci-pr
 make ci
 ```
 
-Use `make test` during normal iteration when you want the fast structural, quality, unit, integration, and CLI suites after a prerequisite sanity check. Use `make ci` before pushing when you want the full local equivalent of the pull-request checks, including the prerequisite check, Docker build, and mutation suite.
+Use `make test` during normal iteration when you want the fast structural, quality, unit, integration, and CLI suites after a prerequisite sanity check. Use `make ci-pr` when you want the same non-mutation battery that GitHub runs in `pulumi-local.yml`. Use `make ci` before pushing when you want the full local equivalent of every GitHub check, including the prerequisite check, Docker build, and mutation suite.
 
-GitHub Actions now mirrors the aggregate `make ci` command through the `Pulumi Local Test Battery` workflow, while `Pulumi Mutation Tests` keeps mutation analysis isolated as a separate check.
+GitHub Actions now mirrors `make ci-pr` through the `Pulumi Local Test Battery` workflow, while `Pulumi Mutation Tests` keeps mutation analysis isolated as a separate check.
 The `Python Quality Checks` workflow runs Ruff and Ty as dedicated quality gates.
 
 Use `make pulumi-preview` before any real cloud deployment.

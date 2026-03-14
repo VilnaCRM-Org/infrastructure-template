@@ -5,6 +5,10 @@ mkdir -p "${HOME}/.aws"
 chmod 700 "${HOME}/.aws"
 
 if [[ ! -f .env ]]; then
+  if [[ ! -f .env.empty ]]; then
+    echo "error: .env.empty not found; cannot bootstrap .env" >&2
+    exit 1
+  fi
   cp .env.empty .env
 fi
 

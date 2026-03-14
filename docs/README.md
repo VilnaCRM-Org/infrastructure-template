@@ -50,7 +50,8 @@ That is all you need to begin iterating on the sample AWS instance or adapting t
 ```text
 all               Display help (default goal).
 build             Build the Pulumi development image used by local and CI checks.
-ci                Run the full local equivalent of the pull-request CI battery.
+ci                Run the full local equivalent of all GitHub checks, including mutation.
+ci-pr             Run the non-mutation GitHub pull-request battery locally.
 doctor            Check local prerequisites and effective paths without printing secrets.
 help              Print the available make targets.
 start             Initialize and start the Pulumi development environment.
@@ -113,7 +114,7 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `pulumi-mutation.yml` executes mutation testing.
 - `python-quality.yml` runs Ruff and Ty as dedicated quality checks.
 - `bats-tests.yml` validates the Makefile CLI surface.
-- `pulumi-local.yml` runs `make ci`, the full local equivalent of the pull-request battery.
+- `pulumi-local.yml` runs `make ci-pr`, the non-mutation pull-request battery inside Docker.
 
 These checks do not require AWS or Pulumi credentials by default. They use
 concurrency groups, bounded job timeouts, pinned actions, and a shared
@@ -148,10 +149,11 @@ Continuous integration runs automatically on every pull request. You can also va
 - Start with `make doctor` if you need a quick sanity check of Docker, Compose, and the effective env file.
 - Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`.
 - Run `make test` to execute the faster structural, quality, unit, integration, and CLI checks together after a prerequisite sanity check.
-- Execute `make ci` to run the full local equivalent of the pull-request battery, including the prerequisite check, image build, and mutation suite.
+- Execute `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check and image build.
+- Execute `make ci` to run the full local equivalent of all GitHub checks, including the prerequisite check, image build, and mutation suite.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
-- GitHub Actions mirrors the full `make ci` command through the `Pulumi Local Test Battery` workflow.
+- GitHub Actions mirrors `make ci-pr` through the `Pulumi Local Test Battery` workflow, while mutation remains isolated in `pulumi-mutation.yml`.
 
 ## SRE Operations
 

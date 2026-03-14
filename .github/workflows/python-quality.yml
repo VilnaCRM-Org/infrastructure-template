@@ -22,8 +22,6 @@ jobs:
     name: Ruff
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      PULUMI_SKIP_UPDATE_CHECK: "true"
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
@@ -39,8 +37,6 @@ jobs:
     name: Ty
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    env:
-      PULUMI_SKIP_UPDATE_CHECK: "true"
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:

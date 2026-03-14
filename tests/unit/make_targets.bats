@@ -14,6 +14,7 @@ assert_compose_env_file() {
   [[ "$output" == *"all"* ]]
   [[ "$output" == *"build"* ]]
   [[ "$output" == *"ci"* ]]
+  [[ "$output" == *"ci-pr"* ]]
   [[ "$output" == *"clean"* ]]
   [[ "$output" == *"doctor"* ]]
   [[ "$output" == *"down"* ]]
@@ -186,14 +187,21 @@ assert_compose_env_file() {
 @test "make ci runs the full local equivalent of the pull-request CI battery" {
   run make -n ci
   [ "$status" -eq 0 ]
+  [[ "$output" == *"make ci-pr"* ]]
+  [[ "$output" == *"make test-mutation"* ]]
+}
+
+@test "make ci-pr runs the non-mutation PR battery" {
+  run make -n ci-pr
+  [ "$status" -eq 0 ]
   [[ "$output" == *"make doctor"* ]]
   [[ "$output" == *"make build"* ]]
   [[ "$output" == *"make test-pulumi"* ]]
   [[ "$output" == *"make test-quality"* ]]
   [[ "$output" == *"make test-unit"* ]]
   [[ "$output" == *"make test-integration"* ]]
-  [[ "$output" == *"make test-mutation"* ]]
   [[ "$output" == *"make test-cli"* ]]
+  [[ "$output" != *"make test-mutation"* ]]
 }
 
 @test "make clean removes compose state and Python build artifacts" {

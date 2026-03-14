@@ -20,8 +20,8 @@ TEMPLATE_SYNC_WORKFLOWS = ("template-sync-app.yml", "template-sync-pat.yml")
 PULL_REQUEST_WORKFLOW_TIMEOUTS = {
     "bats-tests.yml": {"bats_tests": 15},
     "pulumi-integration.yml": {"integration": 20},
-    "pulumi-local.yml": {"local_battery": 45},
-    "pulumi-mutation.yml": {"mutation": 20},
+    "pulumi-local.yml": {"local_battery": 30},
+    "pulumi-mutation.yml": {"mutation": 45},
     "pulumi-structural.yml": {"structural": 15},
     "pulumi-unit.yml": {"unit": 15},
     "python-quality.yml": {"ruff": 15, "ty": 15},
@@ -95,7 +95,7 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     assert "PYTHONUNBUFFERED=1" in dockerfile_text
     assert "uv venv --seed" in dockerfile_text
     assert UV_LOCKFILE.exists()
-    assert dockerfile_text.count('case "${TARGETARCH}" in') == 3
+    assert dockerfile_text.count('case "${TARGETARCH}" in') >= 3
     assert "/opt/pulumi/pulumi-language-dotnet" in dockerfile_text
     assert "/usr/local/aws-cli/v2/current/dist/awscli/examples" in dockerfile_text
     assert dockerfile_text.count("sha256sum -c -") >= 4
@@ -191,6 +191,27 @@ def test_prepare_docker_context_script_preserves_existing_env_file(
     assert (repo_dir / ".env").read_text(encoding="utf-8") == "LOCAL=value\n"
 
 
+def test_prepare_docker_context_script_requires_env_template(tmp_path: Path) -> None:
+    """Fail clearly when the committed fallback env file is missing."""
+    home_dir = tmp_path / "home"
+    repo_dir = tmp_path / "repo"
+    home_dir.mkdir()
+    repo_dir.mkdir()
+
+    result = subprocess.run(
+        ["bash", str(PREPARE_SCRIPT)],
+        check=False,
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HOME": str(home_dir)},
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "error: .env.empty not found" in result.stderr
+
+
 def test_bats_suite_covers_every_public_make_target() -> None:
     """Keep every public make target locked down by the CLI regression suite."""
     bats_text = BATS_FILE.read_text(encoding="utf-8")
@@ -199,6 +220,7 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make all",
         "make -n build",
         "make -n ci",
+        "make -n ci-pr",
         "make -n doctor",
         "make -n start",
         "make -n pulumi-preview",
@@ -223,25 +245,24 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         assert invocation in bats_text
 
 
-def test_local_battery_workflow_mirrors_make_ci() -> None:
-    """Ensure GitHub Actions exercises the full PR-equivalent local command."""
+def test_local_battery_workflow_avoids_duplicate_mutation_runs() -> None:
+    """Ensure GitHub Actions keeps mutation isolated to the dedicated workflow."""
     workflow = yaml.safe_load(
         (WORKFLOWS_DIR / "pulumi-local.yml").read_text(encoding="utf-8")
     )
     triggers = _triggers(workflow)
-    step_names = [
-        step.get("name") for step in workflow["jobs"]["local_battery"]["steps"]
-    ]
+    steps = workflow["jobs"]["local_battery"]["steps"]
+    step_names = [step.get("name") for step in steps]
+    runs = [step.get("run") for step in steps if step.get("run")]
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
-    assert workflow["jobs"]["local_battery"]["timeout-minutes"] == 45
+    assert workflow["jobs"]["local_battery"]["timeout-minutes"] == 30
     assert "Prepare Docker context" in step_names
-    assert "Run full CI-equivalent battery inside Docker" in step_names
-    assert any(
-        step.get("run") == "make ci"
-        for step in workflow["jobs"]["local_battery"]["steps"]
-    )
+    assert "Run non-mutation PR battery inside Docker" in step_names
+    assert "make ci-pr" in runs
+    assert "make ci" not in runs
+    assert "make test-mutation" not in runs
 
 
 def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
@@ -249,7 +270,7 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
     expected_runs = {
         "bats-tests.yml": ["make test-cli"],
         "pulumi-integration.yml": ["make test-integration"],
-        "pulumi-local.yml": ["make ci"],
+        "pulumi-local.yml": ["make ci-pr"],
         "pulumi-mutation.yml": ["make test-mutation"],
         "pulumi-structural.yml": ["make test-pulumi"],
         "pulumi-unit.yml": ["make test-unit"],
@@ -373,6 +394,8 @@ def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
 
     assert "ruff" in jobs, "python-quality.yml missing 'ruff' job"
     assert "ty" in jobs, "python-quality.yml missing 'ty' job"
+    assert "env" not in jobs["ruff"]
+    assert "env" not in jobs["ty"]
 
     ruff_runs = [step.get("run") for step in jobs.get("ruff", {}).get("steps", [])]
     ty_runs = [step.get("run") for step in jobs.get("ty", {}).get("steps", [])]

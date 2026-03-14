@@ -11,7 +11,7 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 5. Use `uv run ...` for Python CLI commands instead of invoking tools directly from the global environment.
 6. Seed local `uv` environments with `uv venv --seed` before syncing if you need to run Pulumi Automation outside Docker.
 7. Keep the structural, quality, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
-8. Use `make ci` when you need the full local equivalent of the pull-request checks; use `make test` for the faster non-mutation developer battery.
+8. Use `make ci-pr` when you want the non-mutation GitHub PR battery, `make ci` for the full local superset including mutation, and `make test` for the faster non-mutation developer battery.
 9. Use `make doctor` before debugging local Docker or Compose issues.
 10. Reuse `./scripts/prepare_docker_context.sh` when changing Docker-backed CI jobs so setup remains consistent across workflows.
 

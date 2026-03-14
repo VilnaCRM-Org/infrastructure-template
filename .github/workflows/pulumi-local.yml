@@ -21,7 +21,7 @@ jobs:
   local_battery:
     name: Local Battery
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 30
     env:
       PULUMI_SKIP_UPDATE_CHECK: "true"
     steps:
@@ -32,8 +32,8 @@ jobs:
       - name: Prepare Docker context
         run: ./scripts/prepare_docker_context.sh
 
-      - name: Run full CI-equivalent battery inside Docker
+      - name: Run non-mutation PR battery inside Docker
         env:
           PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
           PULUMI_CONFIG_PASSPHRASE: ""
-        run: make ci
+        run: make ci-pr

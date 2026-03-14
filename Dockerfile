@@ -142,7 +142,7 @@ COPY --chown=${USERNAME}:${GID} pyproject.toml uv.lock /workspace/
 
 WORKDIR /workspace
 
-RUN --mount=type=cache,target=/home/${USERNAME}/.cache/uv \
+RUN --mount=type=cache,target=/home/${USERNAME}/.cache/uv,uid=${UID},gid=${GID} \
     uv venv --seed "${UV_PROJECT_ENVIRONMENT}" \
     && uv sync --frozen --all-groups \
     && chown -R "${USERNAME}:${GID}" "${UV_CACHE_DIR}" \

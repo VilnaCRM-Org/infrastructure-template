@@ -21,7 +21,7 @@ Every pull request check is driven by the same Docker workspace and the same
 | `pulumi-integration.yml` | `make test-integration` | Automation API lifecycle tests against a local file backend |
 | `pulumi-mutation.yml` | `make test-mutation` | Mutation analysis of the Pulumi component layer |
 | `bats-tests.yml` | `make test-cli` | CLI contract tests for the Makefile interface |
-| `pulumi-local.yml` | `make ci` | Full PR-equivalent battery inside Docker |
+| `pulumi-local.yml` | `make ci-pr` | Non-mutation PR-equivalent battery inside Docker |
 
 ## Shared Controls
 
@@ -61,7 +61,8 @@ The repository intentionally avoids workflow-only logic for the core validation
 battery.
 
 - `make test` is the fast inner-loop command.
-- `make ci` is the full local equivalent of the pull-request battery.
+- `make ci-pr` matches the non-mutation GitHub pull-request battery.
+- `make ci` is the full local superset, including the dedicated mutation suite.
 - `make doctor` provides a quick prerequisite check before developers start
   debugging Docker or Pulumi behavior.
 

@@ -25,15 +25,22 @@ make test
 ```
 
 Before pushing a branch that changes infrastructure logic, Docker wiring, or CI
-contracts:
+contracts, use the same non-mutation battery that GitHub runs in
+`pulumi-local.yml`:
+
+```bash
+make ci-pr
+```
+
+When you also want the dedicated mutation suite locally:
 
 ```bash
 make ci
 ```
 
-`make ci` is the closest local approximation of the pull-request checks. Use it
-to catch structural, quality, unit, integration, mutation, and CLI regressions
-before the branch reaches GitHub Actions.
+Use `make ci-pr` to catch the same structural, quality, unit, integration, and
+CLI regressions that GitHub runs before merge. Use `make ci` when you also want
+the mutation suite before the branch reaches GitHub Actions.
 
 ## Preview and Apply
 
@@ -97,7 +104,7 @@ Map failures back to their local commands:
 - `Integration` -> `make test-integration`
 - `Mutation` -> `make test-mutation`
 - `Run Bats Tests` -> `make test-cli`
-- `Local Battery` -> `make ci`
+- `Local Battery` -> `make ci-pr`
 
 That mapping is intentional. If a failure cannot be reproduced locally with the
 matching target, the problem is probably workflow-specific and should be treated
