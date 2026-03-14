@@ -44,6 +44,8 @@ That is all you need to begin iterating on the sample AWS instance or adapting t
 `make help` prints the available tasks. Most common targets:
 
 ```text
+all               Display help (default goal).
+help              Print the available make targets.
 start             Initialize and start the Pulumi development environment.
 pulumi-preview    Preview infrastructure changes from inside the container.
 pulumi-up         Apply the current infrastructure plan.
@@ -51,6 +53,13 @@ pulumi-refresh    Sync the Pulumi stack with live cloud resources.
 pulumi-destroy    Tear down the stack (irreversible; use with caution).
 sh                Open a shell inside the Pulumi container.
 down              Stop the Docker Compose environment.
+test              Run the aggregate structural, unit, integration, and CLI battery.
+test-pulumi       Structural validation for manifests, workflows, and supply-chain guards.
+test-unit         Pulumi component tests with mocks.
+test-integration  Pulumi Automation smoke tests with a local backend.
+test-mutation     Mutation analysis of the component layer.
+test-cli          Bats-based checks for the Makefile interface.
+clean             Remove Docker Compose artifacts and Python build caches.
 ```
 
 ## Development
@@ -75,7 +84,7 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `pulumi-mutation.yml` executes mutation testing.
 - `bats-tests.yml` validates the Makefile CLI surface.
 
-These checks do not require AWS or Pulumi credentials by default. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
+These checks do not require AWS or Pulumi credentials by default. The `pulumi-local.yml` workflow also reruns the aggregate `make test` battery used during local development. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
 
 ## Project Structure
 
@@ -92,6 +101,7 @@ Continuous integration runs automatically on every pull request. You can also va
 - `make test` to run the structural, unit, integration, and CLI checks together.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
+- GitHub Actions mirrors the aggregate `make test` command through the `Pulumi Local Test Battery` workflow.
 
 ## Detailed Test Matrix
 

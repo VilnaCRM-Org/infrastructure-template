@@ -3,11 +3,12 @@
 This repository is a Pulumi-based infrastructure template. Agents should keep changes minimal, preserve the local developer workflow, and avoid introducing hidden cloud dependencies into CI.
 
 ## Working rules
+
 1. Make the smallest change that satisfies the task.
 2. Prefer updating tests, docs, and examples before widening release or deployment behavior.
 3. Run the narrowest useful validation for the files you touched.
 4. Use `pulumi -C pulumi ...` for direct Pulumi CLI commands.
-5. Keep the structural, unit, integration, mutation, and CLI suites runnable without live AWS credentials.
+5. Keep the structural, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
 
 ## Secret handling
 
@@ -25,12 +26,14 @@ These rules are mandatory for AI coding agents in this repository.
 6. Never commit secret values, decrypted outputs, copied stack exports, or temporary files containing secrets.
 
 ## Pulumi workflow
+
 1. Structural, unit, integration, mutation, and CLI checks should stay local-backend-friendly.
 2. Preview before apply when working against a real stack.
 3. Prefer ephemeral validation stacks such as `pr-<number>` or `smoke` for manual checks.
 4. Destroy ephemeral validation stacks after the check completes.
 
 ## Review-driven changes
+
 1. Use `gh pr view <PR>` and `gh pr checks <PR>` for context.
 2. Pull review threads with `gh api graphql` and resolve every actionable thread.
 3. Keep refactors minimal and directly tied to review feedback.
