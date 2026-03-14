@@ -1,14 +1,13 @@
-from __future__ import annotations
-
 """Pulumi Automation API integration tests for stack lifecycle."""
+
+from __future__ import annotations
 
 import shutil
 import uuid
 from pathlib import Path
 
-import pytest
 import pulumi.automation as auto
-
+import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PULUMI_WORKDIR = PROJECT_ROOT / "pulumi"
@@ -32,7 +31,9 @@ def test_pulumi_stack_preview_and_up_cycle(tmp_path: Path) -> None:
         ignore=shutil.ignore_patterns("__pycache__", "*.pyc", "*.pyo", ".pytest_cache"),
     )
 
-    stack = auto.create_or_select_stack(stack_name=_stack_name(), work_dir=str(work_dir))
+    stack = auto.create_or_select_stack(
+        stack_name=_stack_name(), work_dir=str(work_dir)
+    )
     stack.set_config("environment", auto.ConfigValue(value="integration"))
     stack.set_config("serviceName", auto.ConfigValue(value="integration-test"))
 

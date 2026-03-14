@@ -17,6 +17,24 @@ Coverage:
 - Release workflow contracts
 - Dockerfile supply-chain safeguards
 
+## Quality checks
+
+Run with:
+
+```bash
+make test-quality
+```
+
+Coverage:
+
+- `ruff check` for fast linting
+- `ruff format --check` for formatting drift
+- `ty check` for static typing diagnostics on the Pulumi application layer
+
+Ty currently ignores a small set of false positives caused by Pulumi's dynamic
+`Output.apply` API and the coverage bootstrap shim. The CI command keeps those
+exceptions explicit instead of silently disabling the type check.
+
 ## Unit tests
 
 Run with:
@@ -44,6 +62,10 @@ Coverage:
 - The real `pulumi/__main__.py` entrypoint
 - Pulumi Automation lifecycle behavior with a local backend
 - Output wiring for environment metadata
+
+The Docker workspace keeps its `uv` virtual environment outside the bind-mounted
+repository tree so Pulumi always sees a stable interpreter with `pip`
+available for plugin discovery.
 
 ## Mutation tests
 
@@ -82,6 +104,9 @@ Coverage:
 - `make test-unit`
 - `make test-integration`
 - `make test-pulumi`
+- `make test-quality`
+- `make test-ruff`
+- `make test-ty`
 - `make test-mutation`
 - `make test-cli`
 - `make test`
@@ -97,5 +122,6 @@ make test-mutation
 ```
 
 GitHub Actions now mirrors the aggregate `make test` command through the `Pulumi Local Test Battery` workflow, while `Pulumi Mutation Tests` keeps mutation analysis isolated as a separate check.
+The `Python Quality Checks` workflow runs Ruff and Ty as dedicated quality gates.
 
 Use `make pulumi-preview` before any real cloud deployment.

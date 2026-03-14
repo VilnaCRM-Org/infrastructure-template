@@ -37,7 +37,7 @@ an interpreter on disk.
    - Choose the repo's `docker-compose.yml`.
    - Set **Service** to `pulumi`.
    - Leave the working directory as `/workspace`.
-   - Ensure the Python interpreter path is `/opt/pulumi-venv/bin/python`.
+   - Ensure the Python interpreter path is `/home/dev/.venvs/infrastructure-template/bin/python`.
 5. Click **OK**, then **Apply**. PyCharm connects to the running container,
    indexes the interpreter, and autocomplete should light up immediately.
 
@@ -57,14 +57,8 @@ Run the commands below from the repository root (replace `pulumi/.venv` with
 `.venv` if you pick the root location).
 
 ```bash
-python -m venv pulumi/.venv
-# Activate the environment (run the line that matches your shell):
-#   macOS/Linux:        source pulumi/.venv/bin/activate
-#   Windows PowerShell: pulumi\.venv\Scripts\Activate
-#   Windows cmd:        pulumi\.venv\Scripts\activate.bat
-pip install --upgrade pip
-pip install "pulumi>=3.138,<4" "pulumi-aws>=7.0,<8" black flake8 pre-commit
-deactivate
+uv venv --seed pulumi/.venv
+UV_PROJECT_ENVIRONMENT=pulumi/.venv uv sync --all-groups
 ```
 
 When adding the interpreter in PyCharm, select the relevant path:

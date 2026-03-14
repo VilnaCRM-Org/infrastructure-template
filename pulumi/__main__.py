@@ -1,9 +1,8 @@
 """Pulumi entrypoint that exports baseline stack metadata."""
 
-import pulumi
-
 from app.environment import EnvironmentSettings
 
+import pulumi
 
 settings = EnvironmentSettings("environment-settings")
 

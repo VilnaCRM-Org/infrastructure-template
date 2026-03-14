@@ -7,6 +7,7 @@
 [![Pulumi Structural Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-structural.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-structural.yml)
 [![Pulumi Mutation Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-mutation.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-mutation.yml)
 [![CLI Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/bats-tests.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/bats-tests.yml)
+[![Python Quality Checks](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/python-quality.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/python-quality.yml)
 
 Production-ready scaffold for teams that want to ship infrastructure-as-code with Pulumi and Docker from day zero.
 
@@ -39,7 +40,7 @@ All project docs live under `docs/` to keep everything version controlled. Start
 - [Development Environment](docs/README.md#development)
 - [PyCharm Autocomplete](docs/pycharm-autocomplete.md)
 - [CI/CD and Secrets](docs/README.md#cicd-and-secrets)
-- [uv and Rust-native tooling roadmap](docs/uv-rust-python-tooling-plan.md)
+- [uv and Rust-native Python tooling](docs/uv-rust-python-tooling-plan.md)
 - [Testing and Validation](docs/README.md#testing-and-validation)
 - [Security](docs/README.md#security)
 - [Contributing](docs/README.md#contributing)
@@ -65,13 +66,24 @@ For onboarding, create or update `.env` with any local overrides you need, keep
 `.env.empty` safe to commit, and refresh `.env.dist` only when the example
 values or documented setup flow changes.
 
-Install development dependencies via Poetry and then use the `make` targets to run the different Pulumi-focused suites:
+If you want a local `uv` environment outside Docker, seed it once so Pulumi's
+Automation API can still use `pip` for package discovery:
 
 ```sh
-poetry install --with dev
+uv venv --seed
+uv sync --all-groups
+```
 
+The Docker workspace already ships with an isolated seeded environment at
+`/home/dev/.venvs/infrastructure-template`, so the `make` targets remain the
+recommended way to run the different Pulumi-focused suites:
+
+```sh
 # Configuration validation
 make test-pulumi
+
+# Rust-based quality gates
+make test-quality
 
 # Unit tests (pure Pulumi runtime with mocks)
 make test-unit
@@ -83,7 +95,7 @@ make test-integration
 make test-mutation
 ```
 
-You can also execute `make test` to run the structural, unit, and integration checks as a batch.
+You can also execute `make test` to run the structural, quality, unit, integration, and CLI checks as a batch.
 
 ## Security
 

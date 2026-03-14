@@ -24,12 +24,10 @@ def pulumi_automation_environment(tmp_path_factory: pytest.TempPathFactory) -> N
 
     os.environ.setdefault("PULUMI_SKIP_UPDATE_CHECK", "true")
     python_cmd = sys.executable
-    coverage_wrapper = PROJECT_ROOT / "scripts" / "pulumi_python_with_coverage.sh"
 
-    if _COVERAGE_CONFIG.exists() and coverage_wrapper.exists():
+    if _COVERAGE_CONFIG.exists():
         os.environ.setdefault("COVERAGE_PROCESS_START", str(_COVERAGE_CONFIG))
         os.environ.setdefault("COVERAGE_FILE", str(PROJECT_ROOT / ".coverage"))
-        python_cmd = str(coverage_wrapper)
 
     os.environ.setdefault("PULUMI_PYTHON_CMD", python_cmd)
 
@@ -41,7 +39,9 @@ def pulumi_automation_environment(tmp_path_factory: pytest.TempPathFactory) -> N
 
     env = os.environ.copy()
     env["PULUMI_HOME"] = str(backend_dir)
-    env["PULUMI_CONFIG_PASSPHRASE"] = env.get("PULUMI_CONFIG_PASSPHRASE", "integration-test-passphrase")
+    env["PULUMI_CONFIG_PASSPHRASE"] = env.get(
+        "PULUMI_CONFIG_PASSPHRASE", "integration-test-passphrase"
+    )
 
     subprocess.run(["pulumi", "login", backend_uri], check=True, env=env, timeout=30)
 

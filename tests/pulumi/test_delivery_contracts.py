@@ -4,12 +4,12 @@ from pathlib import Path
 
 import yaml
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR = PROJECT_ROOT / ".github" / "workflows"
 DOCKERFILE = PROJECT_ROOT / "Dockerfile"
 SECRETS_DOC = PROJECT_ROOT / "docs" / "github-actions-secrets.md"
 BATS_FILE = PROJECT_ROOT / "tests" / "unit" / "make_targets.bats"
+UV_LOCKFILE = PROJECT_ROOT / "uv.lock"
 RELEASE_WORKFLOWS = ("autorelease.yml", "autoprerelase.yml")
 
 
@@ -55,8 +55,12 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     assert "python:3.11.9-slim-bookworm@" in dockerfile_text
     assert "PULUMI_SHA256" in dockerfile_text
     assert "AWSCLI_SHA256" in dockerfile_text
-    assert "POETRY_INSTALLER_SHA256" in dockerfile_text
+    assert "UV_SHA256" in dockerfile_text
     assert "BATS_SHA256" in dockerfile_text
+    assert "UV_PROJECT_ENVIRONMENT" in dockerfile_text
+    assert "PULUMI_PYTHON_CMD" in dockerfile_text
+    assert "uv venv --seed" in dockerfile_text
+    assert UV_LOCKFILE.exists()
     assert dockerfile_text.count("sha256sum -c -") >= 4
 
 
@@ -73,6 +77,9 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make -n pulumi-destroy",
         "make -n sh",
         "make -n down",
+        "make -n test-quality",
+        "make -n test-ruff",
+        "make -n test-ty",
         "make -n test-unit",
         "make -n test-integration",
         "make -n test-pulumi",
@@ -113,3 +120,16 @@ def test_bats_workflow_runs_on_push_and_pull_request() -> None:
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
+
+
+def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
+    """Keep the Rust-based Python quality gates wired into CI."""
+    workflow = yaml.safe_load(
+        (WORKFLOWS_DIR / "python-quality.yml").read_text(encoding="utf-8")
+    )
+    triggers = _triggers(workflow)
+
+    assert triggers["push"]["branches"] == ["main"]
+    assert "pull_request" in triggers
+    assert workflow["jobs"]["ruff"]["steps"][-1]["run"] == "make test-ruff"
+    assert workflow["jobs"]["ty"]["steps"][-1]["run"] == "make test-ty"

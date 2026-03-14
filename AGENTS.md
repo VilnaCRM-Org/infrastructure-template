@@ -8,7 +8,9 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 2. Prefer updating tests, docs, and examples before widening release or deployment behavior.
 3. Run the narrowest useful validation for the files you touched.
 4. Use `pulumi -C pulumi ...` for direct Pulumi CLI commands.
-5. Keep the structural, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
+5. Use `uv run ...` for Python CLI commands instead of invoking tools directly from the global environment.
+6. Seed local `uv` environments with `uv venv --seed` before syncing if you need to run Pulumi Automation outside Docker.
+7. Keep the structural, quality, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
 
 ## Secret handling
 
@@ -27,7 +29,7 @@ These rules are mandatory for AI coding agents in this repository.
 
 ## Pulumi workflow
 
-1. Structural, unit, integration, mutation, and CLI checks should stay local-backend-friendly.
+1. Structural, quality, unit, integration, mutation, and CLI checks should stay local-backend-friendly.
 2. Preview before apply when working against a real stack.
 3. Prefer ephemeral validation stacks such as `pr-<number>` or `smoke` for manual checks.
 4. Destroy ephemeral validation stacks after the check completes.

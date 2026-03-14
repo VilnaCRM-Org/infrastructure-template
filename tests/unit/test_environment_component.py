@@ -8,10 +8,10 @@ from contextlib import ExitStack, contextmanager
 from pathlib import Path
 from unittest.mock import patch
 
-import pulumi
+from app.environment import EnvironmentSettings
 from pulumi.runtime import mocks, settings, stack
 
-from app.environment import EnvironmentSettings
+import pulumi
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PULUMI_MAIN = PROJECT_ROOT / "pulumi" / "__main__.py"

@@ -2,6 +2,7 @@
 .venv/
 pulumi/.venv/
 .env
+.ruff_cache/
 __pycache__/
 *.py[cod]
 .mutmut-cache

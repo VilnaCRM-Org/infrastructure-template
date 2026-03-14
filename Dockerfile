@@ -18,7 +18,9 @@ ARG GROFF_VERSION=1.22.4-10
 ARG CURL_VERSION=7.88.1-10+deb12u14
 ARG LESS_VERSION=590-2.1~deb12u2
 ARG GIT_VERSION=1:2.39.5-0+deb12u2
-ARG POETRY_INSTALLER_SHA256=963d56703976ce9cdc6ff460c44a4f8fbad64c110dc447b86eeabb4a47ec2160
+ARG UV_VERSION=0.9.21
+ARG UV_ARCH=x86_64-unknown-linux-gnu
+ARG UV_SHA256=0a1ab27383c28ef1c041f85cbbc609d8e3752dfb4b238d2ad97b208a52232baf
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install OS dependencies required for Pulumi CLI, AWS CLI, and Python tooling
@@ -60,39 +62,45 @@ RUN bash -o pipefail -c "set -euo pipefail \
     && /tmp/aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli \
     && rm -rf /tmp/aws /tmp/awscliv2.zip"
 
-# Install Poetry
-ENV POETRY_HOME=/opt/poetry
-ENV PATH="/opt/pulumi:${POETRY_HOME}/bin:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
-ARG POETRY_VERSION=1.8.4
+# Install uv for dependency management and command execution
+ENV PATH="/opt/pulumi:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
+ENV UV_LINK_MODE=copy
 RUN bash -o pipefail -c 'curl --fail --silent --show-error --location \
         --retry 5 --retry-delay 5 --retry-all-errors \
-        https://install.python-poetry.org \
-        --output /tmp/install-poetry.py \
-    && echo "${POETRY_INSTALLER_SHA256}  /tmp/install-poetry.py" | sha256sum -c - \
-    && python /tmp/install-poetry.py --version "${POETRY_VERSION}" \
-    && rm -f /tmp/install-poetry.py'
-ENV POETRY_VIRTUALENVS_CREATE=false
-ENV POETRY_HTTP_TIMEOUT=60
+        "https://github.com/astral-sh/uv/releases/download/${UV_VERSION}/uv-${UV_ARCH}.tar.gz" \
+        --output /tmp/uv.tar.gz \
+    && echo "${UV_SHA256}  /tmp/uv.tar.gz" | sha256sum -c - \
+    && tar --extract --gzip --file /tmp/uv.tar.gz --directory /tmp \
+    && install -m 0755 "/tmp/uv-${UV_ARCH}/uv" /usr/local/bin/uv \
+    && install -m 0755 "/tmp/uv-${UV_ARCH}/uvx" /usr/local/bin/uvx \
+    && rm -rf /tmp/uv.tar.gz "/tmp/uv-${UV_ARCH}"'
 
 FROM base AS dev
 
 ARG USERNAME=dev
 ARG GID=1000
+ENV HOME=/home/${USERNAME}
+ENV UV_CACHE_DIR=${HOME}/.cache/uv
+ENV UV_PROJECT_ENVIRONMENT=${HOME}/.venvs/infrastructure-template
+ENV PULUMI_PYTHON_CMD=${UV_PROJECT_ENVIRONMENT}/bin/python
 
-COPY --chown=${USERNAME}:${GID} pyproject.toml poetry.lock /workspace/
+# Keep the uv-managed environment outside /workspace so bind mounts never hide it.
+RUN install -d -o "${USERNAME}" -g "${GID}" "${HOME}/.cache/uv" "${HOME}/.venvs"
+
+COPY --chown=${USERNAME}:${GID} pyproject.toml uv.lock /workspace/
 
 WORKDIR /workspace
 
-RUN --mount=type=cache,target=/root/.cache/pypoetry \
-    poetry config installer.max-workers 4 \
-    && poetry install --no-root --no-interaction --no-ansi --with dev
+RUN --mount=type=cache,target=/home/${USERNAME}/.cache/uv \
+    uv venv --seed "${UV_PROJECT_ENVIRONMENT}" \
+    && uv sync --frozen --all-groups \
+    && chown -R "${USERNAME}:${GID}" "${UV_CACHE_DIR}" \
+    && chown -R "${USERNAME}:${GID}" "${UV_PROJECT_ENVIRONMENT}"
 
 USER "${USERNAME}"
 WORKDIR /workspace
 
 # Pulumi CLI caches a few files under the user's home directory
-ENV HOME=/home/${USERNAME}
-
 CMD ["bash"]
 
 FROM dev AS test

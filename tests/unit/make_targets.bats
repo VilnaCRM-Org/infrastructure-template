@@ -26,6 +26,9 @@ assert_compose_env_file() {
   [[ "$output" == *"test-integration"* ]]
   [[ "$output" == *"test-mutation"* ]]
   [[ "$output" == *"test-pulumi"* ]]
+  [[ "$output" == *"test-quality"* ]]
+  [[ "$output" == *"test-ruff"* ]]
+  [[ "$output" == *"test-ty"* ]]
   [[ "$output" == *"test-unit"* ]]
 }
 
@@ -109,6 +112,32 @@ assert_compose_env_file() {
   [[ "$output" == *"pytest -q tests/pulumi"* ]]
 }
 
+@test "make test-ruff executes Ruff lint and formatting checks" {
+  run make -n test-ruff
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"uv run ruff check pulumi tests"* ]]
+  [[ "$output" == *"uv run ruff format --check pulumi tests"* ]]
+}
+
+@test "make test-ty executes the Ty type checker" {
+  run make -n test-ty
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"uv run ty check"* ]]
+  [[ "$output" == *"--ignore missing-argument"* ]]
+  [[ "$output" == *"--ignore invalid-argument-type"* ]]
+  [[ "$output" == *"--ignore conflicting-declarations"* ]]
+  [[ "$output" == *"pulumi"* ]]
+}
+
+@test "make test-quality delegates to the Rust-based quality suite" {
+  run make -n test-quality
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make test-ruff"* ]]
+  [[ "$output" == *"make test-ty"* ]]
+}
+
 @test "make test-mutation executes the mutation helper script" {
   run make -n test-mutation
   [ "$status" -eq 0 ]
@@ -128,6 +157,7 @@ assert_compose_env_file() {
   run make -n test
   [ "$status" -eq 0 ]
   [[ "$output" == *"make test-pulumi"* ]]
+  [[ "$output" == *"make test-quality"* ]]
   [[ "$output" == *"make test-unit"* ]]
   [[ "$output" == *"make test-integration"* ]]
   [[ "$output" == *"make test-cli"* ]]

@@ -5,19 +5,18 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 cd "${ROOT_DIR}"
 
-POETRY_BIN="${POETRY_BIN:-poetry}"
-if ! command -v "${POETRY_BIN}" >/dev/null 2>&1; then
-  POETRY_HOME="${POETRY_HOME:-/opt/poetry}"
-  if [ -x "${POETRY_HOME}/bin/poetry" ]; then
-    POETRY_BIN="${POETRY_HOME}/bin/poetry"
+UV_BIN="${UV_BIN:-uv}"
+if ! command -v "${UV_BIN}" >/dev/null 2>&1; then
+  if [ -x "/usr/local/bin/uv" ]; then
+    UV_BIN="/usr/local/bin/uv"
   fi
 fi
 
-if ! command -v "${POETRY_BIN}" >/dev/null 2>&1; then
-  echo "Poetry executable not found. Set POETRY_BIN or install Poetry." >&2
+if ! command -v "${UV_BIN}" >/dev/null 2>&1; then
+  echo "uv executable not found. Set UV_BIN or install uv." >&2
   exit 127
 fi
 
-"${POETRY_BIN}" run mutmut run \
+"${UV_BIN}" run mutmut run \
   --paths-to-mutate pulumi/app \
-  --runner "${POETRY_BIN} run pytest -q tests/unit tests/integration"
+  --runner "${UV_BIN} run pytest -q tests/unit tests/integration"

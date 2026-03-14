@@ -30,7 +30,8 @@ INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 .DEFAULT_GOAL     = help
 .RECIPEPREFIX    +=
 .PHONY: help start pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
-        sh down test-unit test-integration test-pulumi test-mutation test-cli test all clean
+        sh down test-quality test-ruff test-ty test-unit test-integration \
+        test-pulumi test-mutation test-cli test all clean
 
 all: help ## Display help (default goal).
 
@@ -61,20 +62,35 @@ down: ## Stop the Docker Compose environment.
 
 test-unit: ## Execute fast unit tests for the Pulumi application layer.
 	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
-		$(COMPOSE_SERVICE) poetry run pytest -q tests/unit
+		$(COMPOSE_SERVICE) uv run pytest -q tests/unit
 
 test-integration: ## Execute Pulumi automation-based integration tests.
 	$(COMPOSE) run --rm $(INTEGRATION_COVERAGE_ENV) \
-		$(COMPOSE_SERVICE) poetry run pytest -q tests/integration
+		$(COMPOSE_SERVICE) uv run pytest -q tests/integration
 	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
 		-e COVERAGE_RCFILE=/workspace/.coveragerc \
-		$(COMPOSE_SERVICE) poetry run coverage combine
+		$(COMPOSE_SERVICE) uv run coverage combine
 	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
 		-e COVERAGE_RCFILE=/workspace/.coveragerc \
-		$(COMPOSE_SERVICE) poetry run coverage report --show-missing
+		$(COMPOSE_SERVICE) uv run coverage report --show-missing
 
 test-pulumi: ## Perform structural checks on Pulumi project configuration.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/pulumi
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run pytest -q tests/pulumi
+
+test-ruff: ## Run Ruff lint and format checks against Python sources.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff check pulumi tests
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff format --check pulumi tests
+
+test-ty: ## Run the Ty static type checker against Python sources.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ty check \
+		--ignore missing-argument \
+		--ignore invalid-argument-type \
+		--ignore conflicting-declarations \
+		pulumi
+
+test-quality: ## Run Rust-based Python quality gates.
+	$(MAKE) test-ruff
+	$(MAKE) test-ty
 
 test-mutation: ## Run mutation testing suite against Pulumi components.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
@@ -84,6 +100,7 @@ test-cli: ## Validate Makefile front-ends via Bats.
 
 test: ## Run the complete Pulumi-focused test battery.
 	$(MAKE) test-pulumi
+	$(MAKE) test-quality
 	$(MAKE) test-unit
 	$(MAKE) test-integration
 	$(MAKE) test-cli

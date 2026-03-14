@@ -7,10 +7,10 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 - [Quick Start](#quick-start)
 - [Local Tooling](#local-tooling)
 - [Development](#development)
+- [Python Tooling](#python-tooling)
 - [CI/CD and Secrets](#cicd-and-secrets)
 - [Project Structure](#project-structure)
 - [Testing and Validation](#testing-and-validation)
-- [Planned Follow-ups](#planned-follow-ups)
 - [Detailed Test Matrix](#detailed-test-matrix)
 - [Repository Synchronization](#repository-synchronization)
 - [Security](#security)
@@ -56,6 +56,9 @@ sh                Open a shell inside the Pulumi container.
 down              Stop the Docker Compose environment.
 test              Run the aggregate structural, unit, integration, and CLI battery.
 test-pulumi       Structural validation for manifests, workflows, and supply-chain guards.
+test-quality      Rust-based linting, formatting, and typing checks.
+test-ruff         Ruff lint and format drift checks.
+test-ty           Ty static typing diagnostics for the Pulumi layer.
 test-unit         Pulumi component tests with mocks.
 test-integration  Pulumi Automation smoke tests with a local backend.
 test-mutation     Mutation analysis of the component layer.
@@ -67,13 +70,32 @@ clean             Remove Docker Compose artifacts and Python build caches.
 
 We recommend editing the project through the Docker workspace so IDEs can reuse
 the interpreter that already ships with the repository (Pulumi CLI, Python SDKs,
-Black, Flake8, Pre-commit).
+uv, Ruff, Ty).
 
 - [PyCharm autocomplete guide](pycharm-autocomplete.md) — shows how to attach
   PyCharm to the Docker Compose interpreter or create a local virtualenv
   fallback.
 - `docker compose up --build -d` launches the workspace; `docker compose down`
   stops it.
+
+## Python Tooling
+
+The repository now uses `uv` for locking, syncing, and command execution, with
+Ruff and Ty as fast Rust-based quality gates.
+
+- The Docker workspace keeps its `uv` environment at
+  `/home/dev/.venvs/infrastructure-template` so host bind mounts cannot replace
+  the interpreter seen by Pulumi.
+- If you want a local virtual environment outside Docker, seed it once before
+  syncing:
+
+  ```bash
+  uv venv --seed
+  uv sync --all-groups
+  ```
+
+- The detailed workflow and rationale live in
+  [uv and Rust-native Python tooling](uv-rust-python-tooling-plan.md).
 
 ## CI/CD and Secrets
 
@@ -83,6 +105,7 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `pulumi-unit.yml` runs unit tests with Pulumi mocks.
 - `pulumi-integration.yml` runs Pulumi Automation tests with a local file backend.
 - `pulumi-mutation.yml` executes mutation testing.
+- `python-quality.yml` runs Ruff and Ty as dedicated quality checks.
 - `bats-tests.yml` validates the Makefile CLI surface.
 
 These checks do not require AWS or Pulumi credentials by default. The `pulumi-local.yml` workflow also reruns the aggregate `make test` battery used during local development. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
@@ -98,8 +121,8 @@ These checks do not require AWS or Pulumi credentials by default. The `pulumi-lo
 
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
-- `make test-pulumi`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli` for focused suites.
-- `make test` to run the structural, unit, integration, and CLI checks together.
+- `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli` for focused suites.
+- `make test` to run the structural, quality, unit, integration, and CLI checks together.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
 - GitHub Actions mirrors the aggregate `make test` command through the `Pulumi Local Test Battery` workflow.
@@ -107,10 +130,6 @@ Continuous integration runs automatically on every pull request. You can also va
 ## Detailed Test Matrix
 
 Use the dedicated [testing guide](testing.md) when you need to know exactly what each suite covers or which local command maps to which CI workflow.
-
-## Planned Follow-ups
-
-- [uv and Rust-native Python tooling roadmap](uv-rust-python-tooling-plan.md) tracks the next Python tooling upgrade after the Pulumi migration lands.
 
 ## Repository Synchronization
 
