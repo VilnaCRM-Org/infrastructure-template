@@ -6,7 +6,7 @@ COMPOSE_SERVICE   ?= pulumi
 PULUMI_DIR        ?= pulumi
 EFFECTIVE_ENV_FILE := $(firstword $(wildcard $(ENV_FILE)) $(wildcard $(EMPTY_ENV_FILE)))
 
-export COMPOSE_ENV_FILE := $(if $(EFFECTIVE_ENV_FILE),$(EFFECTIVE_ENV_FILE),$(EMPTY_ENV_FILE))
+COMPOSE_ENV_FILE := $(if $(EFFECTIVE_ENV_FILE),$(EFFECTIVE_ENV_FILE),$(EMPTY_ENV_FILE))
 UID ?= $(shell id -u 2>/dev/null || echo 1000)
 GID ?= $(shell id -g 2>/dev/null || echo 1000)
 USER ?= $(shell id -un 2>/dev/null || echo dev)
