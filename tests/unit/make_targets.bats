@@ -115,14 +115,18 @@ assert_compose_env_file() {
   run make -n test-unit
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"rm -f .coverage.unit .coverage.unit.*"* ]]
   [[ "$output" == *"pytest -q tests/unit"* ]]
   [[ "$output" == *"PYTEST_ADDOPTS="* ]]
+  [[ "$output" == *"coverage report --show-missing"* ]]
+  [[ "$output" == *"--fail-under=100"* ]]
 }
 
 @test "make test-integration executes the integration suite and coverage merge" {
   run make -n test-integration
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"rm -f .coverage.integration .coverage.integration.*"* ]]
   [[ "$output" == *"pytest -q tests/integration"* ]]
   [[ "$output" == *"coverage combine"* ]]
   [[ "$output" == *"coverage report --show-missing"* ]]
@@ -140,6 +144,7 @@ assert_compose_env_file() {
   run make -n test-policy
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"rm -f .coverage.policy .coverage.policy.*"* ]]
   [[ "$output" == *"pytest -q tests/policies"* ]]
   [[ "$output" == *"--cov=./policy"* ]]
   [[ "$output" == *".coverage.policy"* ]]

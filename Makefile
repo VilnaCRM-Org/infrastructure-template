@@ -115,6 +115,7 @@ test-pulumi: ## Perform structural checks on Pulumi project configuration.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run pytest -q tests/pulumi
 
 test-policy: ## Execute Pulumi policy-pack tests and guardrail coverage.
+	rm -f .coverage.policy .coverage.policy.*
 	$(COMPOSE) run --rm $(POLICY_COVERAGE_ENV) -e PYTEST_ADDOPTS="$(POLICY_COVERAGE_OPTS)" \
 		$(COMPOSE_SERVICE) uv run pytest -q tests/policies
 	$(COMPOSE) run --rm $(POLICY_COVERAGE_ENV) \

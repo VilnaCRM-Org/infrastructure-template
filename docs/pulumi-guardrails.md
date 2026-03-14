@@ -43,6 +43,9 @@ make test-policy
 ```
 
 That command enforces 100% line coverage for the Python policy-pack code.
+`make test-unit` and `make test-integration` keep the Pulumi application layer
+under the same 100% line-coverage contract, so both runtime guardrails and
+policy guardrails fail fast when tests drift.
 
 `make pulumi-preview` and `make pulumi-up` also enable the policy pack by
 default. Before Pulumi starts, the repository checks that the shared

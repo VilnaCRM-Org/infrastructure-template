@@ -237,6 +237,24 @@ def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
     assert "import pulumi_policy" in script_text
 
 
+def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
+    """Prevent drift in the 100%-coverage contract for Python test suites."""
+    makefile_text = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+
+    assert "rm -f .coverage.unit .coverage.unit.*" in makefile_text
+    assert "rm -f .coverage.integration .coverage.integration.*" in makefile_text
+    assert "rm -f .coverage.policy .coverage.policy.*" in makefile_text
+    assert "coverage report --show-missing --include='pulumi/*' --fail-under=100" in (
+        makefile_text
+    )
+    assert "coverage report --show-missing --fail-under=100 --include='pulumi/*'" in (
+        makefile_text
+    )
+    assert "coverage report --show-missing --include='policy/*' --fail-under=100" in (
+        makefile_text
+    )
+
+
 def test_bats_suite_covers_every_public_make_target() -> None:
     """Keep every public make target locked down by the CLI regression suite."""
     bats_text = BATS_FILE.read_text(encoding="utf-8")
@@ -473,3 +491,14 @@ def test_operator_docs_are_present_and_indexed() -> None:
     assert "/home/dev/.venvs/infrastructure-template" not in root_readme
     assert "docker-compose.yml" in docs_index
     assert "docker-compose.yml" in root_readme
+
+
+def test_testing_docs_call_out_full_coverage_contract() -> None:
+    """Keep the operator docs explicit about mandatory 100% line coverage."""
+    testing_doc = (PROJECT_ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
+    guardrails_doc = (PROJECT_ROOT / "docs" / "pulumi-guardrails.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "100% line coverage" in testing_doc
+    assert "100% line coverage" in guardrails_doc

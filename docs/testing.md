@@ -5,6 +5,10 @@ This repository uses multiple test types so infrastructure-template changes are 
 Run `make doctor` first if you suspect the problem is your local Docker or
 Compose setup rather than the repository itself.
 
+All coverage-bearing Python suites in this repository are locked to 100% line
+coverage. If unit, integration, or policy changes reduce coverage, the
+corresponding `make` target fails locally and in CI.
+
 ## Structural tests
 
 Run with:
