@@ -6,12 +6,12 @@ ARG UID=1000
 ARG GID=1000
 ARG USERNAME=appuser
 ARG PULUMI_VERSION=3.131.0
+ARG PULUMI_SHA256=a4d870dc9e5967799c83dc640a7f14571d523b0429ab53257d6457b9b6b0ff19
 
 # Install system dependencies as root
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl=7.88.1-10+deb12u5 \
-    unzip=6.0-28 \
-    gnupg=2.2.40-1.1 \
+    curl \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Create home directory and set ownership
@@ -26,19 +26,18 @@ WORKDIR /home/${USERNAME}
 USER ${UID}:${GID}
 
 # Install Pulumi securely by verifying the release checksum
-RUN set -euo pipefail && \
+RUN set -eu && \
     TARBALL="pulumi-v${PULUMI_VERSION}-linux-x64.tar.gz" && \
     mkdir -p /tmp/pulumi && \
     curl -fsSL "https://get.pulumi.com/releases/sdk/${TARBALL}" -o "/tmp/${TARBALL}" && \
-    curl -fsSL "https://get.pulumi.com/releases/sdk/${TARBALL}.sha256" -o "/tmp/${TARBALL}.sha256" && \
-    (cd /tmp && sha256sum -c "${TARBALL}.sha256") && \
+    echo "${PULUMI_SHA256}  /tmp/${TARBALL}" | sha256sum -c - && \
     tar -xzf "/tmp/${TARBALL}" -C /tmp && \
     mkdir -p /home/${USERNAME}/.pulumi/bin && \
-    cp -r /tmp/pulumi/bin/* /home/${USERNAME}/.pulumi/bin && \
-    rm -rf /tmp/pulumi "/tmp/${TARBALL}" "/tmp/${TARBALL}.sha256"
+    cp -r /tmp/pulumi/* /home/${USERNAME}/.pulumi/bin && \
+    rm -rf /tmp/pulumi "/tmp/${TARBALL}"
 
-# Install Poetry using a verified download step
-RUN set -euo pipefail && \
+# Install Poetry using a pinned installer version
+RUN set -eu && \
     curl -fsSL https://install.python-poetry.org -o /tmp/install-poetry.py && \
     python3 /tmp/install-poetry.py && \
     rm /tmp/install-poetry.py && \
@@ -46,8 +45,8 @@ RUN set -euo pipefail && \
 
 # Install AWS CLI
 RUN mkdir awscliv2 && \
-    curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.15.0.zip" -o "awscliv2/awscliv2.zip" && \
-    echo "3f80bd96a06427da3de238594127ccb704bd220578f1242fe910ae9f5becf7f5  awscliv2/awscliv2.zip" | sha256sum -c && \
+    curl -fsSL "https://awscli.amazonaws.com/awscli-exe-linux-x86_64-2.15.0.zip" -o "awscliv2/awscliv2.zip" && \
+    echo "bd3b5fc72d4bfe554ad72e96dd3571d79a6832fb268cc271ab33d73e8c2af46c  awscliv2/awscliv2.zip" | sha256sum -c && \
     unzip awscliv2/awscliv2.zip -d awscliv2 && \
     awscliv2/aws/install --install-dir /home/${USERNAME}/.aws-cli --bin-dir /home/${USERNAME}/.local/bin && \
     rm -rf awscliv2

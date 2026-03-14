@@ -6,12 +6,23 @@ on:
     paths:
       - "pulumi/**"
 
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: pulumi-preview-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   preview:
     name: Preview Infrastructure Changes
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -23,14 +34,23 @@ jobs:
 
       - name: Install dependencies
         working-directory: ./pulumi
-        run: poetry install
+        run: poetry install --no-interaction --no-ansi
 
-      - name: Configure AWS Credentials
+      - name: Configure AWS Credentials via OIDC
+        if: ${{ vars.AWS_ROLE_TO_ASSUME != '' || secrets.AWS_ROLE_TO_ASSUME != '' }}
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_ROLE_TO_ASSUME || secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ vars.AWS_REGION || secrets.AWS_REGION || 'eu-central-1' }}
+
+      - name: Configure AWS Credentials via static keys
+        if: ${{ vars.AWS_ROLE_TO_ASSUME == '' && secrets.AWS_ROLE_TO_ASSUME == '' }}
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
+          aws-session-token: ${{ secrets.AWS_SESSION_TOKEN }}
+          aws-region: ${{ vars.AWS_REGION || secrets.AWS_REGION || 'eu-central-1' }}
 
       - name: Setup Pulumi
         uses: pulumi/actions@v6
