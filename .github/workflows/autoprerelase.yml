@@ -6,9 +6,18 @@ on:
     paths-ignore:
       - 'CHANGELOG.md'
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     env:
       CHANGELOG_BRANCH: ${{ github.head_ref }}

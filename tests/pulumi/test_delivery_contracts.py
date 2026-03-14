@@ -11,6 +11,23 @@ SECRETS_DOC = PROJECT_ROOT / "docs" / "github-actions-secrets.md"
 BATS_FILE = PROJECT_ROOT / "tests" / "unit" / "make_targets.bats"
 UV_LOCKFILE = PROJECT_ROOT / "uv.lock"
 RELEASE_WORKFLOWS = ("autorelease.yml", "autoprerelase.yml")
+PULL_REQUEST_WORKFLOW_TIMEOUTS = {
+    "bats-tests.yml": {"bats_tests": 15},
+    "pulumi-integration.yml": {"integration": 20},
+    "pulumi-local.yml": {"local_battery": 45},
+    "pulumi-mutation.yml": {"mutation": 20},
+    "pulumi-structural.yml": {"structural": 15},
+    "pulumi-unit.yml": {"unit": 15},
+    "python-quality.yml": {"ruff": 15, "ty": 15},
+}
+DOCS_INDEX = PROJECT_ROOT / "docs" / "README.md"
+ROOT_README = PROJECT_ROOT / "README.md"
+PREPARE_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_docker_context.sh"
+DETAILED_DOCS = (
+    "ci-architecture.md",
+    "security-baseline.md",
+    "sre-operations.md",
+)
 
 
 def _triggers(workflow: dict) -> dict:
@@ -43,9 +60,8 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
             == "${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
         )
         assert any(step.get("name") == "Create Release" for step in steps)
-
-        if workflow_name == "autorelease.yml":
-            assert release_job["timeout-minutes"] == 10
+        assert release_job["timeout-minutes"] == 10
+        assert workflow["concurrency"]["cancel-in-progress"] is True
 
 
 def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
@@ -65,6 +81,11 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     assert "BATS_SHA256" in dockerfile_text
     assert "UV_PROJECT_ENVIRONMENT" in dockerfile_text
     assert "PULUMI_PYTHON_CMD" in dockerfile_text
+    assert 'AWS_PAGER=""' in dockerfile_text
+    assert "PULUMI_HOME" in dockerfile_text
+    assert "PULUMI_SKIP_UPDATE_CHECK=true" in dockerfile_text
+    assert "PYTHONDONTWRITEBYTECODE=1" in dockerfile_text
+    assert "PYTHONUNBUFFERED=1" in dockerfile_text
     assert "uv venv --seed" in dockerfile_text
     assert UV_LOCKFILE.exists()
     assert dockerfile_text.count('case "${TARGETARCH}" in') == 3
@@ -81,6 +102,7 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make all",
         "make -n build",
         "make -n ci",
+        "make -n doctor",
         "make -n start",
         "make -n pulumi-preview",
         "make -n pulumi-up",
@@ -154,6 +176,36 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
             )
 
 
+def test_ci_workflows_use_guardrails_and_shared_bootstrap() -> None:
+    """Require consistent concurrency, timeout, and bootstrap rules in CI."""
+    assert PREPARE_SCRIPT.exists()
+
+    for workflow_name, jobs in PULL_REQUEST_WORKFLOW_TIMEOUTS.items():
+        workflow = yaml.safe_load(
+            (WORKFLOWS_DIR / workflow_name).read_text(encoding="utf-8")
+        )
+        triggers = _triggers(workflow)
+
+        assert triggers["push"]["branches"] == ["main"]
+        assert triggers["pull_request"]["branches"] == ["main"]
+        assert workflow["permissions"] == {"contents": "read"}
+        assert workflow["defaults"]["run"]["shell"] == "bash"
+        assert workflow["concurrency"]["cancel-in-progress"] is True
+        assert "${{ github.workflow }}" in workflow["concurrency"]["group"]
+        assert (
+            "${{ github.event.pull_request.number || github.ref }}"
+            in workflow["concurrency"]["group"]
+        )
+
+        for job_name, expected_timeout in jobs.items():
+            job = workflow["jobs"][job_name]
+            assert job["timeout-minutes"] == expected_timeout
+            assert any(
+                step.get("run") == "./scripts/prepare_docker_context.sh"
+                for step in job["steps"]
+            ), f"{workflow_name}:{job_name} must use the shared Docker bootstrap"
+
+
 def test_bats_workflow_runs_on_push_and_pull_request() -> None:
     """Keep the CLI regression suite aligned with other local-only checks."""
     workflow = yaml.safe_load(
@@ -183,3 +235,14 @@ def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
     assert "pull_request" in triggers
     assert "make test-ruff" in ruff_runs
     assert "make test-ty" in ty_runs
+
+
+def test_operator_docs_are_present_and_indexed() -> None:
+    """Keep the root documentation discoverable from the handbook and README."""
+    docs_index = DOCS_INDEX.read_text(encoding="utf-8")
+    root_readme = ROOT_README.read_text(encoding="utf-8")
+
+    for doc_name in DETAILED_DOCS:
+        assert (PROJECT_ROOT / "docs" / doc_name).exists()
+        assert doc_name in docs_index
+        assert f"docs/{doc_name}" in root_readme

@@ -98,9 +98,15 @@ ARG GID=1000
 ARG CA_CERTIFICATES_VERSION=20230311
 ARG MAKE_VERSION=4.3-4.1
 ENV DEBIAN_FRONTEND=noninteractive
-ENV PATH="/opt/pulumi:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
-ENV UV_LINK_MODE=copy
 ENV HOME=/home/${USERNAME}
+ENV PATH="/opt/pulumi:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
+ENV AWS_PAGER=""
+ENV PIP_DISABLE_PIP_VERSION_CHECK=1
+ENV PULUMI_HOME=${HOME}/.pulumi
+ENV PULUMI_SKIP_UPDATE_CHECK=true
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV UV_LINK_MODE=copy
 ENV UV_CACHE_DIR=${HOME}/.cache/uv
 ENV UV_PROJECT_ENVIRONMENT=${HOME}/.venvs/infrastructure-template
 ENV PULUMI_PYTHON_CMD=${UV_PROJECT_ENVIRONMENT}/bin/python
@@ -127,7 +133,10 @@ RUN ln -sf /opt/pulumi/pulumi /usr/local/bin/pulumi \
 FROM runtime-base AS dev
 
 # Keep the uv-managed environment outside /workspace so bind mounts never hide it.
-RUN install -d -o "${USERNAME}" -g "${GID}" "${HOME}/.cache/uv" "${HOME}/.venvs"
+RUN install -d -o "${USERNAME}" -g "${GID}" \
+        "${HOME}/.cache/uv" \
+        "${HOME}/.venvs" \
+        "${PULUMI_HOME}"
 
 COPY --chown=${USERNAME}:${GID} pyproject.toml uv.lock /workspace/
 

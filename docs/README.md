@@ -9,8 +9,11 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 - [Development](#development)
 - [Python Tooling](#python-tooling)
 - [CI/CD and Secrets](#cicd-and-secrets)
+- [CI Architecture](#ci-architecture)
+- [Security Baseline](#security-baseline)
 - [Project Structure](#project-structure)
 - [Testing and Validation](#testing-and-validation)
+- [SRE Operations](#sre-operations)
 - [Detailed Test Matrix](#detailed-test-matrix)
 - [Repository Synchronization](#repository-synchronization)
 - [Security](#security)
@@ -48,6 +51,7 @@ That is all you need to begin iterating on the sample AWS instance or adapting t
 all               Display help (default goal).
 build             Build the Pulumi development image used by local and CI checks.
 ci                Run the full local equivalent of the pull-request CI battery.
+doctor            Check local prerequisites and effective paths without printing secrets.
 help              Print the available make targets.
 start             Initialize and start the Pulumi development environment.
 pulumi-preview    Preview infrastructure changes from inside the container.
@@ -111,7 +115,24 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `bats-tests.yml` validates the Makefile CLI surface.
 - `pulumi-local.yml` runs `make ci`, the full local equivalent of the pull-request battery.
 
-These checks do not require AWS or Pulumi credentials by default. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
+These checks do not require AWS or Pulumi credentials by default. They use
+concurrency groups, bounded job timeouts, pinned actions, and a shared
+`./scripts/prepare_docker_context.sh` bootstrap path so local and GitHub-hosted
+validation stay aligned. If you add deploy workflows or provision real cloud
+resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md)
+to configure the required secrets.
+
+## CI Architecture
+
+Use the dedicated [CI architecture guide](ci-architecture.md) when you need the
+workflow matrix, local-to-GitHub mapping, or the checklist for adding a new CI
+job safely.
+
+## Security Baseline
+
+Use the [security baseline](security-baseline.md) for the template's enforced
+controls, extension checklist, and guidance on secrets, token scope, and
+supply-chain hygiene.
 
 ## Project Structure
 
@@ -124,12 +145,18 @@ These checks do not require AWS or Pulumi credentials by default. If you add dep
 
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
+- Start with `make doctor` if you need a quick sanity check of Docker, Compose, and the effective env file.
 - Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`.
 - Run `make test` to execute the faster structural, quality, unit, integration, and CLI checks together.
 - Execute `make ci` to run the full local equivalent of the pull-request battery, including the image build and mutation suite.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
 - GitHub Actions mirrors the full `make ci` command through the `Pulumi Local Test Battery` workflow.
+
+## SRE Operations
+
+Use the [SRE operations guide](sre-operations.md) for preview/apply/refresh
+flows, stack strategy, failure triage, release hygiene, and cleanup guidance.
 
 ## Detailed Test Matrix
 

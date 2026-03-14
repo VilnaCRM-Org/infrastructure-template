@@ -5,6 +5,16 @@ on:
     branches:
       - main
   pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
 
 permissions:
   contents: read
@@ -22,9 +32,7 @@ jobs:
           persist-credentials: false
 
       - name: Prepare Docker context
-        run: |
-          mkdir -p "${HOME}/.aws"
-          cp -n .env.empty .env || touch .env
+        run: ./scripts/prepare_docker_context.sh
 
       - name: Run Ruff suite inside Docker
         run: make test-ruff
@@ -41,9 +49,7 @@ jobs:
           persist-credentials: false
 
       - name: Prepare Docker context
-        run: |
-          mkdir -p "${HOME}/.aws"
-          cp -n .env.empty .env || touch .env
+        run: ./scripts/prepare_docker_context.sh
 
       - name: Run Ty suite inside Docker
         run: make test-ty

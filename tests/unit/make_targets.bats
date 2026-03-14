@@ -15,6 +15,7 @@ assert_compose_env_file() {
   [[ "$output" == *"build"* ]]
   [[ "$output" == *"ci"* ]]
   [[ "$output" == *"clean"* ]]
+  [[ "$output" == *"doctor"* ]]
   [[ "$output" == *"down"* ]]
   [[ "$output" == *"help"* ]]
   [[ "$output" == *"pulumi-preview"* ]]
@@ -53,6 +54,15 @@ assert_compose_env_file() {
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"build pulumi"* ]]
+}
+
+@test "make doctor checks prerequisites without printing env values" {
+  run make -n doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"docker compose version"* ]]
+  [[ "$output" == *"effective env file:"* ]]
+  [[ "$output" == *"compose service:"* ]]
+  [[ "$output" != *"AWS_SECRET_ACCESS_KEY"* ]]
 }
 
 @test "make pulumi-preview executes preview inside container" {

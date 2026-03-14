@@ -29,15 +29,37 @@ INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 # Misc
 .DEFAULT_GOAL     = help
 .RECIPEPREFIX    +=
-.PHONY: help build start pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
-        sh down ci test-quality test-ruff test-ty test-unit test-integration \
-        test-pulumi test-mutation test-cli test all clean
+.PHONY: help doctor build start pulumi-preview pulumi-up pulumi-refresh \
+        pulumi-destroy sh down ci test-quality test-ruff test-ty test-unit \
+        test-integration test-pulumi test-mutation test-cli test all clean
 
 all: help ## Display help (default goal).
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
 	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
+
+doctor: ## Check local prerequisites and effective paths without printing secrets.
+	@set -eu; \
+	if ! command -v docker >/dev/null 2>&1; then \
+		echo "docker: missing" >&2; \
+		exit 1; \
+	fi; \
+	if ! docker compose version >/dev/null 2>&1; then \
+		echo "docker compose: missing" >&2; \
+		exit 1; \
+	fi; \
+	printf "docker: %s\n" "$$(docker --version)"; \
+	printf "docker compose: %s\n" "$$(docker compose version --short)"; \
+	printf "effective env file: %s\n" "$(COMPOSE_ENV_FILE)"; \
+	printf "compose service: %s\n" "$(COMPOSE_SERVICE)"; \
+	printf "pulumi directory: %s\n" "$(PULUMI_DIR)"; \
+	if [ -f "$(COMPOSE_ENV_FILE)" ]; then \
+		printf "env file present: yes\n"; \
+	else \
+		printf "env file present: no\n" >&2; \
+		exit 1; \
+	fi
 
 build: ## Build the Pulumi development image used by local and CI checks.
 	$(COMPOSE) build $(COMPOSE_SERVICE)

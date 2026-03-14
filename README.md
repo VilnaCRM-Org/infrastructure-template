@@ -40,7 +40,10 @@ All project docs live under `docs/` to keep everything version controlled. Start
 - [Development Environment](docs/README.md#development)
 - [PyCharm Autocomplete](docs/pycharm-autocomplete.md)
 - [CI/CD and Secrets](docs/README.md#cicd-and-secrets)
+- [CI Architecture](docs/ci-architecture.md)
+- [Security Baseline](docs/security-baseline.md)
 - [uv and Rust-native Python tooling](docs/uv-rust-python-tooling-plan.md)
+- [SRE Operations](docs/sre-operations.md)
 - [Testing and Validation](docs/README.md#testing-and-validation)
 - [Security](docs/README.md#security)
 - [Contributing](docs/README.md#contributing)
@@ -99,6 +102,9 @@ make test-mutation
 ```
 
 Use `make test` for the faster structural, quality, unit, integration, and CLI battery during day-to-day development. Use `make ci` when you want the full local equivalent of the pull-request checks, including the image build and mutation suite.
+
+Run `make doctor` when you need a fast prerequisite check before debugging local
+Docker or Compose behavior.
 
 ## Security
 

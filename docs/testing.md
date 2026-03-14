@@ -2,6 +2,9 @@
 
 This repository uses multiple test types so infrastructure-template changes are checked from configuration shape down to the developer CLI surface.
 
+Run `make doctor` first if you suspect the problem is your local Docker or
+Compose setup rather than the repository itself.
+
 ## Structural tests
 
 Run with:
