@@ -3,6 +3,7 @@
 This repository is a Pulumi infrastructure template for AWS. Agents should keep the scope tight, prefer testable changes, and avoid turning local validation into real cloud mutations unless the user explicitly asks for that.
 
 ## Working rules
+
 1. Make the smallest change that satisfies the task.
 2. Prefer updating tests, docs, or examples before broad workflow refactors.
 3. Run the narrowest useful validation for the files you touched.
@@ -25,12 +26,14 @@ These rules are mandatory for AI coding agents in this repository.
 6. Never commit secret values, decrypted outputs, copied stack exports, or temporary files containing secrets.
 
 ## Pulumi workflow
+
 1. Default validation should use Pulumi mocks, dry runs, or local-only smoke tests.
 2. Preview before apply when working against a real stack.
 3. Prefer ephemeral validation stacks such as `pr-<number>` or `smoke` for manual checks.
 4. Destroy ephemeral validation stacks after the check completes.
 
 ## Review-driven changes
+
 1. Use `gh pr view <PR>` and `gh pr checks <PR>` for context.
 2. Pull review threads with `gh api graphql` and resolve every actionable thread.
 3. Keep refactors minimal and directly tied to review feedback.
