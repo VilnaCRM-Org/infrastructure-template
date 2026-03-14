@@ -20,13 +20,19 @@ class ExampleServer(pulumi.ComponentResource):
         name_tag: Optional[str] = None,
         opts: Optional[pulumi.ResourceOptions] = None,
     ) -> None:
-        super().__init__("infrastructure-template:compute:ExampleServer", name, None, opts)
+        super().__init__(
+            "infrastructure-template:compute:ExampleServer", name, None, opts
+        )
 
         config = pulumi.Config()
 
         resolved_ami_id = ami_id or config.require("amiId")
-        resolved_instance_type = instance_type or config.get("instanceType") or "t2.micro"
-        resolved_name_tag = name_tag or config.get("nameTag") or "ExampleAppServerInstance"
+        resolved_instance_type = (
+            instance_type or config.get("instanceType") or "t2.micro"
+        )
+        resolved_name_tag = (
+            name_tag or config.get("nameTag") or "ExampleAppServerInstance"
+        )
         resolved_tags = {"Name": resolved_name_tag}
 
         self.instance = ec2.Instance(

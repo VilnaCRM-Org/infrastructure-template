@@ -76,7 +76,9 @@ def mocked_pulumi_context(
         config_patch = exit_stack.enter_context(patch("app.server.pulumi.Config"))
         config_instance = config_patch.return_value
         config_instance.require.side_effect = lambda key: required_values[key]
-        config_instance.get.side_effect = lambda key, default=None: optional_values.get(key, default)
+        config_instance.get.side_effect = lambda key, default=None: optional_values.get(
+            key, default
+        )
         yield
 
 

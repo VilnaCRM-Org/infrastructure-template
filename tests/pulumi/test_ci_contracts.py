@@ -26,7 +26,10 @@ def test_preview_workflow_supports_oidc_and_static_credentials() -> None:
     assert "Skip preview when credentials are not configured" in step_names
     assert "Configure AWS Credentials via OIDC" in step_names
     assert "Configure AWS Credentials via static keys" in step_names
-    assert job["env"]["AWS_ROLE_TO_ASSUME"] == "${{ vars.AWS_ROLE_TO_ASSUME || secrets.AWS_ROLE_TO_ASSUME }}"
+    assert (
+        job["env"]["AWS_ROLE_TO_ASSUME"]
+        == "${{ vars.AWS_ROLE_TO_ASSUME || secrets.AWS_ROLE_TO_ASSUME }}"
+    )
     assert job["steps"][-1]["if"] == "${{ steps.credentials.outputs.ready == 'true' }}"
 
 

@@ -6,7 +6,6 @@ import sys
 from pathlib import Path
 from unittest.mock import patch
 
-import pulumi
 from pulumi.runtime import mocks, settings, stack
 
 
@@ -53,14 +52,22 @@ def test_stack_entrypoint_executes_with_pulumi_mocks() -> None:
                 sys.path.pop(0)
 
             server = module_globals["server"]
-            server.instance_type.apply(lambda value: captured.setdefault("instance_type", value))
+            server.instance_type.apply(
+                lambda value: captured.setdefault("instance_type", value)
+            )
             server.tags.apply(lambda value: captured.setdefault("tags", value))
-            server.instance_public_ip.apply(lambda value: captured.setdefault("public_ip", value))
-            server.instance_private_ip.apply(lambda value: captured.setdefault("private_ip", value))
+            server.instance_public_ip.apply(
+                lambda value: captured.setdefault("public_ip", value)
+            )
+            server.instance_private_ip.apply(
+                lambda value: captured.setdefault("private_ip", value)
+            )
 
         with patch("app.server.pulumi.Config") as config_patch:
             config_instance = config_patch.return_value
-            config_instance.require.side_effect = lambda key: {"amiId": "ami-integration"}[key]
+            config_instance.require.side_effect = lambda key: {
+                "amiId": "ami-integration"
+            }[key]
             config_instance.get.side_effect = lambda key, default=None: {
                 "instanceType": "t3.small",
                 "nameTag": "IntegrationServer",
