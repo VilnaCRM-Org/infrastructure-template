@@ -10,10 +10,12 @@ COMPOSE_ENV_FILE := $(if $(EFFECTIVE_ENV_FILE),$(EFFECTIVE_ENV_FILE),$(EMPTY_ENV
 UID ?= $(shell id -u 2>/dev/null || echo 1000)
 GID ?= $(shell id -g 2>/dev/null || echo 1000)
 USER ?= $(shell id -un 2>/dev/null || echo dev)
+GITHUB_TOKEN ?= $(shell gh auth token 2>/dev/null)
 
 export UID
 export GID
 export USER
+export GITHUB_TOKEN
 
 # Executables
 DOCKER_COMPOSE    = docker compose
@@ -22,8 +24,13 @@ COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
 POLICY_PACK_DIR   = /workspace/policy
 POLICY_PACK_FLAG  = --policy-pack $(POLICY_PACK_DIR)
+DEFAULT_PULUMI_STACK ?= $(shell find $(PULUMI_DIR) -maxdepth 1 -type f -name 'Pulumi.*.yaml' ! -name 'Pulumi.yaml' -printf '%f\n' 2>/dev/null | sed -E 's/^Pulumi\.(.+)\.yaml$$/\1/' | sort | head -n 1)
+PULUMI_STACK     ?= $(DEFAULT_PULUMI_STACK)
+PULUMI_LOGIN_CMD  = export PULUMI_CONFIG_PASSPHRASE="$${PULUMI_CONFIG_PASSPHRASE-}"; \
+	pulumi $(PULUMI_CWD_FLAG) login "$${PULUMI_BACKEND_URL:-file:///workspace/.pulumi-backend}" >/dev/null
 COVERAGE_OPTS            ?= --cov=./pulumi --cov-report=term-missing
-UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS)
+UNIT_COVERAGE_INCLUDE    ?= pulumi/*,scripts/*
+UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS) --cov=./scripts
 POLICY_COVERAGE_OPTS     ?= --cov=./policy --cov-report=
 INTEGRATION_COVERAGE_INCLUDE ?= pulumi/__main__.py,pulumi/app/*
 INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
@@ -39,6 +46,8 @@ POLICY_COVERAGE_ENV       = -e COVERAGE_FILE=/workspace/.coverage.policy \
 .RECIPEPREFIX    +=
 .PHONY: help doctor build start pulumi-preview pulumi-up pulumi-refresh \
         pulumi-destroy sh down ci ci-pr test-quality test-ruff test-ty \
+        test-actionlint test-deps-security test-destructive-diff test-drift \
+        test-guardrails test-iam-validation test-preview test-security test-secrets \
         test-unit test-integration test-pulumi test-policy test-mutation \
         test-battery \
         test-cli test all clean
@@ -78,16 +87,16 @@ start: ## Initialize and start the Pulumi development environment.
 	$(COMPOSE) up -d
 
 pulumi-preview: ## Preview infrastructure changes from inside the Pulumi container.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/prepare_policy_pack.sh && pulumi $(PULUMI_CWD_FLAG) preview $(POLICY_PACK_FLAG)"
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --create --non-interactive >/dev/null; ./scripts/prepare_policy_pack.sh && pulumi $(PULUMI_CWD_FLAG) preview --stack "$$stack" $(POLICY_PACK_FLAG)'
 
 pulumi-up: ## Apply the current Pulumi infrastructure plan.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/prepare_policy_pack.sh && pulumi $(PULUMI_CWD_FLAG) up $(POLICY_PACK_FLAG)"
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --create --non-interactive >/dev/null; ./scripts/prepare_policy_pack.sh && pulumi $(PULUMI_CWD_FLAG) up --stack "$$stack" $(POLICY_PACK_FLAG)'
 
 pulumi-refresh: ## Sync the Pulumi stack with live cloud resources.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) refresh
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --create --non-interactive >/dev/null; pulumi $(PULUMI_CWD_FLAG) refresh --stack "$$stack"'
 
 pulumi-destroy: ## Tear down the Pulumi stack (irreversible; use with caution).
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) destroy
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --create --non-interactive >/dev/null; pulumi $(PULUMI_CWD_FLAG) destroy --stack "$$stack"'
 
 sh: ## Open a shell inside the Pulumi container.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) sh
@@ -100,7 +109,7 @@ test-unit: ## Execute fast unit tests for the Pulumi application layer.
 	$(COMPOSE) run --rm $(UNIT_COVERAGE_ENV) -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
 		$(COMPOSE_SERVICE) uv run pytest -q tests/unit
 	$(COMPOSE) run --rm $(UNIT_COVERAGE_ENV) \
-		$(COMPOSE_SERVICE) uv run coverage report --show-missing --include='pulumi/*' --fail-under=100
+		$(COMPOSE_SERVICE) uv run coverage report --show-missing --include='$(UNIT_COVERAGE_INCLUDE)' --fail-under=100
 
 test-integration: ## Execute Pulumi automation-based integration tests.
 	rm -f .coverage.integration .coverage.integration.*
@@ -124,8 +133,8 @@ test-policy: ## Execute Pulumi policy-pack tests and guardrail coverage.
 		$(COMPOSE_SERVICE) uv run coverage report --show-missing --include='policy/*' --fail-under=100
 
 test-ruff: ## Run Ruff lint and format checks against Python sources.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff check pulumi policy tests
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff format --check pulumi policy tests
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff check pulumi policy scripts tests
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff format --check pulumi policy scripts tests
 
 test-ty: ## Run the Ty static type checker against Python sources.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ty check \
@@ -133,7 +142,46 @@ test-ty: ## Run the Ty static type checker against Python sources.
 		--ignore missing-argument \
 		--ignore invalid-argument-type \
 		--ignore conflicting-declarations \
-		pulumi policy
+		pulumi policy scripts
+
+test-actionlint: ## Lint GitHub Actions workflows with actionlint.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) actionlint -color
+
+test-secrets: ## Scan the working tree for accidentally committed secrets.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) gitleaks dir . --config .gitleaks.toml --no-banner --redact
+
+test-deps-security: ## Audit Python dependencies for known vulnerabilities.
+	$(COMPOSE) run --rm -e XDG_CACHE_HOME=/tmp/xdg-cache $(COMPOSE_SERVICE) uv run pip-audit --strict
+
+test-preview: ## Generate non-destructive Pulumi previews for configured stacks.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_pulumi_preview.sh"
+
+test-destructive-diff: ## Fail when Pulumi previews delete or replace critical resources.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc '\
+		if ! compgen -G ".artifacts/pulumi-preview/*.json" >/dev/null; then \
+			./scripts/run_pulumi_preview.sh >/dev/null; \
+		fi; \
+		uv run python ./scripts/pulumi_ci_guardrails.py destructive-gate .artifacts/pulumi-preview/*.json'
+
+test-iam-validation: ## Validate previewed IAM policies with AWS IAM Access Analyzer.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc '\
+		if ! compgen -G ".artifacts/pulumi-preview/*.json" >/dev/null; then \
+			./scripts/run_pulumi_preview.sh >/dev/null; \
+		fi; \
+		uv run python ./scripts/pulumi_ci_guardrails.py validate-iam .artifacts/pulumi-preview/*.json'
+
+test-security: ## Run secret, dependency, and workflow security checks.
+	$(MAKE) test-secrets
+	$(MAKE) test-deps-security
+	$(MAKE) test-actionlint
+
+test-guardrails: ## Run preview, destructive diff, and IAM validation guardrails.
+	$(MAKE) test-preview
+	$(MAKE) test-destructive-diff
+	$(MAKE) test-iam-validation
+
+test-drift: ## Perform a non-destructive drift check against configured shared stacks.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_pulumi_drift_check.sh"
 
 test-quality: ## Run Rust-based Python quality gates.
 	$(MAKE) test-ruff
@@ -161,6 +209,8 @@ ci-pr: ## Run the GitHub PR battery except the dedicated mutation workflow.
 	$(MAKE) doctor
 	$(MAKE) build
 	$(MAKE) test-battery
+	$(MAKE) test-security
+	$(MAKE) test-guardrails
 
 ci: ## Run the full local equivalent of all GitHub checks, including mutation.
 	$(MAKE) ci-pr

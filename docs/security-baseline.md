@@ -37,6 +37,12 @@ the safe path the easy path for normal day-to-day infrastructure work.
 - CI workflows use least-privilege `permissions` blocks.
 - PR validation workflows use concurrency groups with
   `cancel-in-progress: true` so stale runs do not compete for runners.
+- Preview, IAM validation, and drift detection use GitHub OIDC and short-lived
+  AWS credentials rather than static access keys.
+- Every infrastructure PR now produces a Pulumi preview artifact before merge.
+- Critical deletes and replacements are blocked unless the pull request carries
+  the explicit `allow-destructive-infra-change` label.
+- Gitleaks, `pip-audit`, `actionlint`, and CodeQL are part of the review gate.
 - Release workflows serialize runs with `cancel-in-progress: false` so tag and
   changelog publication cannot be interrupted mid-run.
 - CI jobs define timeouts so hung runs fail fast instead of silently burning
@@ -48,10 +54,11 @@ the safe path the easy path for normal day-to-day infrastructure work.
 
 - Runtime guardrails validate `environment` and `serviceName` before the Pulumi
   program exports stack metadata.
-- A Pulumi policy pack under `policy/` enforces mandatory default tags for
-  tagged AWS resources.
-- The same policy pack blocks public S3 bucket ACLs and public SSH/RDP exposure
-  in security groups.
+- A Pulumi policy pack under `policy/` enforces mandatory default tags, region
+  allowlists, S3 privacy, encryption, logging, wildcard IAM restrictions, and
+  production-database safety for supported AWS resources.
+- The same preview artifact is reused for destructive-change gating and AWS IAM
+  Access Analyzer validation.
 - Policy validation has a dedicated CI workflow and a focused local command:
   `make test-policy`.
 

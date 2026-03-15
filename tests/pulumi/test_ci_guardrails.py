@@ -1,0 +1,169 @@
+"""Structural tests for the AI-safe CI/CD guardrail layer."""
+
+from __future__ import annotations
+
+import re
+from pathlib import Path
+
+import yaml
+
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+WORKFLOWS_DIR = PROJECT_ROOT / ".github" / "workflows"
+GUARDRAILS_DOC = PROJECT_ROOT / "docs" / "ci-guardrails.md"
+PREVIEW_SCRIPT = PROJECT_ROOT / "scripts" / "run_pulumi_preview.sh"
+DRIFT_SCRIPT = PROJECT_ROOT / "scripts" / "run_pulumi_drift_check.sh"
+GITLEAKS_CONFIG = PROJECT_ROOT / ".gitleaks.toml"
+ACTION_SHA_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
+
+
+def _workflow(name: str) -> dict:
+    """Load a workflow YAML file from disk."""
+    return yaml.safe_load((WORKFLOWS_DIR / name).read_text(encoding="utf-8"))
+
+
+def _triggers(workflow: dict) -> dict:
+    """Normalize the GitHub Actions `on` key when YAML parses it as a boolean."""
+    return workflow.get("on", workflow.get(True, {}))
+
+
+def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None:
+    """Keep the preview workflow aligned with the repo-local Make entrypoints."""
+    workflow = _workflow("pulumi-pr-guardrails.yml")
+    jobs = workflow["jobs"]
+
+    assert workflow["concurrency"]["cancel-in-progress"] is True
+    assert jobs["preview"]["permissions"] == {"contents": "read", "id-token": "write"}
+    assert jobs["destructive_diff"]["needs"] == "preview"
+    assert jobs["iam_validation"]["needs"] == "preview"
+
+    preview_runs = [
+        step.get("run") for step in jobs["preview"]["steps"] if step.get("run")
+    ]
+    assert any("make test-preview" in run for run in preview_runs)
+    assert any("GITHUB_STEP_SUMMARY" in run for run in preview_runs)
+    assert any(
+        step.get("uses", "").startswith("actions/upload-artifact@")
+        for step in jobs["preview"]["steps"]
+    )
+    assert any(
+        step.get("run") == "make test-destructive-diff"
+        for step in jobs["destructive_diff"]["steps"]
+    )
+    assert any(
+        step.get("run") == "make test-iam-validation"
+        for step in jobs["iam_validation"]["steps"]
+    )
+
+
+def test_security_scan_workflow_runs_repo_make_targets() -> None:
+    """Keep the security-scan workflow easy to reproduce locally."""
+    workflow = _workflow("security-scans.yml")
+    jobs = workflow["jobs"]
+
+    assert jobs["secrets"]["timeout-minutes"] == 10
+    assert jobs["dependency_audit"]["timeout-minutes"] == 15
+    assert jobs["actionlint"]["timeout-minutes"] == 10
+    assert any(
+        step.get("run") == "make test-secrets" for step in jobs["secrets"]["steps"]
+    )
+    assert any(
+        step.get("run") == "make test-deps-security"
+        for step in jobs["dependency_audit"]["steps"]
+    )
+    assert any(
+        step.get("run") == "make test-actionlint"
+        for step in jobs["actionlint"]["steps"]
+    )
+
+
+def test_codeql_workflow_covers_python_and_github_actions() -> None:
+    """Require GitHub-native code scanning for both Python and workflow code."""
+    workflow = _workflow("codeql.yml")
+    matrix_languages = workflow["jobs"]["analyze"]["strategy"]["matrix"]["language"]
+    uses_steps = [
+        step.get("uses")
+        for step in workflow["jobs"]["analyze"]["steps"]
+        if step.get("uses")
+    ]
+
+    assert workflow["permissions"] == {
+        "actions": "read",
+        "contents": "read",
+        "security-events": "write",
+    }
+    assert matrix_languages == ["python", "actions"]
+    assert any("github/codeql-action/init@" in uses for uses in uses_steps)
+    assert any("github/codeql-action/analyze@" in uses for uses in uses_steps)
+
+
+def test_nightly_guardrails_workflow_covers_drift_and_scorecard() -> None:
+    """Keep the scheduled guardrail workflow focused and discoverable."""
+    workflow = _workflow("nightly-guardrails.yml")
+    jobs = workflow["jobs"]
+    triggers = _triggers(workflow)
+    scorecard_uses = [
+        step.get("uses") for step in jobs["scorecard"]["steps"] if step.get("uses")
+    ]
+
+    assert "schedule" in triggers
+    assert "workflow_dispatch" in triggers
+    assert jobs["drift_detection"]["permissions"] == {
+        "contents": "read",
+        "id-token": "write",
+    }
+    assert any(
+        step.get("run") == "make test-drift"
+        for step in jobs["drift_detection"]["steps"]
+    )
+    assert any("ossf/scorecard-action@" in uses for uses in scorecard_uses)
+    assert any("upload-sarif@" in uses for uses in scorecard_uses)
+
+
+def test_new_guardrail_scripts_and_configs_are_present() -> None:
+    """Keep the repo-local building blocks for CI guardrails discoverable."""
+    preview_text = PREVIEW_SCRIPT.read_text(encoding="utf-8")
+    drift_text = DRIFT_SCRIPT.read_text(encoding="utf-8")
+    dockerfile_text = (PROJECT_ROOT / "Dockerfile").read_text(encoding="utf-8")
+
+    assert GITLEAKS_CONFIG.exists()
+    assert "GITHUB_TOKEN" in preview_text
+    assert "pulumi --cwd" in preview_text
+    assert "preview \\" in preview_text
+    assert '--stack "${stack}"' in preview_text
+    assert "expect-no-changes" in drift_text
+    assert "actionlint" in dockerfile_text
+    assert "gitleaks" in dockerfile_text
+
+
+def test_guardrail_docs_are_indexed_from_root_docs() -> None:
+    """Require operator docs for the new CI safety layer."""
+    docs_index = (PROJECT_ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+    root_readme = (PROJECT_ROOT / "README.md").read_text(encoding="utf-8")
+    content = GUARDRAILS_DOC.read_text(encoding="utf-8")
+
+    assert GUARDRAILS_DOC.exists()
+    assert "ci-guardrails.md" in docs_index
+    assert "docs/ci-guardrails.md" in root_readme
+    assert "AWS_OIDC_ROLE_ARN" in content
+    assert "allow-destructive-infra-change" in content
+    assert "CodeQL" in content
+    assert "Gitleaks" in content
+
+
+def test_new_workflows_keep_actions_pinned_to_full_shas() -> None:
+    """Avoid drifting back to mutable action tags in the new workflows."""
+    for workflow_name in (
+        "pulumi-pr-guardrails.yml",
+        "security-scans.yml",
+        "codeql.yml",
+        "nightly-guardrails.yml",
+    ):
+        workflow = _workflow(workflow_name)
+        for job in workflow["jobs"].values():
+            for step in job.get("steps", []):
+                uses = step.get("uses")
+                if uses is None:
+                    continue
+                assert ACTION_SHA_REF.match(uses), (
+                    f"{workflow_name} must pin `{uses}` to a full commit SHA"
+                )

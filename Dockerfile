@@ -17,6 +17,12 @@ ARG AWSCLI_SHA256_ARM64=82636f7ec20c57beeed19a14f8684113e0edfb30e79f1a615809de2d
 ARG UV_VERSION=0.9.21
 ARG UV_SHA256_AMD64=0a1ab27383c28ef1c041f85cbbc609d8e3752dfb4b238d2ad97b208a52232baf
 ARG UV_SHA256_ARM64=416984484783a357170c43f98e7d2d203f1fb595d6b3b95131513c53e50986ef
+ARG ACTIONLINT_VERSION=1.7.7
+ARG ACTIONLINT_SHA256_AMD64=023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757
+ARG ACTIONLINT_SHA256_ARM64=401942f9c24ed71e4fe71b76c7d638f66d8633575c4016efd2977ce7c28317d0
+ARG GITLEAKS_VERSION=8.24.2
+ARG GITLEAKS_SHA256_AMD64=fa0500f6b7e41d28791ebc680f5dd9899cd42b58629218a5f041efa899151a8e
+ARG GITLEAKS_SHA256_ARM64=574a6d52573c61173add7ddb5e3cc68c0e82cb0735818a1eeb9a0a2de1643fbc
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install only the transient packages required to download and unpack tooling.
@@ -86,6 +92,36 @@ RUN bash -o pipefail -c 'set -euo pipefail \
     && install -m 0755 "/tmp/uv-${uv_arch}/uvx" /usr/local/bin/uvx \
     && rm -rf /tmp/uv.tar.gz "/tmp/uv-${uv_arch}"'
 
+RUN bash -o pipefail -c 'set -euo pipefail \
+    && case "${TARGETARCH}" in \
+        amd64) actionlint_arch="linux_amd64"; actionlint_sha256="${ACTIONLINT_SHA256_AMD64}" ;; \
+        arm64) actionlint_arch="linux_arm64"; actionlint_sha256="${ACTIONLINT_SHA256_ARM64}" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && curl --fail --silent --show-error --location \
+        --retry 5 --retry-delay 5 --retry-all-errors \
+        "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/actionlint_${ACTIONLINT_VERSION}_${actionlint_arch}.tar.gz" \
+        --output /tmp/actionlint.tar.gz \
+    && echo "${actionlint_sha256}  /tmp/actionlint.tar.gz" | sha256sum -c - \
+    && tar --extract --gzip --file /tmp/actionlint.tar.gz --directory /tmp \
+    && install -m 0755 "/tmp/actionlint" /usr/local/bin/actionlint \
+    && rm -rf /tmp/actionlint /tmp/actionlint.tar.gz'
+
+RUN bash -o pipefail -c 'set -euo pipefail \
+    && case "${TARGETARCH}" in \
+        amd64) gitleaks_arch="linux_x64"; gitleaks_sha256="${GITLEAKS_SHA256_AMD64}" ;; \
+        arm64) gitleaks_arch="linux_arm64"; gitleaks_sha256="${GITLEAKS_SHA256_ARM64}" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && curl --fail --silent --show-error --location \
+        --retry 5 --retry-delay 5 --retry-all-errors \
+        "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_${gitleaks_arch}.tar.gz" \
+        --output /tmp/gitleaks.tar.gz \
+    && echo "${gitleaks_sha256}  /tmp/gitleaks.tar.gz" | sha256sum -c - \
+    && tar --extract --gzip --file /tmp/gitleaks.tar.gz --directory /tmp \
+    && install -m 0755 "/tmp/gitleaks" /usr/local/bin/gitleaks \
+    && rm -rf /tmp/gitleaks /tmp/gitleaks.tar.gz'
+
 FROM ${BASE_IMAGE} AS runtime-base
 
 ARG USERNAME=dev
@@ -119,6 +155,8 @@ COPY --from=tooling /opt/pulumi /opt/pulumi
 COPY --from=tooling /usr/local/aws-cli /usr/local/aws-cli
 COPY --from=tooling /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=tooling /usr/local/bin/uvx /usr/local/bin/uvx
+COPY --from=tooling /usr/local/bin/actionlint /usr/local/bin/actionlint
+COPY --from=tooling /usr/local/bin/gitleaks /usr/local/bin/gitleaks
 
 RUN ln -sf /opt/pulumi/pulumi /usr/local/bin/pulumi \
     && ln -sf /usr/local/aws-cli/v2/current/bin/aws /usr/local/bin/aws \

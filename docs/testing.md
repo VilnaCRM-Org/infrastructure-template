@@ -59,6 +59,28 @@ Ty currently ignores a small set of false positives caused by Pulumi's dynamic
 `Output.apply` API and the coverage bootstrap shim. The CI command keeps those
 exceptions explicit instead of silently disabling the type check.
 
+## Security and preview guardrails
+
+Run with:
+
+```bash
+make test-security
+make test-guardrails
+```
+
+Coverage:
+
+- `make test-secrets` runs Gitleaks against the working tree
+- `make test-deps-security` runs `pip-audit --strict`
+- `make test-actionlint` lints all workflow files
+- `make test-preview` generates the Pulumi preview artifact consumed by later checks
+- `make test-destructive-diff` blocks deletes and replacements of critical infrastructure without an explicit PR override label
+- `make test-iam-validation` validates previewed IAM policies with AWS IAM Access Analyzer
+
+CodeQL and OpenSSF Scorecard are GitHub-native only. The repository keeps those
+workflow definitions under structural test coverage, but there is no local
+Docker equivalent for the scans themselves.
+
 ## Unit tests
 
 Run with:
@@ -163,6 +185,8 @@ Run `make test` during normal iteration when you want the fast structural, polic
 
 GitHub Actions now mirrors `make ci-pr` through the `Pulumi Local Test Battery` workflow, while `Pulumi Mutation Tests` keeps mutation analysis isolated as a separate check.
 The `Pulumi Policy Tests` workflow runs the policy-pack coverage suite, and the `Python Quality Checks` workflow runs Ruff and Ty as dedicated quality gates.
+`Pulumi PR Guardrails` runs preview, destructive diff, and IAM validation. The
+`Security Scans` workflow runs Gitleaks, dependency audit, and Actionlint.
 
 Use `make pulumi-preview` before any real cloud deployment. The preview and
 apply targets automatically enable the repository policy pack.

@@ -15,6 +15,9 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 9. Use `make doctor` before debugging local Docker or Compose issues.
 10. Reuse `./scripts/prepare_docker_context.sh` when changing Docker-backed CI jobs so setup remains consistent across workflows.
 11. Keep `./scripts/prepare_policy_pack.sh`, `policy/PulumiPolicy.yaml`, `policy/.venv`, and the shared `uv` environment contract aligned when changing Pulumi policy-pack behavior.
+12. Reproduce PR safety checks with `make test-security`, `make test-guardrails`, or `make ci-pr` before pushing infra-related workflow or policy changes.
+13. Do not add long-lived static AWS credentials to workflows; use the documented OIDC role variables instead.
+14. Treat `allow-destructive-infra-change` as the only supported override for destructive Pulumi diffs.
 
 ## Secret handling
 

@@ -32,6 +32,7 @@ ROOT_README = PROJECT_ROOT / "README.md"
 PREPARE_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_docker_context.sh"
 PREPARE_POLICY_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_policy_pack.sh"
 DETAILED_DOCS = (
+    "ci-guardrails.md",
     "ci-architecture.md",
     "pulumi-guardrails.md",
     "security-baseline.md",
@@ -160,6 +161,9 @@ def test_docker_compose_keeps_workspace_and_credentials_contract() -> None:
         "AWS_SECRET_ACCESS_KEY",
         "AWS_SESSION_TOKEN",
         "AWS_PROFILE",
+        "AWS_REGION",
+        "AWS_DEFAULT_REGION",
+        "GITHUB_TOKEN",
         "PYTHONPATH=/workspace/pulumi",
     ]
 
@@ -262,8 +266,10 @@ def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
     assert "rm -f .coverage.unit .coverage.unit.*" in makefile_text
     assert "rm -f .coverage.integration .coverage.integration.*" in makefile_text
     assert "rm -f .coverage.policy .coverage.policy.*" in makefile_text
-    assert "coverage report --show-missing --include='pulumi/*' --fail-under=100" in (
-        makefile_text
+    assert "UNIT_COVERAGE_INCLUDE    ?= pulumi/*,scripts/*" in makefile_text
+    assert (
+        "coverage report --show-missing --include='$(UNIT_COVERAGE_INCLUDE)' "
+        "--fail-under=100" in makefile_text
     )
     assert (
         "INTEGRATION_COVERAGE_INCLUDE ?= pulumi/__main__.py,pulumi/app/*"
@@ -276,6 +282,7 @@ def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
     assert "coverage report --show-missing --include='policy/*' --fail-under=100" in (
         makefile_text
     )
+    assert "scripts" in coverage_config
     assert "pulumi/sitecustomize.py" not in coverage_config
 
 
@@ -296,6 +303,15 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make -n pulumi-destroy",
         "make -n sh",
         "make -n down",
+        "make -n test-actionlint",
+        "make -n test-deps-security",
+        "make -n test-destructive-diff",
+        "make -n test-drift",
+        "make -n test-guardrails",
+        "make -n test-iam-validation",
+        "make -n test-preview",
+        "make -n test-security",
+        "make -n test-secrets",
         "make -n test-quality",
         "make -n test-ruff",
         "make -n test-ty",

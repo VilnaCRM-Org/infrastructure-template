@@ -17,16 +17,29 @@ Those checks live in `pulumi/app/guardrails.py` and are applied by
 
 ## Policy pack
 
-The `policy/` directory contains a Python Pulumi policy pack for AWS resources.
-It currently enforces three mandatory rules:
+The `policy/` directory contains the custom VilnaCRM Pulumi CrossGuard pack for
+AWS resources. It enforces the repository-specific infrastructure rules that are
+most likely to catch risky AI-generated changes:
 
-- tagged AWS resources must include non-empty `Project` and `Environment` tags
-- S3 buckets and dedicated bucket ACL resources must not use `public-read` or `public-read-write` ACLs
-- security groups must not expose SSH or RDP to `0.0.0.0/0` or `::/0`, including modern ingress-rule resources that use `cidrIpv4` or `cidrIpv6`
+- tagged AWS resources must include non-empty `Project`, `Environment`, `Owner`,
+  and `CostCenter` tags
+- AWS regions must stay inside the repository allowlist
+- S3 buckets must not become public through ACLs or bucket policies unless they
+  are explicitly allowlisted
+- critical storage resources must enable encryption at rest
+- supported S3 buckets and load balancers must enable access logging
+- IAM policies must not use wildcard permissions unless a narrow allowlist and
+  justification tag are present
+- production-like RDS resources must enable deletion protection, keep final
+  snapshots, and avoid public accessibility
+- security groups must not expose SSH or RDP to `0.0.0.0/0` or `::/0`,
+  including modern ingress-rule resources that use `cidrIpv4` or `cidrIpv6`
 
 The policy-pack source is split so the reusable validation logic is easy to
 test:
 
+- `policy/config.py` loads the committed VilnaCRM settings from
+  `policy/vilnacrm_guardrails.yaml`
 - `policy/guardrails.py` contains pure validation helpers
 - `policy/pack.py` defines the Pulumi policy validators and policy list
 - `policy/__main__.py` registers the `PolicyPack`
@@ -48,6 +61,10 @@ That command enforces 100% line coverage for the Python policy-pack code.
 `make test-unit` and `make test-integration` keep the Pulumi application layer
 under the same 100% line-coverage contract, so both runtime guardrails and
 policy guardrails fail fast when tests drift.
+
+The PR preview workflow also runs the same policy pack during `make test-preview`
+before the destructive diff and IAM validation steps inspect the resulting
+preview artifact.
 
 `make pulumi-preview` and `make pulumi-up` also enable the policy pack by
 default. Before Pulumi starts, the repository checks that the shared

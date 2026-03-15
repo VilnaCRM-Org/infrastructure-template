@@ -9,6 +9,7 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 - [Development](#development)
 - [Python Tooling](#python-tooling)
 - [CI/CD and Secrets](#cicd-and-secrets)
+- [CI Guardrails](#ci-guardrails)
 - [CI Architecture](#ci-architecture)
 - [Pulumi Guardrails](#pulumi-guardrails)
 - [Security Baseline](#security-baseline)
@@ -127,6 +128,12 @@ validation stay aligned. If you add deploy workflows or provision real cloud
 resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md)
 to configure the required secrets.
 
+## CI Guardrails
+
+Use the [CI guardrails guide](ci-guardrails.md) for the PR-blocking preview,
+destructive diff, IAM validation, secret scanning, dependency audit, CodeQL,
+and nightly drift/Scorecard contracts.
+
 ## CI Architecture
 
 Use the dedicated [CI architecture guide](ci-architecture.md) when you need the
@@ -157,15 +164,16 @@ them enforced.
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
 - Start with `make doctor` if you need a quick sanity check of Docker, Compose, and the effective env file.
-- Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-policy`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`.
+- Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-policy`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`, `make test-security`, `make test-guardrails`.
 - Use `make test-policy` when you are changing guardrails or adding new AWS resource types that should be covered by the policy pack.
 - `make pulumi-preview` and `make pulumi-up` sync the shared `uv` environment if needed, refresh `policy/.venv`, and then run Pulumi with the repository policy pack enabled.
 - Run `make test` to execute the faster structural, policy, quality, unit, integration, and CLI checks together after a prerequisite sanity check.
-- Execute `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check, image build, and policy suite.
+- Execute `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check, image build, security scans, preview generation, and policy suite.
 - Execute `make ci` to run the full local equivalent of all GitHub checks, including the prerequisite check, image build, and mutation suite.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
 - GitHub Actions mirrors `make ci-pr` through the `Pulumi Local Test Battery` workflow, while mutation remains isolated in `pulumi-mutation.yml`.
+- `Pulumi PR Guardrails` and `Security Scans` also expose their focused Make entrypoints as dedicated CI checks.
 
 ## SRE Operations
 

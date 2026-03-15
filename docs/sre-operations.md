@@ -39,8 +39,9 @@ make ci
 ```
 
 Use `make ci-pr` to catch the same structural, policy, quality, unit,
-integration, and CLI regressions that GitHub runs before merge. Use `make ci`
-when you also want the mutation suite before the branch reaches GitHub Actions.
+integration, CLI, security-scan, and preview guardrails that GitHub runs before
+merge. Use `make ci` when you also want the mutation suite before the branch
+reaches GitHub Actions.
 
 ## Preview and Apply
 
@@ -53,6 +54,16 @@ make pulumi-preview
 The preview target syncs the shared `uv` environment if necessary and enables
 the repository policy pack automatically, so guardrail drift is caught before
 the Pulumi plan is shown.
+
+When you want to reproduce the PR-blocking preview flow exactly, use:
+
+```bash
+make test-guardrails
+```
+
+That target generates the preview artifact, blocks destructive changes to
+critical resources, and validates any previewed IAM policies with Access
+Analyzer.
 
 Apply only after the preview is understood and reviewed:
 
@@ -98,6 +109,8 @@ When something looks wrong:
 4. inspect `pulumi -C pulumi stack output` for the non-secret state you expect
 5. use an ephemeral stack for risky experiments instead of debugging directly in
    a shared environment
+6. if a change is intentionally destructive, document the reason and add the
+   `allow-destructive-infra-change` label instead of bypassing the workflow
 
 ## CI Troubleshooting
 
@@ -112,6 +125,12 @@ Map failures back to their local commands:
 - `Mutation` -> `make test-mutation`
 - `Run Bats Tests` -> `make test-cli`
 - `Local Battery` -> `make ci-pr`
+- `Preview` -> `make test-preview`
+- `Destructive Diff Gate` -> `make test-destructive-diff`
+- `IAM Validation` -> `make test-iam-validation`
+- `Secrets Scan` -> `make test-secrets`
+- `Dependency Audit` -> `make test-deps-security`
+- `Actionlint` -> `make test-actionlint`
 
 That mapping is intentional. If a failure cannot be reproduced locally with the
 matching target, the problem is probably workflow-specific and should be treated

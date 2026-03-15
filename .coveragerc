@@ -5,6 +5,7 @@ parallel = True
 source =
     pulumi
     policy
+    scripts
     */pulumi-program
 
 [report]

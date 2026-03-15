@@ -1,24 +1,35 @@
 # GitHub Actions Secrets
 
-The CI test workflows use a local Pulumi backend and do not require cloud credentials by default. Configure secrets only when you enable deployments, release automation, or template synchronization.
+The hardened CI/CD layer in this repository is OIDC-first. Preview, IAM
+validation, and nightly drift detection are designed to use short-lived AWS
+credentials issued through GitHub Actions OIDC. Do not add long-lived static AWS
+access keys for these workflows.
 
-## Pulumi and AWS Secrets (for deploys)
+## Required variables for guardrail workflows
+
+| Variable | Purpose | Notes |
+| --- | --- | --- |
+| `AWS_OIDC_ROLE_ARN` | IAM role assumed by preview, IAM validation, and drift jobs | Repository variable, not a secret |
+| `AWS_REGION` | Region used by `configure-aws-credentials` | Repository variable |
+| `PULUMI_BACKEND_URL` | Shared backend used by real previews and drift checks | Repository variable |
+| `PULUMI_PREVIEW_STACKS` | Optional comma-separated stack list for PR previews | Defaults to committed `Pulumi.<stack>.yaml` files |
+| `PULUMI_DRIFT_STACKS` | Optional comma-separated stack list for nightly drift checks | Defaults to committed `Pulumi.<stack>.yaml` files |
+
+## Optional secrets for guardrail workflows
 
 | Secret | Purpose | Notes |
 | --- | --- | --- |
-| `AWS_ACCESS_KEY_ID` | Authenticate AWS API calls | Optional if you use GitHub OIDC; pair with `AWS_SECRET_ACCESS_KEY`. |
-| `AWS_SECRET_ACCESS_KEY` | Authenticate AWS API calls | Store the matching secret key when using static IAM users. |
-| `PULUMI_ACCESS_TOKEN` | Authenticate against the Pulumi Service | Required when using the Pulumi Service backend. Generate in the Pulumi UI under **Settings → Access Tokens**. |
+| `PULUMI_ACCESS_TOKEN` | Authenticate against the Pulumi Service backend | Only required when the backend is Pulumi Cloud |
+| `PULUMI_CONFIG_PASSPHRASE` | Unlock passphrase-protected backends | Optional when the backend uses passphrase encryption |
 
-### Using GitHub OIDC Instead of Static Keys
+## OIDC role setup
 
-If you prefer short-lived credentials:
+1. Create an IAM OIDC identity provider for `https://token.actions.githubusercontent.com` if your AWS account does not already have one.
+2. Create an IAM role with a trust policy scoped to this repository and the `sts.amazonaws.com` audience.
+3. Grant the role only the permissions required for preview, IAM validation, and drift detection.
+4. Store the role ARN as the `AWS_OIDC_ROLE_ARN` repository variable.
 
-1. Create an IAM role that trusts your GitHub organization/repository via OpenID Connect.
-2. Grant the role permissions to manage the stack resources.
-3. Store the role ARN as `AWS_OIDC_ROLE_ARN` (or another name) and update the workflow to assume it.
-
-See [Configuring OpenID Connect in cloud providers](https://docs.github.com/en/actions/security-guides/security-hardening-your-deployments/configuring-openid-connect-in-cloud-providers) for detailed steps.
+See the dedicated [CI guardrails guide](ci-guardrails.md) for an example trust policy and the documented `sub` claim formats.
 
 ## Release Automation Secrets
 

@@ -44,7 +44,20 @@ class BucketStub(pulumi.ComponentResource):
             name,
             {{
                 "acl": "{acl}",
-                "tags": {{"Project": "demo", "Environment": "dev"}},
+                "logging": {{"targetBucket": "audit-logs", "targetPrefix": "bucket/"}},
+                "serverSideEncryptionConfiguration": {{
+                    "rule": {{
+                        "applyServerSideEncryptionByDefault": {{
+                            "sseAlgorithm": "AES256"
+                        }}
+                    }}
+                }},
+                "tags": {{
+                    "Project": "demo",
+                    "Environment": "dev",
+                    "Owner": "platform",
+                    "CostCenter": "engineering",
+                }},
             }},
         )
         self.register_outputs({{}})
@@ -118,5 +131,5 @@ def test_policy_pack_blocks_public_bucket_acl(tmp_path: Path) -> None:
     combined_output = f"{result.stdout}\n{result.stderr}"
 
     assert result.returncode != 0, combined_output
-    assert "s3-no-public-acls" in combined_output
-    assert "public-read or public-read-write ACLs" in combined_output
+    assert "s3-no-public-exposure" in combined_output
+    assert "public ACLs" in combined_output

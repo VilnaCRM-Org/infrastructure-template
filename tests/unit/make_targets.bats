@@ -27,12 +27,21 @@ assert_compose_env_file() {
   [[ "$output" == *"start"* ]]
   [[ "$output" == *"test"* ]]
   [[ "$output" == *"test-cli"* ]]
+  [[ "$output" == *"test-actionlint"* ]]
+  [[ "$output" == *"test-deps-security"* ]]
+  [[ "$output" == *"test-destructive-diff"* ]]
+  [[ "$output" == *"test-drift"* ]]
+  [[ "$output" == *"test-guardrails"* ]]
+  [[ "$output" == *"test-iam-validation"* ]]
   [[ "$output" == *"test-integration"* ]]
   [[ "$output" == *"test-mutation"* ]]
   [[ "$output" == *"test-policy"* ]]
   [[ "$output" == *"test-pulumi"* ]]
   [[ "$output" == *"test-quality"* ]]
+  [[ "$output" == *"test-preview"* ]]
   [[ "$output" == *"test-ruff"* ]]
+  [[ "$output" == *"test-security"* ]]
+  [[ "$output" == *"test-secrets"* ]]
   [[ "$output" == *"test-ty"* ]]
   [[ "$output" == *"test-unit"* ]]
 }
@@ -82,30 +91,36 @@ assert_compose_env_file() {
   run make -n pulumi-preview
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"stack select"* ]]
   [[ "$output" == *"./scripts/prepare_policy_pack.sh"* ]]
-  [[ "$output" == *"pulumi --cwd pulumi preview --policy-pack /workspace/policy"* ]]
+  [[ "$output" == *"pulumi --cwd pulumi preview --stack"* ]]
+  [[ "$output" == *"--policy-pack /workspace/policy"* ]]
 }
 
 @test "make pulumi-up executes deployment inside container" {
   run make -n pulumi-up
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"stack select"* ]]
   [[ "$output" == *"./scripts/prepare_policy_pack.sh"* ]]
-  [[ "$output" == *"pulumi --cwd pulumi up --policy-pack /workspace/policy"* ]]
+  [[ "$output" == *"pulumi --cwd pulumi up --stack"* ]]
+  [[ "$output" == *"--policy-pack /workspace/policy"* ]]
 }
 
 @test "make pulumi-refresh executes refresh inside container" {
   run make -n pulumi-refresh
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"pulumi --cwd pulumi refresh"* ]]
+  [[ "$output" == *"stack select"* ]]
+  [[ "$output" == *"pulumi --cwd pulumi refresh --stack"* ]]
 }
 
 @test "make pulumi-destroy executes destroy inside container" {
   run make -n pulumi-destroy
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"pulumi --cwd pulumi destroy"* ]]
+  [[ "$output" == *"stack select"* ]]
+  [[ "$output" == *"pulumi --cwd pulumi destroy --stack"* ]]
 }
 
 @test "make sh opens a throwaway shell in the Pulumi container" {
@@ -166,8 +181,8 @@ assert_compose_env_file() {
   run make -n test-ruff
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"uv run ruff check pulumi policy tests"* ]]
-  [[ "$output" == *"uv run ruff format --check pulumi policy tests"* ]]
+  [[ "$output" == *"uv run ruff check pulumi policy scripts tests"* ]]
+  [[ "$output" == *"uv run ruff format --check pulumi policy scripts tests"* ]]
 }
 
 @test "make test-ty executes the Ty type checker" {
@@ -180,6 +195,73 @@ assert_compose_env_file() {
   [[ "$output" == *"--ignore conflicting-declarations"* ]]
   [[ "$output" == *"pulumi"* ]]
   [[ "$output" == *"policy"* ]]
+  [[ "$output" == *"scripts"* ]]
+}
+
+@test "make test-actionlint executes actionlint inside the container" {
+  run make -n test-actionlint
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"actionlint -color"* ]]
+}
+
+@test "make test-secrets executes gitleaks against the working tree" {
+  run make -n test-secrets
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"gitleaks dir . --config .gitleaks.toml --no-banner --redact"* ]]
+}
+
+@test "make test-deps-security executes pip-audit in strict mode" {
+  run make -n test-deps-security
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"XDG_CACHE_HOME=/tmp/xdg-cache"* ]]
+  [[ "$output" == *"uv run pip-audit --strict"* ]]
+}
+
+@test "make test-preview generates Pulumi preview artifacts" {
+  run make -n test-preview
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"./scripts/run_pulumi_preview.sh"* ]]
+}
+
+@test "make test-destructive-diff enforces destructive resource guardrails" {
+  run make -n test-destructive-diff
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"pulumi_ci_guardrails.py destructive-gate"* ]]
+}
+
+@test "make test-iam-validation validates previewed IAM policies" {
+  run make -n test-iam-validation
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"pulumi_ci_guardrails.py validate-iam"* ]]
+}
+
+@test "make test-security delegates to the security scan battery" {
+  run make -n test-security
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make test-secrets"* ]]
+  [[ "$output" == *"make test-deps-security"* ]]
+  [[ "$output" == *"make test-actionlint"* ]]
+}
+
+@test "make test-guardrails delegates to preview, destructive diff, and IAM validation" {
+  run make -n test-guardrails
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make test-preview"* ]]
+  [[ "$output" == *"make test-destructive-diff"* ]]
+  [[ "$output" == *"make test-iam-validation"* ]]
+}
+
+@test "make test-drift executes the non-destructive drift helper" {
+  run make -n test-drift
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"./scripts/run_pulumi_drift_check.sh"* ]]
 }
 
 @test "make test-quality delegates to the Rust-based quality suite" {
