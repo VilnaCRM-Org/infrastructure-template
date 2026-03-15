@@ -175,6 +175,7 @@ def test_quality_docs_and_configs_are_present_and_indexed() -> None:
     docs_index = DOCS_INDEX.read_text(encoding="utf-8")
     root_readme = ROOT_README.read_text(encoding="utf-8")
     content = QUALITY_DOC.read_text(encoding="utf-8")
+    testing_doc = (PROJECT_ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
     yamllint_config = yaml.safe_load(
         (PROJECT_ROOT / ".yamllint.yml").read_text(encoding="utf-8")
     )
@@ -195,6 +196,7 @@ def test_quality_docs_and_configs_are_present_and_indexed() -> None:
     assert "Wily" in content
     assert "SBOM" in content
     assert "artifact attestation" in content
+    assert "`pulumi`, `policy`, and `scripts`" in testing_doc
     assert ".github/workflows/" not in yamllint_config["ignore"]
     assert yamllint_config["rules"]["truthy"]["check-keys"] is False
     assert ".github/workflows" in makefile

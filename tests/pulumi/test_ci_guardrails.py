@@ -175,6 +175,7 @@ def test_new_guardrail_scripts_and_configs_are_present() -> None:
     assert GITLEAKS_CONFIG.exists()
     assert "gh auth token" not in preview_text
     assert "pulumi --cwd" in preview_text
+    assert 'login --non-interactive "${BACKEND_URL}"' in preview_text
     assert "preview \\" in preview_text
     assert '--stack "${stack}"' in preview_text
     assert 'uv --project "${ROOT_DIR}" run python' in preview_text
@@ -197,6 +198,8 @@ def test_guardrail_docs_are_indexed_from_root_docs() -> None:
     assert "ci-guardrails.md" in docs_index
     assert "docs/ci-guardrails.md" in root_readme
     assert "AWS_OIDC_ROLE_ARN" in content
+    assert "<BRANCH_REF>" in content
+    assert "allowed branch" in content
     assert "allow-destructive-infra-change" in content
     assert "CodeQL" in content
     assert "Gitleaks" in content

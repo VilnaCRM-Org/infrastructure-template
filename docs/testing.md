@@ -57,7 +57,7 @@ Coverage:
 
 - `ruff check` for fast linting
 - `ruff format --check` for formatting drift
-- `ty check` for static typing diagnostics on the `pulumi` and `policy` Python surfaces
+- `ty check` for static typing diagnostics on the `pulumi`, `policy`, and `scripts` Python surfaces
 - Ruff McCabe complexity with a maximum score of 10
 - `radon mi` and `xenon` gates for maintainability and cyclomatic complexity
 - Import Linter contracts that keep runtime code and policy code isolated

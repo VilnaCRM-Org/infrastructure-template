@@ -120,7 +120,8 @@ Optional repository secrets:
 
 ### Example IAM trust policy
 
-Replace the account ID, organization, and repository name with your own values.
+Replace the account ID, organization, repository name, and any allowed branch
+names with your own values.
 `<ACCOUNT_ID>` must be the target 12-digit AWS account ID using digits only:
 
 ```json
@@ -140,7 +141,7 @@ Replace the account ID, organization, and repository name with your own values.
         "StringLike": {
           "token.actions.githubusercontent.com:sub": [
             "repo:VilnaCRM-Org/infrastructure-template:pull_request",
-            "repo:VilnaCRM-Org/infrastructure-template:ref:refs/heads/main"
+            "repo:VilnaCRM-Org/infrastructure-template:ref:<BRANCH_REF>"
           ]
         }
       }
@@ -148,6 +149,9 @@ Replace the account ID, organization, and repository name with your own values.
   ]
 }
 ```
+
+Replace `<BRANCH_REF>` with each protected branch ref you authorize, for
+example `refs/heads/main`.
 
 ## Nightly-only checks
 

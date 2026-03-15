@@ -17,7 +17,9 @@ try:
         storage_encryption_violations,
         wildcard_iam_violations,
     )
-except ModuleNotFoundError:  # pragma: no cover - exercised by direct script startup.
+except ModuleNotFoundError as exc:  # pragma: no cover - direct script startup.
+    if exc.name not in {"policy", "policy.config", "policy.guardrails"}:
+        raise
     from config import load_policy_config
     from guardrails import (
         extract_tags,
