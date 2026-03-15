@@ -11,4 +11,3 @@ source =
 show_missing = True
 omit =
     */site-packages/*
-    pulumi/sitecustomize.py

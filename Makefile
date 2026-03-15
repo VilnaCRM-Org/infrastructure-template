@@ -25,6 +25,7 @@ POLICY_PACK_FLAG  = --policy-pack $(POLICY_PACK_DIR)
 COVERAGE_OPTS            ?= --cov=./pulumi --cov-report=term-missing
 UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS)
 POLICY_COVERAGE_OPTS     ?= --cov=./policy --cov-report=
+INTEGRATION_COVERAGE_INCLUDE ?= pulumi/__main__.py,pulumi/app/*
 INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 	-e COVERAGE_PROCESS_START=/workspace/.coveragerc \
 	-e COVERAGE_RCFILE=/workspace/.coveragerc
@@ -39,6 +40,7 @@ POLICY_COVERAGE_ENV       = -e COVERAGE_FILE=/workspace/.coverage.policy \
 .PHONY: help doctor build start pulumi-preview pulumi-up pulumi-refresh \
         pulumi-destroy sh down ci ci-pr test-quality test-ruff test-ty \
         test-unit test-integration test-pulumi test-policy test-mutation \
+        test-battery \
         test-cli test all clean
 
 all: help ## Display help (default goal).
@@ -109,7 +111,7 @@ test-integration: ## Execute Pulumi automation-based integration tests.
 		$(COMPOSE_SERVICE) uv run coverage combine
 	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
 		-e COVERAGE_RCFILE=/workspace/.coveragerc \
-		$(COMPOSE_SERVICE) uv run coverage report --show-missing --fail-under=100 --include='pulumi/*'
+		$(COMPOSE_SERVICE) uv run coverage report --show-missing --fail-under=100 --include='$(INTEGRATION_COVERAGE_INCLUDE)'
 
 test-pulumi: ## Perform structural checks on Pulumi project configuration.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run pytest -q tests/pulumi
@@ -143,8 +145,7 @@ test-mutation: ## Run mutation testing suite against Pulumi components.
 test-cli: ## Validate Makefile front-ends via Bats.
 	COMPOSE_TARGET=test $(COMPOSE) run --build --rm $(COMPOSE_SERVICE) bats tests/unit
 
-test: ## Run the faster developer battery without the image build or mutation suite.
-	$(MAKE) doctor
+test-battery:
 	$(MAKE) test-pulumi
 	$(MAKE) test-policy
 	$(MAKE) test-quality
@@ -152,15 +153,14 @@ test: ## Run the faster developer battery without the image build or mutation su
 	$(MAKE) test-integration
 	$(MAKE) test-cli
 
+test: ## Run the faster developer battery without the image build or mutation suite.
+	$(MAKE) doctor
+	$(MAKE) test-battery
+
 ci-pr: ## Run the GitHub PR battery except the dedicated mutation workflow.
 	$(MAKE) doctor
 	$(MAKE) build
-	$(MAKE) test-pulumi
-	$(MAKE) test-policy
-	$(MAKE) test-quality
-	$(MAKE) test-unit
-	$(MAKE) test-integration
-	$(MAKE) test-cli
+	$(MAKE) test-battery
 
 ci: ## Run the full local equivalent of all GitHub checks, including mutation.
 	$(MAKE) ci-pr

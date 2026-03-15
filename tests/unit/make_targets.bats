@@ -67,6 +67,17 @@ assert_compose_env_file() {
   [[ "$output" != *"AWS_SECRET_ACCESS_KEY"* ]]
 }
 
+@test "make doctor runtime output avoids echoing synthetic secret values when docker is available" {
+  if ! command -v docker >/dev/null 2>&1; then
+    skip "docker CLI is unavailable inside the Bats execution environment"
+  fi
+
+  run env AWS_SECRET_ACCESS_KEY=SECRET123 AWS_ACCESS_KEY_ID=KEY123 make doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"SECRET123"* ]]
+  [[ "$output" != *"KEY123"* ]]
+}
+
 @test "make pulumi-preview executes preview inside container" {
   run make -n pulumi-preview
   [ "$status" -eq 0 ]
@@ -197,12 +208,7 @@ assert_compose_env_file() {
   run make -n test
   [ "$status" -eq 0 ]
   [[ "$output" == *"make doctor"* ]]
-  [[ "$output" == *"make test-pulumi"* ]]
-  [[ "$output" == *"make test-policy"* ]]
-  [[ "$output" == *"make test-quality"* ]]
-  [[ "$output" == *"make test-unit"* ]]
-  [[ "$output" == *"make test-integration"* ]]
-  [[ "$output" == *"make test-cli"* ]]
+  [[ "$output" == *"make test-battery"* ]]
 }
 
 @test "make ci runs the full local equivalent of the pull-request CI battery" {
@@ -217,12 +223,7 @@ assert_compose_env_file() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"make doctor"* ]]
   [[ "$output" == *"make build"* ]]
-  [[ "$output" == *"make test-pulumi"* ]]
-  [[ "$output" == *"make test-policy"* ]]
-  [[ "$output" == *"make test-quality"* ]]
-  [[ "$output" == *"make test-unit"* ]]
-  [[ "$output" == *"make test-integration"* ]]
-  [[ "$output" == *"make test-cli"* ]]
+  [[ "$output" == *"make test-battery"* ]]
   [[ "$output" != *"make test-mutation"* ]]
 }
 

@@ -10,8 +10,13 @@ PUBLIC_S3_ACLS = {"public-read", "public-read-write"}
 OPEN_CIDRS = ("0.0.0.0/0", "::/0")
 SENSITIVE_PORTS = (22, 3389)
 S3_BUCKET_TYPE_SUFFIX = "s3/bucket:Bucket"
+S3_BUCKET_ACL_TYPE_SUFFIX = "s3/bucketAcl:BucketAcl"
+S3_BUCKET_ACL_V2_TYPE_SUFFIX = "s3/bucketAclV2:BucketAclV2"
 SECURITY_GROUP_RULE_TYPE_SUFFIX = "ec2/securityGroupRule:SecurityGroupRule"
 SECURITY_GROUP_TYPE_SUFFIX = "ec2/securityGroup:SecurityGroup"
+SECURITY_GROUP_INGRESS_RULE_TYPE_SUFFIX = (
+    "vpc/securityGroupIngressRule:SecurityGroupIngressRule"
+)
 
 
 def extract_tags(props: Mapping[str, Any]) -> Mapping[str, Any] | None:
@@ -42,9 +47,14 @@ def missing_required_tags(tags: Mapping[str, Any] | None) -> list[str]:
 
 def has_public_s3_acl(resource_type: str, props: Mapping[str, Any]) -> bool:
     """Detect explicitly public S3 bucket ACLs."""
-    return _matches_resource_type(resource_type, S3_BUCKET_TYPE_SUFFIX) and (
-        props.get("acl") in PUBLIC_S3_ACLS
-    )
+    return _matches_any_resource_type(
+        resource_type,
+        (
+            S3_BUCKET_TYPE_SUFFIX,
+            S3_BUCKET_ACL_TYPE_SUFFIX,
+            S3_BUCKET_ACL_V2_TYPE_SUFFIX,
+        ),
+    ) and (props.get("acl") in PUBLIC_S3_ACLS)
 
 
 def open_admin_ports(resource_type: str, props: Mapping[str, Any]) -> list[int]:
@@ -53,6 +63,10 @@ def open_admin_ports(resource_type: str, props: Mapping[str, Any]) -> list[int]:
 
     if _matches_resource_type(resource_type, SECURITY_GROUP_RULE_TYPE_SUFFIX):
         if props.get("type") == "ingress" and _is_open_to_world(props):
+            exposed_ports.update(_ports_in_range(props))
+
+    if _matches_resource_type(resource_type, SECURITY_GROUP_INGRESS_RULE_TYPE_SUFFIX):
+        if _is_open_to_world(props):
             exposed_ports.update(_ports_in_range(props))
 
     if _matches_resource_type(resource_type, SECURITY_GROUP_TYPE_SUFFIX):
@@ -65,14 +79,20 @@ def open_admin_ports(resource_type: str, props: Mapping[str, Any]) -> list[int]:
 
 def _is_open_to_world(props: Mapping[str, Any]) -> bool:
     """Return whether a rule exposes traffic to all IPv4 or IPv6 addresses."""
-    return _contains_open_cidr(props.get("cidrBlocks")) or _contains_open_cidr(
-        props.get("ipv6CidrBlocks")
+    return any(
+        _contains_open_cidr(props.get(key))
+        for key in ("cidrBlocks", "ipv6CidrBlocks", "cidrIpv4", "cidrIpv6")
     )
 
 
 def _matches_resource_type(resource_type: str, suffix: str) -> bool:
     """Allow equivalent package prefixes while keeping the module/type contract."""
     return resource_type.endswith(suffix)
+
+
+def _matches_any_resource_type(resource_type: str, suffixes: Sequence[str]) -> bool:
+    """Check multiple equivalent provider suffixes without hardcoding package names."""
+    return any(_matches_resource_type(resource_type, suffix) for suffix in suffixes)
 
 
 def _contains_open_cidr(value: Any) -> bool:
@@ -85,6 +105,10 @@ def _contains_open_cidr(value: Any) -> bool:
 
 def _ports_in_range(props: Mapping[str, Any]) -> set[int]:
     """Return tracked sensitive ports within the rule's from/to range."""
+    protocol = props.get("ipProtocol")
+    if protocol in (-1, "-1", "all"):
+        return set(SENSITIVE_PORTS)
+
     from_port = props.get("fromPort")
     to_port = props.get("toPort")
 

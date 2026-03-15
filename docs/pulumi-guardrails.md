@@ -21,8 +21,8 @@ The `policy/` directory contains a Python Pulumi policy pack for AWS resources.
 It currently enforces three mandatory rules:
 
 - tagged AWS resources must include non-empty `Project` and `Environment` tags
-- S3 buckets must not use `public-read` or `public-read-write` ACLs
-- security groups must not expose SSH or RDP to `0.0.0.0/0` or `::/0`
+- S3 buckets and dedicated bucket ACL resources must not use `public-read` or `public-read-write` ACLs
+- security groups must not expose SSH or RDP to `0.0.0.0/0` or `::/0`, including modern ingress-rule resources that use `cidrIpv4` or `cidrIpv6`
 
 The policy-pack source is split so the reusable validation logic is easy to
 test:

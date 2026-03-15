@@ -71,8 +71,10 @@ Coverage:
 
 - `pulumi/app/environment.py`
 - `pulumi/app/guardrails.py`
+- `pulumi/sitecustomize.py`
 - Config fallback behavior for `environment` and `serviceName`
 - Identifier validation and fail-fast guardrails
+- Best-effort coverage bootstrap behavior when the dependency is present, fails, or is absent
 - Component type token and exported outputs
 - 100% line coverage for the Pulumi application layer
 
@@ -91,7 +93,11 @@ Coverage:
 - Real Pulumi policy-pack startup and enforcement through `pulumi preview --policy-pack`
 - Guardrail resolution contracts for explicit, configured, and default metadata
 - Output wiring for environment metadata
-- 100% line coverage enforced for the integration-covered Pulumi program files
+- 100% line coverage enforced for the integration-covered Pulumi runtime files in `pulumi/__main__.py` and `pulumi/app`
+
+The integration suite does not enforce coverage on `pulumi/sitecustomize.py`.
+That bootstrap shim is exercised to 100% line coverage in the unit suite,
+where its import-failure and startup-failure branches can be tested directly.
 
 The Docker workspace keeps its `uv` virtual environment outside the bind-mounted
 repository tree so Pulumi always sees a stable interpreter with `pip`

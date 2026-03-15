@@ -110,6 +110,18 @@ def test_has_public_s3_acl_detects_public_acls_only(
         is True
     )
     assert (
+        policy_runtime.has_public_s3_acl(
+            "aws:s3/bucketAcl:BucketAcl", {"acl": "public-read"}
+        )
+        is True
+    )
+    assert (
+        policy_runtime.has_public_s3_acl(
+            "aws:s3/bucketAclV2:BucketAclV2", {"acl": "public-read-write"}
+        )
+        is True
+    )
+    assert (
         policy_runtime.has_public_s3_acl("aws:s3/bucket:Bucket", {"acl": "private"})
         is False
     )
@@ -159,6 +171,26 @@ def test_open_admin_ports_detects_public_inline_security_group_rules(
             ]
         },
     ) == [3389]
+
+
+def test_open_admin_ports_detects_modern_ingress_rules_and_all_protocols(
+    policy_runtime: SimpleNamespace,
+) -> None:
+    """Catch VPC ingress-rule resources that expose sensitive ports publicly."""
+    assert policy_runtime.open_admin_ports(
+        "aws:vpc/securityGroupIngressRule:SecurityGroupIngressRule",
+        {
+            "cidrIpv4": "0.0.0.0/0",
+            "ipProtocol": "-1",
+        },
+    ) == [22, 3389]
+    assert policy_runtime.open_admin_ports(
+        "aws:vpc/securityGroupIngressRule:SecurityGroupIngressRule",
+        {
+            "cidrIpv6": "::/0",
+            "ipProtocol": "all",
+        },
+    ) == [22, 3389]
 
 
 def test_open_admin_ports_ignores_safe_or_malformed_rules(
@@ -258,6 +290,16 @@ def test_block_public_s3_acls_validator_reports_public_buckets(
         "S3 buckets must not use public-read or public-read-write ACLs."
     ]
 
+    dedicated_acl_violations = _collect_violations(
+        policy_runtime.block_public_s3_acls,
+        resource_type="aws:s3/bucketAcl:BucketAcl",
+        props={"acl": "public-read"},
+    )
+
+    assert dedicated_acl_violations == [
+        "S3 buckets must not use public-read or public-read-write ACLs."
+    ]
+
 
 def test_block_open_admin_ports_validator_reports_public_admin_access(
     policy_runtime: SimpleNamespace,
@@ -293,6 +335,19 @@ def test_block_open_admin_ports_validator_reports_public_admin_access(
 
     assert violations == [
         "Security groups must not expose admin ports to the public internet: 22."
+    ]
+
+    modern_rule_violations = _collect_violations(
+        policy_runtime.block_open_admin_ports,
+        resource_type="aws:vpc/securityGroupIngressRule:SecurityGroupIngressRule",
+        props={
+            "cidrIpv4": "0.0.0.0/0",
+            "ipProtocol": "-1",
+        },
+    )
+
+    assert modern_rule_violations == [
+        "Security groups must not expose admin ports to the public internet: 22, 3389."
     ]
 
 

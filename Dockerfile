@@ -91,7 +91,6 @@ RUN bash -o pipefail -c 'set -euo pipefail \
 
 FROM ${BASE_IMAGE} AS runtime-base
 
-ARG TARGETARCH=amd64
 ARG USERNAME=dev
 ARG UID=1000
 ARG GID=1000

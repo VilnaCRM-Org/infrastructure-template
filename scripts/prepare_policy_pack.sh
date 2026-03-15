@@ -25,7 +25,7 @@ PY
 then
     (
         cd "${ROOT_DIR}"
-        uv sync --frozen --all-groups >/dev/null
+        UV_PROJECT_ENVIRONMENT="${POLICY_VENV}" uv sync --frozen --all-groups >/dev/null
     )
 fi
 

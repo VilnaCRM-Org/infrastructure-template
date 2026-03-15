@@ -9,6 +9,9 @@ _IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$")
 
 def _validate_identifier(value: str, *, label: str) -> str:
     """Require stable lowercase identifiers for stack metadata."""
+    if not isinstance(value, str):
+        raise ValueError(f"{label} must be a string.")
+
     normalized = value.strip()
 
     if not normalized:

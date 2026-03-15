@@ -62,7 +62,7 @@ releases, or pull requests.
 The repository intentionally avoids workflow-only logic for the core validation
 battery.
 
-- `make test` is the fast inner-loop command for structural, policy, quality, unit, integration, and CLI checks.
+- `make test` is the fast inner-loop command for the prerequisite sanity check, Pulumi structural tests, policy, quality, unit, integration, and CLI checks.
 - `make ci-pr` matches the non-mutation GitHub pull-request battery.
 - `make ci` is the full local superset, including the dedicated mutation suite.
 - `make doctor` provides a quick prerequisite check before developers start

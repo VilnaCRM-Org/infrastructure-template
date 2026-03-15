@@ -19,6 +19,7 @@ def test_validate_service_name_accepts_stable_slug() -> None:
 @pytest.mark.parametrize(
     ("validator", "value", "message"),
     [
+        (validate_environment_name, 1, "environment must be a string"),
         (validate_environment_name, "", "environment must not be empty"),
         (
             validate_environment_name,
@@ -33,7 +34,7 @@ def test_validate_service_name_accepts_stable_slug() -> None:
     ],
 )
 def test_identifier_guardrails_reject_invalid_values(
-    validator, value: str, message: str
+    validator, value: object, message: str
 ) -> None:
     """Reject empty, padded, and malformed identifiers."""
     with pytest.raises(ValueError, match=rf"^{re.escape(message)}\.$"):

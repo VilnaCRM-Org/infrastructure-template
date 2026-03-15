@@ -61,6 +61,17 @@ def _checkout_step(steps: list[dict], *, workflow_name: str) -> dict:
     raise AssertionError(f"actions/checkout not found in {workflow_name}")
 
 
+def _run_lines(steps: list[dict]) -> list[str]:
+    """Flatten workflow shell snippets into normalized lines for contract checks."""
+    lines: list[str] = []
+    for step in steps:
+        run = step.get("run")
+        if not run:
+            continue
+        lines.extend(line.strip() for line in run.splitlines() if line.strip())
+    return lines
+
+
 def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
     """Keep the release workflows aligned with the documented secret contract."""
     secrets_doc = SECRETS_DOC.read_text(encoding="utf-8")
@@ -232,6 +243,7 @@ def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
 
     assert PREPARE_POLICY_SCRIPT.exists()
     assert "/home/dev/.venvs/infrastructure-template" in script_text
+    assert 'UV_PROJECT_ENVIRONMENT="${POLICY_VENV}"' in script_text
     assert "uv sync --frozen --all-groups" in script_text
     assert "import pulumi" in script_text
     assert "import pulumi_policy" in script_text
@@ -240,6 +252,7 @@ def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
 def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
     """Prevent drift in the 100%-coverage contract for Python test suites."""
     makefile_text = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+    coverage_config = (PROJECT_ROOT / ".coveragerc").read_text(encoding="utf-8")
 
     assert "rm -f .coverage.unit .coverage.unit.*" in makefile_text
     assert "rm -f .coverage.integration .coverage.integration.*" in makefile_text
@@ -247,12 +260,18 @@ def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
     assert "coverage report --show-missing --include='pulumi/*' --fail-under=100" in (
         makefile_text
     )
-    assert "coverage report --show-missing --fail-under=100 --include='pulumi/*'" in (
-        makefile_text
+    assert (
+        "INTEGRATION_COVERAGE_INCLUDE ?= pulumi/__main__.py,pulumi/app/*"
+        in makefile_text
+    )
+    assert (
+        "coverage report --show-missing --fail-under=100 "
+        "--include='$(INTEGRATION_COVERAGE_INCLUDE)'" in makefile_text
     )
     assert "coverage report --show-missing --include='policy/*' --fail-under=100" in (
         makefile_text
     )
+    assert "pulumi/sitecustomize.py" not in coverage_config
 
 
 def test_bats_suite_covers_every_public_make_target() -> None:
@@ -297,16 +316,16 @@ def test_local_battery_workflow_avoids_duplicate_mutation_runs() -> None:
     triggers = _triggers(workflow)
     steps = workflow["jobs"]["local_battery"]["steps"]
     step_names = [step.get("name") for step in steps]
-    runs = [step.get("run") for step in steps if step.get("run")]
+    run_lines = _run_lines(steps)
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
     assert workflow["jobs"]["local_battery"]["timeout-minutes"] == 30
     assert "Prepare Docker context" in step_names
     assert "Run non-mutation PR battery inside Docker" in step_names
-    assert "make ci-pr" in runs
-    assert "make ci" not in runs
-    assert "make test-mutation" not in runs
+    assert any("make ci-pr" in line for line in run_lines)
+    assert not any("make ci" == line for line in run_lines)
+    assert not any("make test-mutation" in line for line in run_lines)
 
 
 def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
@@ -502,3 +521,14 @@ def test_testing_docs_call_out_full_coverage_contract() -> None:
 
     assert "100% line coverage" in testing_doc
     assert "100% line coverage" in guardrails_doc
+
+
+def test_ci_architecture_docs_match_make_entrypoints() -> None:
+    """Keep the CI architecture guide aligned with the current make targets."""
+    architecture_doc = (PROJECT_ROOT / "docs" / "ci-architecture.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "prerequisite sanity check" in architecture_doc
+    assert "Pulumi structural tests" in architecture_doc
+    assert "make ci-pr" in architecture_doc

@@ -20,6 +20,7 @@ def test_resolve_config_value_preserves_explicit_configured_and_default_paths() 
 @pytest.mark.parametrize(
     ("validator", "value", "message"),
     [
+        (validate_environment_name, 1, "environment must be a string"),
         (validate_environment_name, "", "environment must not be empty"),
         (
             validate_environment_name,
@@ -34,7 +35,7 @@ def test_resolve_config_value_preserves_explicit_configured_and_default_paths() 
     ],
 )
 def test_identifier_guardrails_reject_invalid_integration_inputs(
-    validator: Callable[[str], str], value: str, message: str
+    validator: Callable[[str], str], value: object, message: str
 ) -> None:
     """Exercise invalid metadata branches in the integration battery as well."""
     with pytest.raises(ValueError, match=rf"^{re.escape(message)}\.$"):
