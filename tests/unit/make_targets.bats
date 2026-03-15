@@ -123,9 +123,11 @@ assert_help_target() {
 }
 
 @test "make pulumi-preview executes preview inside container" {
-  run make -n pulumi-preview
+  run env GITHUB_TOKEN=ghs_test_token make -n pulumi-preview
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"-e GITHUB_TOKEN"* ]]
+  [[ "$output" != *"ghs_test_token"* ]]
   [[ "$output" == *"stack select"* ]]
   [[ "$output" == *"./scripts/prepare_policy_pack.sh"* ]]
   [[ "$output" == *"pulumi --cwd pulumi preview --stack"* ]]
@@ -143,18 +145,24 @@ assert_help_target() {
 }
 
 @test "make pulumi-refresh executes refresh inside container" {
-  run make -n pulumi-refresh
+  run env GITHUB_TOKEN=ghs_test_token make -n pulumi-refresh
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"-e GITHUB_TOKEN"* ]]
+  [[ "$output" != *"ghs_test_token"* ]]
   [[ "$output" == *"stack select"* ]]
+  [[ "$output" != *"--create --non-interactive"* ]]
   [[ "$output" == *"pulumi --cwd pulumi refresh --stack"* ]]
 }
 
 @test "make pulumi-destroy executes destroy inside container" {
-  run make -n pulumi-destroy
+  run env GITHUB_TOKEN=ghs_test_token make -n pulumi-destroy
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"-e GITHUB_TOKEN"* ]]
+  [[ "$output" != *"ghs_test_token"* ]]
   [[ "$output" == *"stack select"* ]]
+  [[ "$output" != *"--create --non-interactive"* ]]
   [[ "$output" == *"pulumi --cwd pulumi destroy --stack"* ]]
 }
 
@@ -336,23 +344,29 @@ assert_help_target() {
 }
 
 @test "make test-preview generates Pulumi preview artifacts" {
-  run make -n test-preview
+  run env GITHUB_TOKEN=ghs_test_token make -n test-preview
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"-e GITHUB_TOKEN"* ]]
+  [[ "$output" != *"ghs_test_token"* ]]
   [[ "$output" == *"./scripts/run_pulumi_preview.sh"* ]]
 }
 
 @test "make test-destructive-diff enforces destructive resource guardrails" {
-  run make -n test-destructive-diff
+  run env GITHUB_TOKEN=ghs_test_token make -n test-destructive-diff
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"-e GITHUB_TOKEN"* ]]
+  [[ "$output" != *"ghs_test_token"* ]]
   [[ "$output" == *"pulumi_ci_guardrails.py destructive-gate"* ]]
 }
 
 @test "make test-iam-validation validates previewed IAM policies" {
-  run make -n test-iam-validation
+  run env GITHUB_TOKEN=ghs_test_token make -n test-iam-validation
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"-e GITHUB_TOKEN"* ]]
+  [[ "$output" != *"ghs_test_token"* ]]
   [[ "$output" == *"pulumi_ci_guardrails.py validate-iam"* ]]
 }
 
@@ -373,9 +387,11 @@ assert_help_target() {
 }
 
 @test "make test-drift executes the non-destructive drift helper" {
-  run make -n test-drift
+  run env GITHUB_TOKEN=ghs_test_token make -n test-drift
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"-e GITHUB_TOKEN"* ]]
+  [[ "$output" != *"ghs_test_token"* ]]
   [[ "$output" == *"./scripts/run_pulumi_drift_check.sh"* ]]
 }
 

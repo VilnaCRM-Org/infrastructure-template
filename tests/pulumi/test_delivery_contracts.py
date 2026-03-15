@@ -103,6 +103,7 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         "autoprerelase.yml": True,
     }
 
+    assert secrets_doc.startswith("# GitHub Actions Secrets and Variables\n")
     assert "fall back to `GITHUB_TOKEN`" in secrets_doc
 
     for workflow_name in RELEASE_WORKFLOWS:
@@ -354,6 +355,28 @@ def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
     assert "/workspace/policy" in coverage_config
     assert "/workspace/scripts" in coverage_config
     assert "pulumi/sitecustomize.py" not in coverage_config
+
+
+def test_makefile_keeps_pulumi_guardrails_secret_safe() -> None:
+    """Protect preview and drift targets from leaking tokens or creating typo stacks."""
+    makefile_text = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+    refresh_select = (
+        'pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" '
+        "--non-interactive >/dev/null; "
+        'pulumi $(PULUMI_CWD_FLAG) refresh --stack "$$stack"'
+    )
+    destroy_select = (
+        'pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" '
+        "--non-interactive >/dev/null; "
+        'pulumi $(PULUMI_CWD_FLAG) destroy --stack "$$stack"'
+    )
+    guardrail_runs = "$(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc"
+
+    assert "GITHUB_TOKEN='$(GITHUB_TOKEN)'" not in makefile_text
+    assert "export GITHUB_TOKEN" in makefile_text
+    assert refresh_select in makefile_text
+    assert destroy_select in makefile_text
+    assert makefile_text.count(guardrail_runs) >= 7
 
 
 def test_bats_suite_covers_every_public_make_target() -> None:

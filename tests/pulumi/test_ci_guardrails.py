@@ -178,6 +178,7 @@ def test_new_guardrail_scripts_and_configs_are_present() -> None:
     assert "preview \\" in preview_text
     assert '--stack "${stack}"' in preview_text
     assert 'uv --project "${ROOT_DIR}" run python' in preview_text
+    assert 'login --non-interactive "${BACKEND_URL}"' in drift_text
     assert "unable to select existing stack" in drift_text
     assert "PULUMI_DIR '${PULUMI_DIR}' does not exist" in drift_text
     assert "expect-no-changes" in drift_text

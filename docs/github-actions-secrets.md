@@ -1,4 +1,4 @@
-# GitHub Actions Secrets
+# GitHub Actions Secrets and Variables
 
 The hardened CI/CD layer in this repository is OIDC-first. Preview, IAM
 validation, and nightly drift detection are designed to use short-lived AWS

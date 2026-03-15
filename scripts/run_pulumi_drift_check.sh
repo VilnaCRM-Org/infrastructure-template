@@ -37,7 +37,7 @@ if [[ "${#STACKS[@]}" -eq 0 ]]; then
   exit 1
 fi
 
-pulumi --cwd "${PULUMI_DIR}" login "${BACKEND_URL}" >/dev/null
+pulumi --cwd "${PULUMI_DIR}" login --non-interactive "${BACKEND_URL}" >/dev/null
 
 for stack in "${STACKS[@]}"; do
   echo "Checking drift for stack ${stack}"
