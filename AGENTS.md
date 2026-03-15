@@ -63,3 +63,4 @@ These rules are mandatory for AI coding agents in this repository.
 5. Reply on review threads when the fix is already present or needs brief verification context.
 6. Ask `@coderabbitai review` after pushing if the bot has not posted a fresh approval on the new head.
 7. Do not call the PR finished until required GitHub checks are green and current review threads are resolved.
+8. If CodeRabbit still withholds approval, inspect the latest current-head CodeRabbit review summary with `gh pr view <PR> --json reviews`, address any current-head findings even when no inline thread remains open, then post a PR comment summarizing the exact fixes and ask `@coderabbitai full review` to verify the new head.

@@ -23,9 +23,16 @@ MUTATION_RUNNER="${MUTATION_RUNNER:-${UV_BIN} run pytest -q ${MUTATION_TEST_TARG
 MUTATION_COVERAGE_TARGETS="${MUTATION_COVERAGE_TARGETS:-${MUTATION_TEST_TARGETS}}"
 
 read -r -a mutation_coverage_targets <<<"${MUTATION_COVERAGE_TARGETS}"
+read -r -a mutation_paths <<<"${MUTATION_PATHS}"
+
+coverage_flags=()
+for mutation_path in "${mutation_paths[@]}"; do
+  coverage_flags+=("--cov=${mutation_path}")
+done
 
 rm -f .coverage .coverage.*
-"${UV_BIN}" run pytest -q --cov=pulumi/app --cov-branch --cov-report= "${mutation_coverage_targets[@]}"
+"${UV_BIN}" run pytest -q "${coverage_flags[@]}" --cov-branch --cov-report= \
+  "${mutation_coverage_targets[@]}"
 
 "${UV_BIN}" run mutmut run \
   --paths-to-mutate "${MUTATION_PATHS}" \

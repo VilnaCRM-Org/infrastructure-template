@@ -17,6 +17,7 @@ PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 DOCS_INDEX = PROJECT_ROOT / "docs" / "README.md"
 ROOT_README = PROJECT_ROOT / "README.md"
 QUALITY_DOC = PROJECT_ROOT / "docs" / "ci-quality-gates.md"
+MUTATION_SCRIPT = PROJECT_ROOT / "scripts" / "run_mutation_tests.sh"
 ACTION_SHA_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
 
 
@@ -226,3 +227,13 @@ def test_quality_related_actions_are_pinned_to_full_shas() -> None:
                 assert ACTION_SHA_REF.match(uses), (
                     f"{workflow_name} must pin `{uses}` to a full commit SHA"
                 )
+
+
+def test_mutation_script_derives_coverage_flags_from_mutation_paths() -> None:
+    """Keep mutation coverage aligned with the configured mutation target paths."""
+    script = MUTATION_SCRIPT.read_text(encoding="utf-8")
+
+    assert 'read -r -a mutation_paths <<<"${MUTATION_PATHS}"' in script
+    assert 'coverage_flags+=("--cov=${mutation_path}")' in script
+    assert '"${UV_BIN}" run pytest -q "${coverage_flags[@]}" --cov-branch' in script
+    assert "--cov=pulumi/app" not in script
