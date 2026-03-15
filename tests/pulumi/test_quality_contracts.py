@@ -113,6 +113,13 @@ def test_nightly_quality_workflow_generates_reports_and_attestation() -> None:
     jobs = workflow["jobs"]
     triggers = _triggers(workflow)
     sbom_uses = [step.get("uses") for step in jobs["sbom"]["steps"] if step.get("uses")]
+    upload_steps = [
+        step
+        for job in jobs.values()
+        for step in job.get("steps", [])
+        if step.get("uses", "").startswith("actions/upload-artifact@")
+    ]
+    maintainability_checkout = jobs["maintainability_trends"]["steps"][0]
 
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
@@ -121,11 +128,17 @@ def test_nightly_quality_workflow_generates_reports_and_attestation() -> None:
     assert jobs["docstrings"]["timeout-minutes"] == 15
     assert jobs["sbom"]["timeout-minutes"] == 15
     assert jobs["docstrings"]["name"] == "Docstring Coverage"
+    assert maintainability_checkout["with"]["fetch-depth"] == 0
     assert jobs["sbom"]["permissions"] == {
         "attestations": "write",
         "contents": "read",
         "id-token": "write",
     }
+    assert upload_steps
+    assert all(
+        step.get("with", {}).get("if-no-files-found") == "error"
+        for step in upload_steps
+    )
     assert any(
         step.get("run") == "make report-maintainability-trends"
         for step in jobs["maintainability_trends"]["steps"]
@@ -152,6 +165,12 @@ def test_quality_docs_and_configs_are_present_and_indexed() -> None:
     docs_index = DOCS_INDEX.read_text(encoding="utf-8")
     root_readme = ROOT_README.read_text(encoding="utf-8")
     content = QUALITY_DOC.read_text(encoding="utf-8")
+    yamllint_config = yaml.safe_load(
+        (PROJECT_ROOT / ".yamllint.yml").read_text(encoding="utf-8")
+    )
+    hadolint_config = (PROJECT_ROOT / ".hadolint.yaml").read_text(encoding="utf-8")
+    makefile = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+    dockerfile = (PROJECT_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert QUALITY_DOC.exists()
     assert (PROJECT_ROOT / ".yamllint.yml").exists()
@@ -166,6 +185,11 @@ def test_quality_docs_and_configs_are_present_and_indexed() -> None:
     assert "Wily" in content
     assert "SBOM" in content
     assert "artifact attestation" in content
+    assert ".github/workflows/" not in yamllint_config["ignore"]
+    assert yamllint_config["rules"]["truthy"]["check-keys"] is False
+    assert ".github/workflows" in makefile
+    assert "DL3008" not in hadolint_config
+    assert dockerfile.count("# hadolint ignore=DL3008") >= 2
 
 
 def test_quality_related_actions_are_pinned_to_full_shas() -> None:

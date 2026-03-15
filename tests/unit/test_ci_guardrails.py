@@ -284,6 +284,29 @@ def test_validate_iam_inputs_raises_on_cli_failure(
         )
 
 
+def test_validate_iam_inputs_raises_on_cli_timeout(
+    guardrails_module, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Treat Access Analyzer timeouts like ordinary guardrail failures."""
+
+    def fake_run(*args, **kwargs):
+        raise subprocess.TimeoutExpired(args[0], timeout=120, output="", stderr="")
+
+    monkeypatch.setattr(guardrails_module.subprocess, "run", fake_run)
+
+    with pytest.raises(RuntimeError, match="timed out"):
+        guardrails_module.validate_iam_inputs(
+            [
+                {
+                    "urn": "urn:pulumi:dev::stack::aws:iam/policy:Policy::policy",
+                    "field": "policy",
+                    "policy_type": "IDENTITY_POLICY",
+                    "policy_document": json.dumps({"Statement": []}),
+                }
+            ]
+        )
+
+
 def test_iam_policy_fields_maps_identity_and_resource_policy_types(
     guardrails_module,
 ) -> None:

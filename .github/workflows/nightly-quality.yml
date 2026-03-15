@@ -24,6 +24,7 @@ jobs:
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
+          fetch-depth: 0
           persist-credentials: false
 
       - name: Prepare Docker context
@@ -35,6 +36,7 @@ jobs:
       - name: Upload Wily artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
+          if-no-files-found: error
           name: wily-maintainability
           path: .artifacts/quality/wily-rank.txt
 
@@ -56,6 +58,7 @@ jobs:
       - name: Upload Vulture artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
+          if-no-files-found: error
           name: vulture-report
           path: .artifacts/quality/vulture.txt
 
@@ -77,6 +80,7 @@ jobs:
       - name: Upload docstring artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
+          if-no-files-found: error
           name: docstr-coverage-report
           path: .artifacts/quality/docstr-coverage.txt
 
@@ -102,6 +106,7 @@ jobs:
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
+          if-no-files-found: error
           name: python-environment-sbom
           path: .artifacts/sbom/python-environment.cdx.json
 

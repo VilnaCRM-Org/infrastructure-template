@@ -110,7 +110,9 @@ assert_help_target() {
 }
 
 @test "make doctor runtime output avoids echoing synthetic secret values when docker is available" {
-  if ! command -v docker >/dev/null 2>&1; then
+  if ! command -v docker >/dev/null 2>&1 \
+    || ! docker info >/dev/null 2>&1 \
+    || ! docker compose version >/dev/null 2>&1; then
     skip "docker CLI is unavailable inside the Bats execution environment"
   fi
 

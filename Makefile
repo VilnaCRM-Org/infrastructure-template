@@ -38,7 +38,7 @@ QUALITY_ARTIFACT_DIR     ?= .artifacts/quality
 SBOM_ARTIFACT_DIR        ?= .artifacts/sbom
 DOCSTRING_PATHS          ?= pulumi/app policy scripts/pulumi_ci_guardrails.py
 WILY_TARGETS             ?= pulumi policy scripts
-YAML_LINT_PATHS          ?= docker-compose.yml policy pulumi .hadolint.yaml .yamllint.yml
+YAML_LINT_PATHS          ?= .github/workflows docker-compose.yml policy pulumi .hadolint.yaml .yamllint.yml
 INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 	-e COVERAGE_PROCESS_START=/workspace/.coveragerc \
 	-e COVERAGE_RCFILE=/workspace/.coveragerc
@@ -170,7 +170,7 @@ test-bandit: ## Lint Python sources for common security hazards.
 test-actionlint: ## Lint GitHub Actions workflows with actionlint.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) actionlint -color
 
-test-yaml: ## Lint Pulumi and operational YAML outside GitHub workflow files.
+test-yaml: ## Lint GitHub workflows, Pulumi stacks, and operational YAML.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run yamllint -c .yamllint.yml $(YAML_LINT_PATHS)
 
 test-shell: ## Lint and format repository shell scripts.

@@ -25,6 +25,11 @@ class _IntegrationMocks(mocks.Mocks):
 
 def _run_with_mocks(program: Callable[[], None]) -> None:
     """Execute a Pulumi program inside the integration suite process."""
+    try:
+        previous_loop = asyncio.get_event_loop()
+    except RuntimeError:
+        previous_loop = None
+
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     try:
@@ -41,7 +46,7 @@ def _run_with_mocks(program: Callable[[], None]) -> None:
     finally:
         settings.reset_options(project=None, stack=None)
         loop.close()
-        asyncio.set_event_loop(None)
+        asyncio.set_event_loop(previous_loop)
 
 
 def test_environment_settings_support_default_resolution_under_pulumi_mocks() -> None:

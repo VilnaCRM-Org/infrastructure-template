@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import Mapping, Sequence
+from ipaddress import ip_network
 from typing import Any, cast
 
 try:
@@ -23,6 +24,9 @@ PUBLIC_ACCESS_NARROWING_KEYS = (
     "aws:SourceIp",
     "aws:SourceVpc",
     "aws:SourceVpce",
+)
+POSITIVE_PUBLIC_ACCESS_OPERATORS = frozenset(
+    {"ArnEquals", "ArnLike", "IpAddress", "StringEquals", "StringLike"}
 )
 AWS_PROVIDER_TYPE_SUFFIX = "pulumi:providers:aws"
 S3_BUCKET_TYPE_SUFFIX = "s3/bucket:Bucket"
@@ -68,7 +72,7 @@ def missing_required_tags(
 ) -> list[str]:
     """Return required default tags that are absent or blank."""
     if tags is None:
-        return []
+        return list(config.required_tags)
 
     missing = []
     for key in config.required_tags:
@@ -377,11 +381,18 @@ def _has_public_access_narrowing_condition(condition: object) -> bool:
     if not isinstance(condition, Mapping):
         return False
 
-    for value in condition.values():
+    for operator, value in condition.items():
+        if not isinstance(operator, str) or not _is_positive_condition_operator(
+            operator
+        ):
+            continue
         if not isinstance(value, Mapping):
             continue
-        if any(key in PUBLIC_ACCESS_NARROWING_KEYS for key in value):
-            return True
+        for key, nested_value in value.items():
+            if key in PUBLIC_ACCESS_NARROWING_KEYS and _condition_values_are_concrete(
+                nested_value
+            ):
+                return True
     return False
 
 
@@ -391,9 +402,14 @@ def _statement_contains_wildcard_permissions(statement: Mapping[str, Any]) -> bo
     if effect != "Allow":
         return False
 
-    return _contains_action_wildcard(
-        statement.get("Action")
-    ) or _contains_resource_wildcard(statement.get("Resource"))
+    return (
+        _contains_action_wildcard(statement.get("Action"))
+        or _contains_action_wildcard(statement.get("NotAction"))
+        or _has_negated_policy_scope(statement.get("NotAction"))
+        or _contains_resource_wildcard(statement.get("Resource"))
+        or _contains_resource_wildcard(statement.get("NotResource"))
+        or _has_negated_policy_scope(statement.get("NotResource"))
+    )
 
 
 def _contains_action_wildcard(value: object) -> bool:
@@ -416,6 +432,15 @@ def _contains_resource_wildcard(value: object) -> bool:
         return True
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
         return any(item == "*" for item in value)
+    return False
+
+
+def _has_negated_policy_scope(value: object) -> bool:
+    """Treat non-empty NotAction and NotResource clauses as inherently broad."""
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return any(isinstance(item, str) and item.strip() for item in value)
     return False
 
 
@@ -444,6 +469,42 @@ def _contains_open_cidr(value: Any) -> bool:
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
         return any(cidr in OPEN_CIDRS for cidr in value)
     return value in OPEN_CIDRS
+
+
+def _is_positive_condition_operator(operator: str) -> bool:
+    """Accept only operators that narrow access rather than invert it."""
+    return operator.split(":")[-1] in POSITIVE_PUBLIC_ACCESS_OPERATORS
+
+
+def _condition_values_are_concrete(value: object) -> bool:
+    """Require non-empty concrete values for public-access narrowing conditions."""
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return bool(value) and all(_condition_value_is_concrete(item) for item in value)
+    return _condition_value_is_concrete(value)
+
+
+def _condition_value_is_concrete(value: object) -> bool:
+    """Reject wildcard, blank, and globally open condition values."""
+    if not isinstance(value, str):
+        return False
+
+    stripped = value.strip()
+    if not stripped or "*" in stripped or "?" in stripped:
+        return False
+
+    return not _is_open_cidr(stripped)
+
+
+def _is_open_cidr(value: str) -> bool:
+    """Treat explicit and syntactically equivalent /0 CIDRs as non-narrowing."""
+    if value in OPEN_CIDRS:
+        return True
+
+    try:
+        network = ip_network(value, strict=False)
+    except ValueError:
+        return False
+    return network.prefixlen == 0
 
 
 def _ports_in_range(props: Mapping[str, Any]) -> set[int]:

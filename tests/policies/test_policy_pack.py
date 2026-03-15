@@ -208,7 +208,12 @@ def test_missing_required_tags_reports_blank_or_missing_values(
     """Detect blank or absent required default tags."""
     config = _custom_config(policy_runtime)
 
-    assert policy_runtime.missing_required_tags(None, config) == []
+    assert policy_runtime.missing_required_tags(None, config) == [
+        "Project",
+        "Environment",
+        "Owner",
+        "CostCenter",
+    ]
     assert (
         policy_runtime.missing_required_tags(
             {
@@ -297,6 +302,94 @@ def test_public_s3_helpers_cover_acl_policy_and_allowlist_paths(
                 "Statement": {
                     "Effect": "Allow",
                     "Principal": {"AWS": "arn:aws:iam::123456789012:root"},
+                }
+            }
+        },
+    )
+    assert policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {"IpAddress": {"aws:SourceIp": "0.0.0.0/0"}},
+                }
+            }
+        },
+    )
+    assert policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {"NotIpAddress": {"aws:SourceIp": ["10.0.0.0/8"]}},
+                }
+            }
+        },
+    )
+    assert policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {
+                        "StringNotEquals": {"aws:SourceVpc": "vpc-1234567890abcdef0"}
+                    },
+                }
+            }
+        },
+    )
+    assert policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {"StringEquals": {"aws:SourceVpce": "vpce-*"}},
+                }
+            }
+        },
+    )
+    assert policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {"StringEquals": "vpce-1234567890abcdef0"},
+                }
+            }
+        },
+    )
+    assert policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {"StringEquals": {"aws:SourceVpce": 1}},
+                }
+            }
+        },
+    )
+    assert not policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {
+                        "IpAddress": {"aws:SourceIp": ["10.0.0.0/8", "192.168.0.0/16"]}
+                    },
                 }
             }
         },
@@ -582,6 +675,42 @@ def test_wildcard_iam_violations_support_allowlists_and_inline_policies(
                                 "arn:aws:s3:::example",
                                 "arn:aws:s3:::example/*",
                             ],
+                        }
+                    ],
+                }
+            )
+        },
+        config,
+    ) == ["policy must not use wildcard IAM permissions without an explicit allowlist."]
+    assert policy_runtime.wildcard_iam_violations(
+        "aws:iam/policy:Policy",
+        {
+            "policy": _json(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "NotAction": "iam:PassRole",
+                            "Resource": "arn:aws:iam::123456789012:role/example",
+                        }
+                    ],
+                }
+            )
+        },
+        config,
+    ) == ["policy must not use wildcard IAM permissions without an explicit allowlist."]
+    assert policy_runtime.wildcard_iam_violations(
+        "aws:iam/policy:Policy",
+        {
+            "policy": _json(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "iam:PassRole",
+                            "NotResource": ["arn:aws:iam::123456789012:role/example"],
                         }
                     ],
                 }

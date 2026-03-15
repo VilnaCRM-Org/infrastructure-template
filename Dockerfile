@@ -29,6 +29,8 @@ ARG HADOLINT_SHA256_ARM64=331f1d3511b84a4f1e3d18d52fec284723e4019552f4f47b19322a
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install only the transient packages required to download and unpack tooling.
+# Bookworm's rolling security repositories do not provide stable patch pins for these base tools.
+# hadolint ignore=DL3008
 RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/99retries \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -160,6 +162,8 @@ ENV UV_CACHE_DIR=${HOME}/.cache/uv
 ENV UV_PROJECT_ENVIRONMENT=${HOME}/.venvs/infrastructure-template
 ENV PULUMI_PYTHON_CMD=${UV_PROJECT_ENVIRONMENT}/bin/python
 
+# Bookworm's rolling security repositories do not provide stable patch pins for these runtime packages.
+# hadolint ignore=DL3008
 RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/99retries \
     && apt-get update \
     && apt-get install -y --no-install-recommends \

@@ -154,25 +154,46 @@ def load_destructive_override(event_path: str | None) -> bool:
 def validate_iam_inputs(inputs: Sequence[dict[str, str]]) -> list[str]:
     """Validate IAM policy documents with AWS IAM Access Analyzer."""
     failures: list[str] = []
-    aws_env = {
+    aws_env = _aws_validation_env()
+
+    for item in inputs:
+        result = _run_access_analyzer_validation(item, aws_env)
+        response = json.loads(result.stdout or "{}")
+        failures.extend(_validation_failures(item, response))
+    return failures
+
+
+def _aws_validation_env() -> dict[str, str]:
+    """Pass only the AWS and shell environment needed by the AWS CLI."""
+    return {
         key: value
         for key, value in os.environ.items()
         if key.startswith("AWS_") or key in {"HOME", "PATH"}
     }
 
-    for item in inputs:
-        command = [
-            "aws",
-            "accessanalyzer",
-            "validate-policy",
-            "--policy-type",
-            item["policy_type"],
-            "--policy-document",
-            item["policy_document"],
-            "--output",
-            "json",
-        ]
-        # Fixed argv list for AWS CLI Access Analyzer invocation.
+
+def _access_analyzer_command(item: dict[str, str]) -> list[str]:
+    """Build a fixed AWS CLI argv list for policy validation."""
+    return [
+        "aws",
+        "accessanalyzer",
+        "validate-policy",
+        "--policy-type",
+        item["policy_type"],
+        "--policy-document",
+        item["policy_document"],
+        "--output",
+        "json",
+    ]
+
+
+def _run_access_analyzer_validation(
+    item: dict[str, str], aws_env: dict[str, str]
+) -> subprocess.CompletedProcess[str]:
+    """Run AWS IAM Access Analyzer and normalize CLI failures."""
+    command = _access_analyzer_command(item)
+
+    try:
         result = subprocess.run(  # nosec B603
             command,
             check=False,
@@ -181,20 +202,40 @@ def validate_iam_inputs(inputs: Sequence[dict[str, str]]) -> list[str]:
             text=True,
             timeout=120,
         )
-        if result.returncode != 0:
-            raise RuntimeError(
-                f"IAM Access Analyzer validation failed for {item['urn']} "
-                f"({item['field']}): "
-                f"{result.stderr.strip() or result.stdout.strip()}"
-            )
+    except subprocess.TimeoutExpired as exc:
+        raise RuntimeError(
+            f"IAM Access Analyzer validation timed out for {item['urn']} "
+            f"({item['field']}): {_subprocess_failure_details(exc)}"
+        ) from exc
 
-        response = json.loads(result.stdout or "{}")
-        for finding in response.get("findings", []):
-            if finding.get("findingType") in FAIL_FINDING_TYPES:
-                failures.append(
-                    f"{item['urn']} [{item['field']}] {finding['findingType']}: "
-                    f"{finding.get('findingDetails', 'unspecified finding')}"
-                )
+    if result.returncode != 0:
+        raise RuntimeError(
+            f"IAM Access Analyzer validation failed for {item['urn']} "
+            f"({item['field']}): {_subprocess_failure_details(result)}"
+        )
+    return result
+
+
+def _subprocess_failure_details(
+    result: subprocess.CompletedProcess[str] | subprocess.TimeoutExpired,
+) -> str:
+    """Extract a useful stderr/stdout summary from subprocess failures."""
+    return (
+        getattr(result, "stderr", None)
+        or getattr(result, "stdout", None)
+        or str(result)
+    ).strip()
+
+
+def _validation_failures(item: dict[str, str], response: dict[str, Any]) -> list[str]:
+    """Convert Access Analyzer findings into CI failure messages."""
+    failures: list[str] = []
+    for finding in response.get("findings", []):
+        if finding.get("findingType") in FAIL_FINDING_TYPES:
+            failures.append(
+                f"{item['urn']} [{item['field']}] {finding['findingType']}: "
+                f"{finding.get('findingDetails', 'unspecified finding')}"
+            )
     return failures
 
 

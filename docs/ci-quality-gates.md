@@ -26,7 +26,7 @@ These checks should be required in branch protection:
 | `Bandit` | `make test-bandit` | Python security linting for runtime and helper code |
 | `Dependency Review` | GitHub-native | Pull-request dependency risk review against GitHub advisories |
 | `Actionlint` | `make test-actionlint` | Workflow syntax and common GitHub Actions mistakes |
-| `Yamllint` | `make test-yaml` | Pulumi stack YAML and operational YAML hygiene |
+| `Yamllint` | `make test-yaml` | GitHub workflow YAML, Pulumi stack YAML, and operational YAML hygiene |
 | `Shell Hygiene` | `make test-shell` | ShellCheck and `shfmt` on repository shell scripts |
 | `Hadolint` | `make test-dockerfile` | Dockerfile quality and safety linting |
 | `Preview` | `make test-preview` | Non-destructive Pulumi preview artifact generation |
@@ -116,12 +116,12 @@ Current explicit exceptions are minimal and documented in `pyproject.toml`:
   static AWS keys
 - Dependency Review, CodeQL, and SBOM artifact attestation are GitHub-native only, so
   there is no exact local Make equivalent for those specific services
-- `yamllint` intentionally ignores `.github/workflows/` because workflow files
-  are covered more accurately by `actionlint` and CodeQL
-- `hadolint` ignores `DL3008` and `DL3059`; Debian micro-version pinning
-  without a snapshot repository is brittle, and the Dockerfile intentionally
-  keeps separate `RUN` steps where checksum verification and tool caching are
-  clearer than forced consolidation
+- `yamllint` now covers `.github/workflows/` as well as the Pulumi stack and
+  operational YAML surface, while `actionlint` and CodeQL still provide the
+  workflow-specific semantics and security checks
+- `hadolint` keeps only `DL3059` globally ignored; the Dockerfile uses narrow
+  inline `DL3008` suppressions only on the Debian package-install steps where
+  patch-level pinning is impractical without a snapshot repository
 
 ## Path filtering strategy
 
@@ -131,9 +131,8 @@ workflows, docs, tooling, Docker, or Pulumi helpers can affect repository
 behavior far outside the file that changed. The bias here is safety over clever
 skip logic.
 
-The only scoped lint exception today is `yamllint` skipping
-`.github/workflows/`, because those files already have stronger dedicated
-checks.
+The only scoped lint exception today is `.pulumi-backend/`, which is local
+state rather than committed configuration.
 
 ## Safe exception handling
 

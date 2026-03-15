@@ -1,9 +1,10 @@
 extends: default
 
 ignore: |
-  .github/workflows/
   .pulumi-backend/
 
 rules:
   document-start: disable
   line-length: disable
+  truthy:
+    check-keys: false

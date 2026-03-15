@@ -51,11 +51,11 @@ Choose one authentication strategy for the template sync workflows:
 | `VILNACRM_APP_ID` | GitHub App ID for template sync | Required by `.github/workflows/template-sync-app.yml`. |
 | `VILNACRM_APP_PRIVATE_KEY` | GitHub App private key for template sync | Required by `.github/workflows/template-sync-app.yml`. Store the PEM contents. |
 
-## Setting Secrets
+## Setting Secrets and Variables
 
 1. Navigate to **Settings → Secrets and variables → Actions** in your GitHub repository.
 2. Add `AWS_OIDC_ROLE_ARN`, `AWS_REGION`, `PULUMI_BACKEND_URL`, `PULUMI_PREVIEW_STACKS`, and `PULUMI_DRIFT_STACKS` under **Variables → Repository variables**.
 3. Add `PULUMI_ACCESS_TOKEN`, `PULUMI_CONFIG_PASSPHRASE`, and any release or template-sync credentials under **Secrets → Repository secrets**.
-4. If several repositories share the same infrastructure credentials, consider using organization secrets instead.
+4. If several repositories share the same guardrail configuration, use organization variables for `AWS_OIDC_ROLE_ARN`, `AWS_REGION`, `PULUMI_BACKEND_URL`, `PULUMI_PREVIEW_STACKS`, and `PULUMI_DRIFT_STACKS`, and organization secrets for `PULUMI_ACCESS_TOKEN`, `PULUMI_CONFIG_PASSPHRASE`, and any release or template-sync credentials.
 
 Rotate credentials regularly and audit workflow runs for unexpected usage.

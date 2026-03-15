@@ -57,7 +57,7 @@ Coverage:
 
 - `ruff check` for fast linting
 - `ruff format --check` for formatting drift
-- `ty check` for static typing diagnostics on the Pulumi application layer
+- `ty check` for static typing diagnostics on the `pulumi` and `policy` Python surfaces
 - Ruff McCabe complexity with a maximum score of 10
 - `radon mi` and `xenon` gates for maintainability and cyclomatic complexity
 - Import Linter contracts that keep runtime code and policy code isolated
@@ -78,7 +78,7 @@ make test-repo-hygiene
 Coverage:
 
 - `make test-actionlint` for GitHub workflow linting
-- `make test-yaml` for Pulumi stacks and operational YAML
+- `make test-yaml` for GitHub workflow YAML, Pulumi stacks, and operational YAML
 - `make test-shell` for ShellCheck and `shfmt`
 - `make test-dockerfile` for Hadolint
 
@@ -147,8 +147,9 @@ where its import-failure and startup-failure branches can be tested directly.
 
 The Docker workspace keeps its `uv` virtual environment outside the bind-mounted
 repository tree so Pulumi always sees a stable interpreter with `pip`
-available for plugin discovery. The policy-pack bootstrap reuses that same
-environment and resyncs it from `uv.lock` when Python dependencies drift.
+available for plugin discovery. The policy-pack bootstrap keeps a dedicated
+`policy/.venv` in sync from `policy/requirements.txt`, so policy startup and
+troubleshooting stay isolated from the main `uv` workspace environment.
 
 ## Combined coverage gate
 
