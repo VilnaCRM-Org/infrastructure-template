@@ -21,13 +21,17 @@ class EnvironmentSettings(pulumi.ComponentResource):
         opts: Optional[pulumi.ResourceOptions] = None,
     ) -> None:
         """Create the component and resolve environment/service configuration."""
-        super().__init__("infrastructure-template:core:EnvironmentSettings", name, None, opts)
+        super().__init__(
+            "infrastructure-template:core:EnvironmentSettings", name, None, opts
+        )
 
         config = pulumi.Config()
 
         resolved_environment = environment or config.get("environment") or "dev"
 
-        resolved_service = service_name or config.get("serviceName") or pulumi.get_project()
+        resolved_service = (
+            service_name or config.get("serviceName") or pulumi.get_project()
+        )
 
         self.environment = pulumi.Output.from_input(resolved_environment)
         self.service_name = pulumi.Output.from_input(resolved_service)
@@ -36,9 +40,9 @@ class EnvironmentSettings(pulumi.ComponentResource):
             lambda args: f"{args[0]}-{args[1]}"
         )
 
-        self.default_tags = pulumi.Output.all(self.service_name, self.environment).apply(
-            lambda args: {"Project": args[0], "Environment": args[1]}
-        )
+        self.default_tags = pulumi.Output.all(
+            self.service_name, self.environment
+        ).apply(lambda args: {"Project": args[0], "Environment": args[1]})
 
         self.register_outputs(
             {

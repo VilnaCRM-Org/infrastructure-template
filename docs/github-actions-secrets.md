@@ -4,11 +4,11 @@ The CI test workflows use a local Pulumi backend and do not require cloud creden
 
 ## Pulumi and AWS Secrets (for deploys)
 
-| Secret | Purpose | Notes |
-| --- | --- | --- |
-| `AWS_ACCESS_KEY_ID` | Authenticate AWS API calls | Optional if you use GitHub OIDC; pair with `AWS_SECRET_ACCESS_KEY`. |
-| `AWS_SECRET_ACCESS_KEY` | Authenticate AWS API calls | Store the matching secret key when using static IAM users. |
-| `PULUMI_ACCESS_TOKEN` | Authenticate against the Pulumi Service | Required when using the Pulumi Service backend. Generate in the Pulumi UI under **Settings → Access Tokens**. |
+| Secret                  | Purpose                                 | Notes                                                                                                         |
+| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `AWS_ACCESS_KEY_ID`     | Authenticate AWS API calls              | Optional if you use GitHub OIDC; pair with `AWS_SECRET_ACCESS_KEY`.                                           |
+| `AWS_SECRET_ACCESS_KEY` | Authenticate AWS API calls              | Store the matching secret key when using static IAM users.                                                    |
+| `PULUMI_ACCESS_TOKEN`   | Authenticate against the Pulumi Service | Required when using the Pulumi Service backend. Generate in the Pulumi UI under **Settings → Access Tokens**. |
 
 ### Using GitHub OIDC Instead of Static Keys
 
@@ -22,19 +22,19 @@ See [Configuring OpenID Connect in cloud providers](https://docs.github.com/en/a
 
 ## Release Automation Secrets
 
-| Secret | Purpose | Notes |
-| --- | --- | --- |
+| Secret              | Purpose                          | Notes                                                                            |
+| ------------------- | -------------------------------- | -------------------------------------------------------------------------------- |
 | `REPO_GITHUB_TOKEN` | Publish changelog-based releases | Optional; if unset, workflows fall back to `GITHUB_TOKEN` with `contents:write`. |
 
 ## Template Sync Secrets
 
 Choose one authentication strategy for the template sync workflows:
 
-| Secret | Purpose | Notes |
-| --- | --- | --- |
-| `PERSONAL_ACCESS_TOKEN` | Authenticate template sync (PAT workflow) | Required by `.github/workflows/template-sync-pat.yml`. Needs repo write access. |
-| `VILNACRM_APP_ID` | GitHub App ID for template sync | Required by `.github/workflows/template-sync-app.yml`. |
-| `VILNACRM_APP_PRIVATE_KEY` | GitHub App private key for template sync | Required by `.github/workflows/template-sync-app.yml`. Store the PEM contents. |
+| Secret                     | Purpose                                   | Notes                                                                           |
+| -------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
+| `PERSONAL_ACCESS_TOKEN`    | Authenticate template sync (PAT workflow) | Required by `.github/workflows/template-sync-pat.yml`. Needs repo write access. |
+| `VILNACRM_APP_ID`          | GitHub App ID for template sync           | Required by `.github/workflows/template-sync-app.yml`.                          |
+| `VILNACRM_APP_PRIVATE_KEY` | GitHub App private key for template sync  | Required by `.github/workflows/template-sync-app.yml`. Store the PEM contents.  |
 
 ## Setting Secrets
 
