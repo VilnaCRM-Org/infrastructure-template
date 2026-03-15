@@ -60,7 +60,10 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     assert workflow["concurrency"]["cancel-in-progress"] is True
     assert "if" not in jobs["preview"]
     assert jobs["preview"]["permissions"] == {"contents": "read"}
-    assert jobs["preview"]["env"]["PULUMI_BACKEND_URL"] == "file:///workspace/.pulumi-backend"
+    assert (
+        jobs["preview"]["env"]["PULUMI_BACKEND_URL"]
+        == "file:///workspace/.pulumi-backend"
+    )
     assert jobs["preview_privileged"]["if"] == same_repo_only
     assert jobs["preview_privileged"]["permissions"] == {
         "contents": "read",
