@@ -82,7 +82,7 @@ make test-integration
 make test-mutation
 ```
 
-You can also execute `make test` to run the structural, unit, and integration checks as a batch.
+You can also execute `make test` to run the structural, unit, integration, and CLI checks as a batch.
 
 ## Security
 

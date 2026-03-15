@@ -2,7 +2,7 @@
 
 try:
     import coverage
-except Exception:  # pragma: no cover - best-effort only
+except ImportError:  # pragma: no cover - best-effort only
     coverage = None
 
 if coverage is not None:
