@@ -50,11 +50,13 @@ These checks are intentionally visible but do not block pull requests:
 | `Docstring Coverage` | `make report-docstrings` | Reports docstring coverage on reusable modules and utilities |
 | `CycloneDX SBOM` | `make report-sbom` | Generates a Python environment SBOM artifact |
 | `SBOM provenance` | GitHub-native in `nightly-quality.yml` | Attests the generated SBOM artifact |
-| `Drift Detection` | `make test-drift` | Non-destructive shared-stack drift detection |
+| `Drift Detection` | `make test-drift` | Non-destructive shared-stack drift detection run separately from `make report-quality` / `make nightly-quality` |
 | `Scorecard` | GitHub-native | OpenSSF repository-health monitoring |
 
 `make report-quality` runs the scheduled local report battery, and
-`make nightly-quality` is an alias for the same command.
+`make nightly-quality` is an alias for the same command. Neither target runs
+`make test-drift`; drift detection stays in the separate infra-oriented nightly
+workflow and local `make test-drift` path.
 
 ## Thresholds
 

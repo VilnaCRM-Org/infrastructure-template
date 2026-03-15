@@ -1,7 +1,7 @@
 # CI Architecture
 
 This repository keeps CI intentionally close to the local developer workflow.
-Every pull request check is driven by the same Docker workspace and the same
+Docker-backed pull request checks use the same Docker workspace and the same
 `make` entrypoints that developers use locally.
 
 ## Design Principles

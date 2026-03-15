@@ -35,7 +35,8 @@ fi
 pulumi --cwd "${PULUMI_DIR}" login --non-interactive "${BACKEND_URL}" >/dev/null
 
 for stack in "${STACKS[@]}"; do
-  preview_file="${PREVIEW_ARTIFACT_DIR}/${stack}.json"
+  safe_stack="$(printf '%s' "${stack}" | tr -c 'A-Za-z0-9._-' '_')"
+  preview_file="${PREVIEW_ARTIFACT_DIR}/${safe_stack}.json"
 
   pulumi --cwd "${PULUMI_DIR}" stack select "${stack}" --create --non-interactive >/dev/null
   pulumi --cwd "${PULUMI_DIR}" preview \

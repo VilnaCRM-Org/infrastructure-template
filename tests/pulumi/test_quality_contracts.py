@@ -62,6 +62,7 @@ def test_pyproject_declares_quality_tooling_contracts() -> None:
     assert importlinter["root_packages"] == ["app", "policy"]
     assert len(importlinter["contracts"]) == 4
     assert data["tool"]["vulture"]["min_confidence"] == 80
+    assert "pulumi/app" in data["tool"]["vulture"]["paths"]
 
 
 def test_security_scan_workflow_covers_repo_hygiene_and_dependency_review() -> None:

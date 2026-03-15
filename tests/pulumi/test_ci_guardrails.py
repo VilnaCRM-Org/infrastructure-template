@@ -34,17 +34,62 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         "${{ github.event_name != 'pull_request' || "
         "github.event.pull_request.head.repo.full_name == github.repository }}"
     )
+    same_repo_or_skipped = (
+        "${{ always() && needs.preview.result == 'success' && "
+        "(needs.preview_privileged.result == 'success' || "
+        "needs.preview_privileged.result == 'skipped') }}"
+    )
     destructive_diff_runs = [
         step.get("run") for step in jobs["destructive_diff"]["steps"] if step.get("run")
     ]
     preview_runs = [
         step.get("run") for step in jobs["preview"]["steps"] if step.get("run")
     ]
+    preview_upload_step = next(
+        (
+            step
+            for step in jobs["preview"]["steps"]
+            if step.get("uses", "").startswith("actions/upload-artifact@")
+        ),
+        None,
+    )
+    preview_privileged_upload_step = next(
+        (
+            step
+            for step in jobs["preview_privileged"]["steps"]
+            if step.get("uses", "").startswith("actions/upload-artifact@")
+        ),
+        None,
+    )
     preview_privileged_oidc_step = next(
         (
             step
             for step in jobs["preview_privileged"]["steps"]
             if step.get("name") == "Configure AWS credentials via OIDC"
+        ),
+        None,
+    )
+    privileged_download_step = next(
+        (
+            step
+            for step in jobs["destructive_diff"]["steps"]
+            if step.get("name") == "Download privileged preview artifact"
+        ),
+        None,
+    )
+    unprivileged_download_step = next(
+        (
+            step
+            for step in jobs["destructive_diff"]["steps"]
+            if step.get("name") == "Download unprivileged preview artifact"
+        ),
+        None,
+    )
+    iam_download_step = next(
+        (
+            step
+            for step in jobs["iam_validation"]["steps"]
+            if step.get("name") == "Download preview artifact"
         ),
         None,
     )
@@ -56,6 +101,7 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         ),
         None,
     )
+    destructive_diff_if = " ".join(jobs["destructive_diff"]["if"].split())
 
     assert workflow["concurrency"]["cancel-in-progress"] is True
     assert "if" not in jobs["preview"]
@@ -70,10 +116,17 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         "id-token": "write",
     }
     assert jobs["iam_validation"]["if"] == same_repo_only
-    assert jobs["destructive_diff"]["needs"] == "preview"
-    assert jobs["iam_validation"]["needs"] == "preview"
+    assert destructive_diff_if == same_repo_or_skipped
+    assert jobs["destructive_diff"]["needs"] == ["preview", "preview_privileged"]
+    assert jobs["iam_validation"]["needs"] == ["preview", "preview_privileged"]
     assert preview_privileged_oidc_step is not None, "preview OIDC step not found"
     assert iam_oidc_step is not None, "IAM validation OIDC step not found"
+    assert preview_upload_step is not None, "preview artifact upload step not found"
+    assert preview_upload_step["with"]["name"] == "pulumi-preview-unprivileged"
+    assert preview_privileged_upload_step is not None, (
+        "preview privileged artifact upload step not found"
+    )
+    assert preview_privileged_upload_step["with"]["name"] == "pulumi-preview-privileged"
     assert "github.event_name != 'pull_request'" in preview_privileged_oidc_step["if"]
     assert (
         "github.event.pull_request.head.repo.full_name == github.repository"
@@ -93,10 +146,17 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         step.get("run") == "./scripts/prepare_docker_context.sh"
         for step in jobs["preview_privileged"]["steps"]
     )
-    assert any(
-        step.get("uses", "").startswith("actions/upload-artifact@")
-        for step in jobs["preview"]["steps"]
+    assert privileged_download_step is not None
+    assert privileged_download_step["if"] == same_repo_only
+    assert privileged_download_step["with"]["name"] == "pulumi-preview-privileged"
+    assert unprivileged_download_step is not None
+    assert unprivileged_download_step["if"] == (
+        "${{ github.event_name == 'pull_request' && "
+        "github.event.pull_request.head.repo.full_name != github.repository }}"
     )
+    assert unprivileged_download_step["with"]["name"] == "pulumi-preview-unprivileged"
+    assert iam_download_step is not None
+    assert iam_download_step["with"]["name"] == "pulumi-preview-privileged"
     assert any(
         step.get("run") == "make test-destructive-diff"
         for step in jobs["destructive_diff"]["steps"]

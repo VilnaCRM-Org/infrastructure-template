@@ -10,11 +10,15 @@ from app.guardrails import validate_environment_name, validate_service_name
 def test_validate_environment_name_accepts_stable_slug() -> None:
     """Accept lowercase slugs that are safe for exports and tags."""
     assert validate_environment_name("dev") == "dev"
+    assert validate_environment_name("d") == "d"
+    assert validate_environment_name("a" * 32) == "a" * 32
 
 
 def test_validate_service_name_accepts_stable_slug() -> None:
     """Accept lowercase service names built from digits and hyphens."""
     assert validate_service_name("billing-api2") == "billing-api2"
+    assert validate_service_name("a") == "a"
+    assert validate_service_name("a" * 32) == "a" * 32
 
 
 @pytest.mark.parametrize(
@@ -30,6 +34,16 @@ def test_validate_service_name_accepts_stable_slug() -> None:
         (
             validate_service_name,
             "Billing_API",
+            "service name must use lowercase letters, digits, and hyphens only",
+        ),
+        (
+            validate_environment_name,
+            "a" * 33,
+            "environment must use lowercase letters, digits, and hyphens only",
+        ),
+        (
+            validate_service_name,
+            "a" * 33,
             "service name must use lowercase letters, digits, and hyphens only",
         ),
     ],

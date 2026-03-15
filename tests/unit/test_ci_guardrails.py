@@ -338,11 +338,41 @@ def test_validate_iam_inputs_raises_on_cli_timeout(
         )
 
 
+def test_validate_iam_inputs_treats_malformed_access_analyzer_output_as_failure(
+    guardrails_module, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Normalize bad CLI JSON into an actionable guardrail failure."""
+
+    def fake_run(*args, **kwargs):
+        return subprocess.CompletedProcess(args[0], returncode=0, stdout="{", stderr="")
+
+    monkeypatch.setattr(guardrails_module.subprocess, "run", fake_run)
+
+    failures = guardrails_module.validate_iam_inputs(
+        [
+            {
+                "urn": "urn:pulumi:dev::stack::aws:iam/role:Role::role",
+                "field": "assumeRolePolicy",
+                "policy_type": "RESOURCE_POLICY",
+                "policy_document": json.dumps({"Statement": []}),
+                "validate_policy_resource_type": "AWS::IAM::AssumeRolePolicyDocument",
+            }
+        ]
+    )
+
+    assert failures
+    assert "malformed access-analyzer response" in failures[0]
+
+
 def test_iam_policy_fields_maps_identity_and_resource_policy_types(
     guardrails_module,
 ) -> None:
     """Keep the supported IAM-bearing resource field map stable."""
     assert list(guardrails_module.iam_policy_fields("aws:iam/policy:Policy")) == [
+        ("policy", "IDENTITY_POLICY"),
+        ("policyDocument", "IDENTITY_POLICY"),
+    ]
+    assert list(guardrails_module.iam_policy_fields("aws:iam/role:Role")) == [
         ("policy", "IDENTITY_POLICY"),
         ("policyDocument", "IDENTITY_POLICY"),
         ("assumeRolePolicy", "RESOURCE_POLICY"),

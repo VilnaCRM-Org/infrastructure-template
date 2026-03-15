@@ -238,7 +238,15 @@ def _load_validation_response(
 ) -> tuple[dict[str, str], dict[str, Any]]:
     """Run Access Analyzer for one item and decode the JSON response."""
     result = _run_access_analyzer_validation(item, aws_env)
-    return item, json.loads(result.stdout or "{}")
+    try:
+        return item, json.loads(result.stdout or "{}")
+    except json.JSONDecodeError as error:
+        return item, {
+            "status": "FAILED",
+            "reason": "malformed access-analyzer response",
+            "error": str(error),
+            "raw_output": result.stdout or "",
+        }
 
 
 def _subprocess_failure_details(
@@ -255,6 +263,13 @@ def _subprocess_failure_details(
 def _validation_failures(item: dict[str, str], response: dict[str, Any]) -> list[str]:
     """Convert Access Analyzer findings into CI failure messages."""
     failures: list[str] = []
+    if response.get("status") == "FAILED":
+        failures.append(
+            f"{item['urn']} [{item['field']}] "
+            f"{response.get('reason', 'validation failed')}: "
+            f"{response.get('error', 'unknown analyzer error')}"
+        )
+        return failures
     for finding in response.get("findings", []):
         if finding.get("findingType") in FAIL_FINDING_TYPES:
             failures.append(
@@ -266,10 +281,14 @@ def _validation_failures(item: dict[str, str], response: dict[str, Any]) -> list
 
 def iam_policy_fields(resource_type: str) -> Iterable[tuple[str, str]]:
     """Yield policy-bearing fields for a resource type."""
-    if "iam/" in resource_type:
+    if "aws:iam/role:Role" in resource_type:
         yield ("policy", "IDENTITY_POLICY")
         yield ("policyDocument", "IDENTITY_POLICY")
         yield ("assumeRolePolicy", "RESOURCE_POLICY")
+        return
+    if "iam/" in resource_type:
+        yield ("policy", "IDENTITY_POLICY")
+        yield ("policyDocument", "IDENTITY_POLICY")
         return
 
     if any(

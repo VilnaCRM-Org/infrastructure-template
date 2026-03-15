@@ -324,11 +324,12 @@ def _policy_documents(
 
 def _policy_statements(props: Mapping[str, Any]) -> Sequence[Mapping[str, Any]]:
     """Extract policy statements from common Pulumi resource property shapes."""
+    documents: list[Mapping[str, Any]] = []
     for field_name in ("policy", "policyDocument"):
         statements = _policy_statements_from_value(props.get(field_name))
         if statements:
-            return statements
-    return []
+            documents.extend(statements)
+    return documents
 
 
 def _policy_statements_from_value(value: object) -> Sequence[Mapping[str, Any]]:

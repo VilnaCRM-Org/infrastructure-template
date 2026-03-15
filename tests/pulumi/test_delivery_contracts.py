@@ -25,6 +25,7 @@ PULL_REQUEST_WORKFLOW_TIMEOUTS = {
     "pulumi-policy.yml": {"policy": 15},
     "pulumi-pr-guardrails.yml": {
         "preview": 20,
+        "preview_privileged": 20,
         "destructive_diff": 10,
         "iam_validation": 15,
     },

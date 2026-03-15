@@ -334,6 +334,13 @@ def test_public_s3_helpers_cover_acl_policy_and_allowlist_paths(
         "aws:s3/bucket:Bucket",
         {"policy": public_policy},
     )
+    assert policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policy": {"Statement": {"Effect": "Deny", "Principal": {"AWS": "*"}}},
+            "policyDocument": mapped_policy,
+        },
+    )
     assert not policy_runtime.has_public_s3_bucket_policy(
         "aws:s3/object:Object",
         {"policy": public_policy},

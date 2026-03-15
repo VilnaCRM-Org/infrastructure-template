@@ -118,7 +118,7 @@ When you extend this template, verify all of the following:
 
 ## What This Template Intentionally Does Not Do
 
-- It does not auto-deploy infrastructure from pull requests.
-- It does not embed long-lived credentials in the Docker image.
-- It does not treat CI green status as a replacement for human review of a
+- Pull requests do not auto-deploy infrastructure.
+- Long-lived credentials are never embedded in the Docker image.
+- CI green status is not treated as a replacement for human review of a
   production-impacting infrastructure diff.
