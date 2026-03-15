@@ -1,6 +1,7 @@
 """Structural tests for release automation and Dockerfile hardening."""
 
 from pathlib import Path
+import re
 
 import yaml
 
@@ -25,6 +26,18 @@ def _release_job(workflow: dict, *, workflow_name: str) -> dict:
     raise AssertionError(f"Create Release step not found in {workflow_name}")
 
 
+def _phony_targets() -> set[str]:
+    """Extract public phony targets from the repository Makefile."""
+    makefile_text = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+    phony_match = re.search(
+        r"^\.PHONY:\s*(.+?)(?=^\S|\Z)", makefile_text, flags=re.MULTILINE | re.DOTALL
+    )
+    assert phony_match is not None, "Expected a .PHONY declaration in Makefile"
+
+    phony_targets = phony_match.group(1).replace("\\\n", " ")
+    return {target for target in phony_targets.split() if target}
+
+
 def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
     """Keep the release workflows aligned with the documented secret contract."""
     secrets_doc = SECRETS_DOC.read_text(encoding="utf-8")
@@ -44,7 +57,7 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         )
         assert any(step.get("name") == "Create Release" for step in steps)
 
-        if workflow_name == "autorelease.yml":
+        if workflow_name in {"autorelease.yml", "autoprerelase.yml"}:
             assert release_job["timeout-minutes"] == 10
 
 
@@ -63,24 +76,18 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
 def test_bats_suite_covers_every_public_make_target() -> None:
     """Keep every public make target locked down by the CLI regression suite."""
     bats_text = BATS_FILE.read_text(encoding="utf-8")
-    expected_invocations = [
-        "make help",
-        "make all",
-        "make -n start",
-        "make -n pulumi-preview",
-        "make -n pulumi-up",
-        "make -n pulumi-refresh",
-        "make -n pulumi-destroy",
-        "make -n sh",
-        "make -n down",
-        "make -n test-unit",
-        "make -n test-integration",
-        "make -n test-pulumi",
-        "make -n test-mutation",
-        "make -n test-cli",
-        "make -n test",
-        "make -n clean",
-    ]
+    phony_targets = _phony_targets()
+    expected_invocations = []
+
+    for target in sorted(phony_targets):
+        if target == "help":
+            expected_invocations.append("make help")
+        elif target == "all":
+            expected_invocations.append("make all")
+        elif target == "pulumi":
+            expected_invocations.append('make -n pulumi ARGS="version"')
+        else:
+            expected_invocations.append(f"make -n {target}")
 
     for invocation in expected_invocations:
         assert invocation in bats_text
@@ -92,16 +99,19 @@ def test_local_battery_workflow_mirrors_make_test() -> None:
         (WORKFLOWS_DIR / "pulumi-local.yml").read_text(encoding="utf-8")
     )
     triggers = _triggers(workflow)
-    step_names = [
-        step.get("name") for step in workflow["jobs"]["local_battery"]["steps"]
-    ]
+    jobs = workflow["jobs"]
+
+    assert "local_battery" in jobs
+
+    local_job = jobs["local_battery"]
+    step_names = [step.get("name") for step in local_job["steps"]]
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
-    assert workflow["jobs"]["local_battery"]["timeout-minutes"] == 30
+    assert local_job["timeout-minutes"] == 30
     assert "Prepare Docker context" in step_names
     assert "Run aggregate local battery inside Docker" in step_names
-    assert workflow["jobs"]["local_battery"]["steps"][-1]["run"] == "make test"
+    assert local_job["steps"][-1]["run"] == "make test"
 
 
 def test_bats_workflow_runs_on_push_and_pull_request() -> None:

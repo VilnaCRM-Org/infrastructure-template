@@ -29,7 +29,7 @@ INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 # Misc
 .DEFAULT_GOAL     = help
 .RECIPEPREFIX    +=
-.PHONY: help start pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
+.PHONY: help start pulumi pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
         sh down test-unit test-integration test-pulumi test-mutation test-cli test all clean
 
 all: help ## Display help (default goal).
@@ -40,6 +40,9 @@ help:
 
 start: ## Initialize and start the Pulumi development environment.
 	$(COMPOSE) up -d
+
+pulumi: ## Proxy arbitrary Pulumi commands (usage: make pulumi ARGS="version").
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) $(ARGS)
 
 pulumi-preview: ## Preview infrastructure changes from inside the Pulumi container.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) preview

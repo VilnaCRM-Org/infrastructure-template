@@ -15,6 +15,7 @@ assert_compose_env_file() {
   [[ "$output" == *"clean"* ]]
   [[ "$output" == *"down"* ]]
   [[ "$output" == *"help"* ]]
+  [[ "$output" == *"pulumi"* ]]
   [[ "$output" == *"pulumi-preview"* ]]
   [[ "$output" == *"pulumi-up"* ]]
   [[ "$output" == *"pulumi-refresh"* ]]
@@ -41,6 +42,13 @@ assert_compose_env_file() {
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"up -d"* ]]
+}
+
+@test "make pulumi proxies arbitrary Pulumi commands inside the container" {
+  run make -n pulumi ARGS="version"
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"pulumi --cwd pulumi version"* ]]
 }
 
 @test "make pulumi-preview executes preview inside container" {
