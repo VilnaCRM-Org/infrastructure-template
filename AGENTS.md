@@ -53,3 +53,13 @@ These rules are mandatory for AI coding agents in this repository.
 4. Update `docs/` whenever the developer workflow, CI surface, or credential contract changes.
 5. Re-run the relevant checks before pushing.
 6. Keep the Pulumi policy pack under `policy/` aligned with the runtime guardrails in `pulumi/app/`.
+
+## Finish PR
+
+1. Confirm the current branch still matches the target PR head before making changes.
+2. Review unresolved, non-outdated human and CodeRabbit comments before widening the patch.
+3. Keep fixes scoped to the active review feedback and the failing checks.
+4. Re-run the narrowest local validation that proves the comment or failure is addressed.
+5. Reply on review threads when the fix is already present or needs brief verification context.
+6. Ask `@coderabbitai review` after pushing if the bot has not posted a fresh approval on the new head.
+7. Do not call the PR finished until required GitHub checks are green and current review threads are resolved.

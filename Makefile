@@ -39,6 +39,8 @@ SBOM_ARTIFACT_DIR        ?= .artifacts/sbom
 DOCSTRING_PATHS          ?= pulumi/app policy scripts/pulumi_ci_guardrails.py
 WILY_TARGETS             ?= pulumi policy scripts
 YAML_LINT_PATHS          ?= .github/workflows docker-compose.yml policy pulumi .hadolint.yaml .yamllint.yml
+MUTATION_TEST_TARGETS    ?= tests/unit/test_environment_component.py tests/unit/test_guardrails.py
+MUTATION_TESTS_DIR       ?= tests/unit
 INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 	-e COVERAGE_PROCESS_START=/workspace/.coveragerc \
 	-e COVERAGE_RCFILE=/workspace/.coveragerc
@@ -240,7 +242,10 @@ test-repo-hygiene: ## Lint GitHub Actions, YAML, shell scripts, and the Dockerfi
 	$(MAKE) test-dockerfile
 
 test-mutation: ## Run mutation testing suite against Pulumi components.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
+	$(COMPOSE) run --rm \
+		-e MUTATION_TEST_TARGETS="$(MUTATION_TEST_TARGETS)" \
+		-e MUTATION_TESTS_DIR="$(MUTATION_TESTS_DIR)" \
+		$(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
 
 test-cli: ## Validate Makefile front-ends via Bats.
 	COMPOSE_TARGET=test $(COMPOSE) run --build --rm $(COMPOSE_SERVICE) bats tests/unit
