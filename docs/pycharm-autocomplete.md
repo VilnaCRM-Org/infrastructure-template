@@ -68,7 +68,8 @@ set UV_PROJECT_ENVIRONMENT=%USERPROFILE%\\.venvs\\infrastructure-template && uv 
 When adding the interpreter in PyCharm, select the explicit environment path:
 
 - macOS/Linux: `${HOME}/.venvs/infrastructure-template/bin/python`
-- Windows (PowerShell/cmd): `%USERPROFILE%\\.venvs\\infrastructure-template\\Scripts\\python.exe`
+- Windows PowerShell: `$env:USERPROFILE\\.venvs\\infrastructure-template\\Scripts\\python.exe`
+- Windows cmd.exe: `%USERPROFILE%\\.venvs\\infrastructure-template\\Scripts\\python.exe`
 
 ## 4. Verify autocomplete
 
