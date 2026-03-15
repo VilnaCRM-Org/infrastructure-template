@@ -94,10 +94,11 @@ def test_codeql_workflow_covers_python_and_github_actions() -> None:
         "contents": "read",
         "security-events": "write",
     }
-    assert workflow["jobs"]["analyze"]["concurrency"] == {
-        "group": "codeql-${{ github.ref }}",
+    assert workflow["concurrency"] == {
+        "group": "${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}",
         "cancel-in-progress": True,
     }
+    assert "concurrency" not in workflow["jobs"]["analyze"]
     assert matrix_languages == ["python", "actions"]
     assert any("github/codeql-action/init@" in uses for uses in uses_steps)
     assert any("github/codeql-action/analyze@" in uses for uses in uses_steps)
