@@ -13,7 +13,7 @@ pulumi = ">=3.138,<4"
 pulumi-aws = ">=6.58,<7"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.0"
+pytest = "^9.0"
 pytest-cov = "^5.0"
 mutmut = "^2.4"
 pyyaml = "^6.0"
