@@ -150,7 +150,13 @@ def test_load_policy_config_defaults_optional_sections(
     """Allow small downstream configs while normalizing empty optional sections."""
     path = tmp_path / "guardrails.yaml"
     path.write_text(
-        "required_tags:\n  - Project\nallowed_regions:\n  - eu-central-1\n",
+        (
+            "required_tags:\n"
+            "  - Project\n"
+            "allowed_regions:\n"
+            "  - eu-central-1\n"
+            "production_environments: []\n"
+        ),
         encoding="utf-8",
     )
 
@@ -173,6 +179,10 @@ def test_load_policy_config_freezes_annotations_mapping(
         (
             "required_tags:\n"
             "  - Project\n"
+            "allowed_regions:\n"
+            "  - eu-central-1\n"
+            "production_environments:\n"
+            "  - prod\n"
             "annotations:\n"
             "  public_s3_tag: AllowPublicBucket\n"
         ),
@@ -189,8 +199,22 @@ def test_load_policy_config_freezes_annotations_mapping(
     ("content", "message"),
     [
         ("[]\n", "must contain a top-level mapping"),
+        ("allowed_regions:\n  - eu-central-1\n", "required_tags is required"),
+        ("required_tags:\n  - Project\n", "allowed_regions is required"),
+        (
+            "required_tags:\n  - Project\nallowed_regions:\n  - eu-central-1\n",
+            "production_environments is required",
+        ),
         ("required_tags: nope\n", "required_tags must be a list"),
-        ("annotations: []\n", "annotations must be a mapping"),
+        (
+            "required_tags:\n"
+            "  - Project\n"
+            "allowed_regions:\n"
+            "  - eu-central-1\n"
+            "production_environments: []\n"
+            "annotations: []\n",
+            "annotations must be a mapping",
+        ),
         ("required_tags:\n  - ''\n", "required_tags must be a non-empty string"),
     ],
 )

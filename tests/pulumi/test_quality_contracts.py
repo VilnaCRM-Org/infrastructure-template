@@ -5,7 +5,10 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - exercised on Python 3.10 only.
+    import tomli as tomllib
 import yaml
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -46,6 +49,7 @@ def test_pyproject_declares_quality_tooling_contracts() -> None:
         "wily>=1.25,<2",
         "xenon>=0.9,<1",
         "yamllint>=1.35,<2",
+        "tomli>=2.0,<3",
     }
 
     assert expected_tools.issubset(dev_dependencies)

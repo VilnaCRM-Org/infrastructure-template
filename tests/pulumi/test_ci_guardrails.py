@@ -30,6 +30,10 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     """Keep the preview workflow aligned with the repo-local Make entrypoints."""
     workflow = _workflow("pulumi-pr-guardrails.yml")
     jobs = workflow["jobs"]
+    same_repo_only = (
+        "${{ github.event_name != 'pull_request' || "
+        "github.event.pull_request.head.repo.full_name == github.repository }}"
+    )
     destructive_diff_runs = [
         step.get("run") for step in jobs["destructive_diff"]["steps"] if step.get("run")
     ]
@@ -51,6 +55,8 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     )
 
     assert workflow["concurrency"]["cancel-in-progress"] is True
+    assert jobs["preview"]["if"] == same_repo_only
+    assert jobs["iam_validation"]["if"] == same_repo_only
     assert jobs["preview"]["permissions"] == {"contents": "read", "id-token": "write"}
     assert jobs["destructive_diff"]["needs"] == "preview"
     assert jobs["iam_validation"]["needs"] == "preview"

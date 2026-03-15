@@ -5,6 +5,9 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="${ROOT_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 ROOT_DIR="$(cd "${ROOT_DIR}" && pwd)"
 QUALITY_ARTIFACT_DIR="${QUALITY_ARTIFACT_DIR:-${ROOT_DIR}/.artifacts/quality}"
+if [[ "${QUALITY_ARTIFACT_DIR}" != /* ]]; then
+  QUALITY_ARTIFACT_DIR="${ROOT_DIR}/${QUALITY_ARTIFACT_DIR}"
+fi
 WILY_TARGETS="${WILY_TARGETS:-pulumi policy scripts}"
 WILY_CACHE_DIR="${QUALITY_ARTIFACT_DIR}/wily-cache"
 WILY_REPORT="${QUALITY_ARTIFACT_DIR}/wily-rank.txt"

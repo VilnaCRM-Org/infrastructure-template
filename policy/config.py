@@ -31,16 +31,10 @@ def load_policy_config(path: Path | None = None) -> PolicyConfig:
     allowlists = _mapping(document.get("allowlists"), label="allowlists")
 
     return PolicyConfig(
-        required_tags=tuple(
-            _string_list(document.get("required_tags"), "required_tags")
-        ),
-        allowed_regions=tuple(
-            _string_list(document.get("allowed_regions"), "allowed_regions")
-        ),
+        required_tags=tuple(_required_string_list(document, "required_tags")),
+        allowed_regions=tuple(_required_string_list(document, "allowed_regions")),
         production_environments=tuple(
-            _string_list(
-                document.get("production_environments"), "production_environments"
-            )
+            _required_string_list(document, "production_environments")
         ),
         public_s3_bucket_allowlist=frozenset(
             _string_list(
@@ -92,6 +86,13 @@ def _string_list(value: object, label: str) -> list[str]:
     for item in value:
         normalized.append(_string_value(item, label))
     return normalized
+
+
+def _required_string_list(document: Mapping[str, object], label: str) -> list[str]:
+    """Require a list-valued setting to be present in the config document."""
+    if label not in document:
+        raise ValueError(f"{label} is required.")
+    return _string_list(document[label], label)
 
 
 def _string_mapping(value: object, *, label: str) -> dict[str, str]:

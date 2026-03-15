@@ -264,6 +264,34 @@ def test_prepare_docker_context_script_preserves_existing_env_file(
     assert stat.S_IMODE((repo_dir / ".env").stat().st_mode) == 0o600
 
 
+def test_prepare_docker_context_script_rejects_non_regular_env_path(
+    tmp_path: Path,
+) -> None:
+    """Fail fast when .env exists as a symlink or directory."""
+    home_dir = tmp_path / "home"
+    repo_dir = tmp_path / "repo"
+    target_file = tmp_path / "target.env"
+    home_dir.mkdir()
+    repo_dir.mkdir()
+    target_file.write_text("TARGET=value\n", encoding="utf-8")
+    (repo_dir / ".env.empty").write_text("DEFAULT=value\n", encoding="utf-8")
+    (repo_dir / ".env").symlink_to(target_file)
+
+    result = subprocess.run(
+        ["bash", str(PREPARE_SCRIPT)],
+        check=False,
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HOME": str(home_dir)},
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "error: .env must be a regular file" in result.stderr
+    assert target_file.read_text(encoding="utf-8") == "TARGET=value\n"
+
+
 def test_prepare_docker_context_script_requires_env_template(tmp_path: Path) -> None:
     """Fail clearly when the committed fallback env file is missing."""
     home_dir = tmp_path / "home"
@@ -323,6 +351,7 @@ def test_new_helper_scripts_keep_local_ci_behaviour_explicit() -> None:
         'QUALITY_ARTIFACT_DIR="${QUALITY_ARTIFACT_DIR:-${ROOT_DIR}/.artifacts/quality}"'
         in wily_script
     )
+    assert 'if [[ "${QUALITY_ARTIFACT_DIR}" != /* ]]; then' in wily_script
     assert 'cd "${ROOT_DIR}"' in wily_script
     assert "git rev-parse --verify HEAD" in wily_script
     assert "Wily maintainability report skipped" in wily_script

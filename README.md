@@ -128,15 +128,16 @@ Run `make doctor` when you need a fast prerequisite check before debugging local
 Docker or Compose behavior.
 
 `make pulumi-preview` and `make pulumi-up` automatically enable the repository
-policy pack. If the shared `uv` environment inside the container is missing the
-policy runtime dependencies, the bootstrap helper resyncs it from `uv.lock`
-before Pulumi starts and refreshes `policy/.venv` so Pulumi can start the
-policy runtime consistently in Docker, CI, and local shells. The interactive
-Pulumi targets also log into the configured backend automatically, falling back
-to the local file backend under `.pulumi-backend/` when no shared backend is
-configured, select the first committed `Pulumi.<stack>.yaml` file by default,
-and use an empty `PULUMI_CONFIG_PASSPHRASE` for the template stacks unless you
-override it explicitly.
+policy pack. If the shared `uv` environment inside the container is missing
+core Pulumi Python dependencies, the bootstrap helper resyncs it from
+`uv.lock` before Pulumi starts. The policy runtime is refreshed separately in
+`policy/.venv` from `policy/requirements.txt` so Pulumi starts the policy pack
+consistently in Docker, CI, and local shells. The interactive Pulumi targets
+also log into the configured backend automatically, falling back to the local
+file backend under `.pulumi-backend/` when no shared backend is configured,
+select the first committed `Pulumi.<stack>.yaml` file by default, and use an
+empty `PULUMI_CONFIG_PASSPHRASE` for the template stacks unless you override it
+explicitly.
 
 ## Security
 
