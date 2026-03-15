@@ -37,10 +37,13 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     destructive_diff_runs = [
         step.get("run") for step in jobs["destructive_diff"]["steps"] if step.get("run")
     ]
-    preview_oidc_step = next(
+    preview_runs = [
+        step.get("run") for step in jobs["preview"]["steps"] if step.get("run")
+    ]
+    preview_privileged_oidc_step = next(
         (
             step
-            for step in jobs["preview"]["steps"]
+            for step in jobs["preview_privileged"]["steps"]
             if step.get("name") == "Configure AWS credentials via OIDC"
         ),
         None,
@@ -55,27 +58,37 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     )
 
     assert workflow["concurrency"]["cancel-in-progress"] is True
-    assert jobs["preview"]["if"] == same_repo_only
+    assert "if" not in jobs["preview"]
+    assert jobs["preview"]["permissions"] == {"contents": "read"}
+    assert jobs["preview"]["env"]["PULUMI_BACKEND_URL"] == "file:///workspace/.pulumi-backend"
+    assert jobs["preview_privileged"]["if"] == same_repo_only
+    assert jobs["preview_privileged"]["permissions"] == {
+        "contents": "read",
+        "id-token": "write",
+    }
     assert jobs["iam_validation"]["if"] == same_repo_only
-    assert jobs["preview"]["permissions"] == {"contents": "read", "id-token": "write"}
     assert jobs["destructive_diff"]["needs"] == "preview"
     assert jobs["iam_validation"]["needs"] == "preview"
-    assert preview_oidc_step is not None, "preview OIDC step not found"
+    assert preview_privileged_oidc_step is not None, "preview OIDC step not found"
     assert iam_oidc_step is not None, "IAM validation OIDC step not found"
-    assert "github.event_name != 'pull_request'" in preview_oidc_step["if"]
+    assert "github.event_name != 'pull_request'" in preview_privileged_oidc_step["if"]
     assert (
         "github.event.pull_request.head.repo.full_name == github.repository"
-        in preview_oidc_step["if"]
+        in preview_privileged_oidc_step["if"]
     )
-    assert preview_oidc_step["if"] == iam_oidc_step["if"]
-
-    preview_runs = [
-        step.get("run") for step in jobs["preview"]["steps"] if step.get("run")
-    ]
+    assert preview_privileged_oidc_step["if"] == iam_oidc_step["if"]
     assert any("make test-preview" in run for run in preview_runs)
     assert any("GITHUB_STEP_SUMMARY" in run for run in preview_runs)
     assert any(
         "[[ -f .artifacts/pulumi-preview/summary.md ]]" in run for run in preview_runs
+    )
+    assert any(
+        step.get("run") == "./scripts/prepare_docker_context.sh"
+        for step in jobs["preview"]["steps"]
+    )
+    assert any(
+        step.get("run") == "./scripts/prepare_docker_context.sh"
+        for step in jobs["preview_privileged"]["steps"]
     )
     assert any(
         step.get("uses", "").startswith("actions/upload-artifact@")

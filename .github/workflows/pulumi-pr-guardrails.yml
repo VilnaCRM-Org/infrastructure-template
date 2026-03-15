@@ -20,6 +20,43 @@ permissions:
 jobs:
   preview:
     name: Preview
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      PULUMI_SKIP_UPDATE_CHECK: "true"
+      AWS_REGION: ${{ vars.AWS_REGION || 'eu-central-1' }}
+      AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'eu-central-1' }}
+      PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
+      PULUMI_PREVIEW_STACKS: ${{ vars.PULUMI_PREVIEW_STACKS }}
+      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Run preview guardrail
+        run: |
+          export PULUMI_BACKEND_URL="${PULUMI_BACKEND_URL:-file:///workspace/.pulumi-backend}"
+          make test-preview
+          if [[ -f .artifacts/pulumi-preview/summary.md ]]; then
+            cat .artifacts/pulumi-preview/summary.md >> "${GITHUB_STEP_SUMMARY}"
+          else
+            printf "Pulumi preview completed without a rendered summary artifact.\n" >> "${GITHUB_STEP_SUMMARY}"
+          fi
+
+      - name: Upload preview artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: pulumi-preview
+          path: .artifacts/pulumi-preview
+
+  preview_privileged:
+    name: Preview (OIDC)
     if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
@@ -59,12 +96,6 @@ jobs:
           else
             printf "Pulumi preview completed without a rendered summary artifact.\n" >> "${GITHUB_STEP_SUMMARY}"
           fi
-
-      - name: Upload preview artifact
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
-        with:
-          name: pulumi-preview
-          path: .artifacts/pulumi-preview
 
   destructive_diff:
     name: Destructive Diff Gate

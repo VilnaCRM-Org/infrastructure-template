@@ -495,7 +495,7 @@ assert_help_target() {
 @test "make report-docstrings executes docstr-coverage with repo config" {
   run make -n report-docstrings
   [ "$status" -eq 0 ]
-  [[ "$output" == *"uv run docstr-coverage --fail-under 100"* ]]
+  [[ "$output" == *"uv run docstr-coverage "* ]]
   [[ "$output" == *"docstr-coverage.txt"* ]]
 }
 

@@ -47,7 +47,7 @@ These checks are intentionally visible but do not block pull requests:
 | --- | --- | --- |
 | `Wily Maintainability Trends` | `make report-maintainability-trends` | Tracks maintainability drift over repository history |
 | `Vulture Dead Code` | `make report-dead-code` | Reports likely dead code in reusable modules |
-| `Docstring Coverage` | `make report-docstrings` | Enforces docstring coverage on reusable modules and utilities |
+| `Docstring Coverage` | `make report-docstrings` | Reports docstring coverage on reusable modules and utilities |
 | `CycloneDX SBOM` | `make report-sbom` | Generates a Python environment SBOM artifact |
 | `SBOM provenance` | GitHub-native in `nightly-quality.yml` | Attests the generated SBOM artifact |
 | `Drift Detection` | `make test-drift` | Non-destructive shared-stack drift detection |

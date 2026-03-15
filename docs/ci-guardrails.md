@@ -106,8 +106,13 @@ Required repository variables:
 | Variable | Purpose |
 | --- | --- |
 | `AWS_OIDC_ROLE_ARN` | IAM role assumed by preview, IAM validation, and drift jobs |
-| `AWS_REGION` | AWS region used by `configure-aws-credentials` |
-| `PULUMI_BACKEND_URL` | Shared Pulumi backend for real preview and drift checks |
+
+Optional or defaulted repository variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `AWS_REGION` | AWS region used by `configure-aws-credentials`; defaults to `eu-central-1` |
+| `PULUMI_BACKEND_URL` | Shared Pulumi backend for OIDC-backed preview and drift checks; preview falls back to the local file backend when unset |
 | `PULUMI_PREVIEW_STACKS` | Optional comma-separated stack list for preview |
 | `PULUMI_DRIFT_STACKS` | Optional comma-separated stack list for nightly drift checks |
 
@@ -117,6 +122,10 @@ Optional repository secrets:
 | --- | --- |
 | `PULUMI_ACCESS_TOKEN` | Required only when the backend is the Pulumi Service |
 | `PULUMI_CONFIG_PASSPHRASE` | Required only for passphrase-protected backends |
+
+Fork pull requests always run the unprivileged file-backend preview and the
+destructive diff gate. The AWS-backed IAM validation job remains same-repo only
+because `aws accessanalyzer validate-policy` requires AWS credentials.
 
 ### Example IAM trust policy
 
