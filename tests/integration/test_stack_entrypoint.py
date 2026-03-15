@@ -69,6 +69,7 @@ def test_stack_entrypoint_executes_with_pulumi_mocks() -> None:
                 "amiId": "ami-integration"
             }[key]
             config_instance.get.side_effect = lambda key, default=None: {
+                "amiId": "ami-integration",
                 "instanceType": "t3.small",
                 "nameTag": "IntegrationServer",
             }.get(key, default)

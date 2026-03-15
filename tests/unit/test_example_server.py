@@ -73,7 +73,7 @@ def mocked_pulumi_context(
     optional_values = optional_values or {}
 
     with ExitStack() as exit_stack:
-        config_patch = exit_stack.enter_context(patch("app.server.pulumi.Config"))
+        config_patch = exit_stack.enter_context(patch("pulumi.Config"))
         config_instance = config_patch.return_value
         config_instance.require.side_effect = lambda key: required_values[key]
         config_instance.get.side_effect = lambda key, default=None: optional_values.get(
@@ -228,7 +228,11 @@ def test_main_exports_expected_outputs() -> None:
 
     with mocked_pulumi_context(
         required_values={"amiId": "ami-main"},
-        optional_values={"instanceType": "t3.nano", "nameTag": "MainProgramServer"},
+        optional_values={
+            "amiId": "ami-main",
+            "instanceType": "t3.nano",
+            "nameTag": "MainProgramServer",
+        },
     ):
         _run_pulumi_program(program)
 

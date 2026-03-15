@@ -1,7 +1,6 @@
 """Pulumi entrypoint that exports baseline stack metadata."""
 
 import pulumi
-from pulumi.runtime import mocks, settings as runtime_settings
 
 from app.environment import EnvironmentSettings
 from app.server import ExampleServer
@@ -14,11 +13,6 @@ def _resolve_example_server_ami_id() -> str | None:
 
     if isinstance(configured_ami_id, str) and configured_ami_id:
         return configured_ami_id
-
-    if isinstance(runtime_settings.get_monitor(), mocks.MockMonitor):
-        required_ami_id = config.require("amiId")
-        if isinstance(required_ami_id, str) and required_ami_id:
-            return required_ami_id
 
     return None
 
