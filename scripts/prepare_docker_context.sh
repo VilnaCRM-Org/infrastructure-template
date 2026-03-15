@@ -4,7 +4,7 @@ set -euo pipefail
 mkdir -p "${HOME}/.aws"
 chmod 700 "${HOME}/.aws"
 
-if [[ -e .env && ( -L .env || ! -f .env ) ]]; then
+if [[ -e .env && (-L .env || ! -f .env) ]]; then
   echo "error: .env must be a regular file" >&2
   exit 1
 fi
