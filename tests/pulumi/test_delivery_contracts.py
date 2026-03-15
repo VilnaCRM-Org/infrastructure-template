@@ -502,8 +502,8 @@ def test_ci_workflows_use_guardrails_and_shared_bootstrap() -> None:
             job = workflow["jobs"][job_name]
             assert job["timeout-minutes"] == expected_timeout
             assert any(
-                step.get("run") == "./scripts/prepare_docker_context.sh"
-                for step in job["steps"]
+                "./scripts/prepare_docker_context.sh" in line
+                for line in _run_lines(job["steps"])
             ), f"{workflow_name}:{job_name} must use the shared Docker bootstrap"
 
 
@@ -676,6 +676,27 @@ def test_ci_architecture_docs_match_make_entrypoints() -> None:
         encoding="utf-8"
     )
 
+    assert "Docker-backed CI workflows" in architecture_doc
+    assert "GitHub-native jobs such as CodeQL" in architecture_doc
     assert "prerequisite sanity check" in architecture_doc
     assert "Pulumi structural tests" in architecture_doc
     assert "make ci-pr" in architecture_doc
+
+
+def test_sre_docs_map_blocking_ci_checks_back_to_local_commands() -> None:
+    """Keep the day-2 guide aligned with the blocking check surface."""
+    operations_doc = (PROJECT_ROOT / "docs" / "sre-operations.md").read_text(
+        encoding="utf-8"
+    )
+
+    assert "`Maintainability` -> `make test-maintainability`" in operations_doc
+    assert "`Architecture` -> `make test-architecture`" in operations_doc
+    assert "`Dependency Hygiene` -> `make test-dependency-hygiene`" in operations_doc
+    assert (
+        "`Coverage` -> `make test-unit && make test-integration && "
+        "make test-policy && make test-coverage`" in operations_doc
+    )
+    assert "`Bandit` -> `make test-bandit`" in operations_doc
+    assert "`Yamllint` -> `make test-yaml`" in operations_doc
+    assert "`Shell Hygiene` -> `make test-shell`" in operations_doc
+    assert "`Hadolint` -> `make test-dockerfile`" in operations_doc

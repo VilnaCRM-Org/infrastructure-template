@@ -48,3 +48,10 @@ def pulumi_automation_environment(tmp_path_factory: pytest.TempPathFactory) -> N
     os.environ.setdefault("PULUMI_HOME", str(backend_dir))
     os.environ.setdefault("PULUMI_BACKEND_URL", backend_uri)
     os.environ.setdefault("PULUMI_CONFIG_PASSPHRASE", env["PULUMI_CONFIG_PASSPHRASE"])
+
+
+@pytest.fixture(scope="session")
+def ensure_pulumi_cli() -> None:
+    """Skip integration cases that require the Pulumi CLI when it is unavailable."""
+    if shutil.which("pulumi") is None:
+        pytest.skip("Pulumi CLI binary is not available in PATH.")

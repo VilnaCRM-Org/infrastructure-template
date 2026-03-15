@@ -113,7 +113,7 @@ assert_help_target() {
   if ! command -v docker >/dev/null 2>&1 \
     || ! docker info >/dev/null 2>&1 \
     || ! docker compose version >/dev/null 2>&1; then
-    skip "docker CLI is unavailable inside the Bats execution environment"
+    skip "docker runtime is unavailable inside the Bats execution environment"
   fi
 
   run env AWS_SECRET_ACCESS_KEY=SECRET123 AWS_ACCESS_KEY_ID=KEY123 make doctor

@@ -120,6 +120,10 @@ Map failures back to their local commands:
 - `Policy` -> `make test-policy`
 - `Ruff` -> `make test-ruff`
 - `Ty` -> `make test-ty`
+- `Maintainability` -> `make test-maintainability`
+- `Architecture` -> `make test-architecture`
+- `Dependency Hygiene` -> `make test-dependency-hygiene`
+- `Coverage` -> `make test-unit && make test-integration && make test-policy && make test-coverage`
 - `Unit` -> `make test-unit`
 - `Integration` -> `make test-integration`
 - `Mutation` -> `make test-mutation`
@@ -130,7 +134,12 @@ Map failures back to their local commands:
 - `IAM Validation` -> `make test-iam-validation`
 - `Secrets Scan` -> `make test-secrets`
 - `Dependency Audit` -> `make test-deps-security`
+- `Bandit` -> `make test-bandit`
 - `Actionlint` -> `make test-actionlint`
+- `Yamllint` -> `make test-yaml`
+- `Shell Hygiene` -> `make test-shell`
+- `Hadolint` -> `make test-dockerfile`
+- `CodeQL`, `Dependency Review`, `Infracost`, and `CodeRabbit` -> GitHub-native only
 
 That mapping is intentional. If a failure cannot be reproduced locally with the
 matching target, the problem is probably workflow-specific and should be treated

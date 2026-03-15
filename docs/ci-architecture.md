@@ -33,8 +33,11 @@ Every pull request check is driven by the same Docker workspace and the same
 
 ### Prepared Docker Context
 
-CI workflows call `./scripts/prepare_docker_context.sh` before running checks.
-That script standardizes the expected local state:
+Docker-backed CI workflows call `./scripts/prepare_docker_context.sh` before
+running checks. GitHub-native jobs such as CodeQL, Dependency Review, and
+Scorecard do not invoke it because they do not run inside the repository Docker
+workspace. For the Docker-backed jobs, the script standardizes the expected
+local state:
 
 - creates `${HOME}/.aws` with restrictive permissions
 - materializes `.env` from `.env.empty` when needed

@@ -43,16 +43,7 @@ class BucketStub(pulumi.ComponentResource):
 BucketStub("bucket")
 """
 
-pytestmark = pytest.mark.skipif(
-    subprocess.run(
-        ["bash", "-lc", "command -v pulumi >/dev/null 2>&1"],
-        check=False,
-        cwd=PROJECT_ROOT,
-        timeout=10,
-    ).returncode
-    != 0,
-    reason="Pulumi CLI binary is not available in PATH.",
-)
+pytestmark = pytest.mark.usefixtures("ensure_pulumi_cli")
 
 
 def _write_program(tmp_path: Path, *, acl: str) -> Path:

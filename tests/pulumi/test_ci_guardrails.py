@@ -125,6 +125,7 @@ def test_nightly_guardrails_workflow_covers_drift_and_scorecard() -> None:
 
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
+    assert workflow["concurrency"]["cancel-in-progress"] is False
     assert jobs["drift_detection"]["permissions"] == {
         "contents": "read",
         "id-token": "write",
