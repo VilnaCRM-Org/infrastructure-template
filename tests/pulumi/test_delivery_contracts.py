@@ -155,7 +155,9 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     assert "uv venv --seed" in dockerfile_text
     assert 'getent group "${GID}"' in dockerfile_text
     assert 'getent passwd "${UID}"' in dockerfile_text
-    assert 'useradd --gid "${group_name}" --create-home "${USERNAME}"' in dockerfile_text
+    assert (
+        'useradd --gid "${group_name}" --create-home "${USERNAME}"' in dockerfile_text
+    )
     assert (
         'useradd --uid "${UID}" --gid "${group_name}" --create-home "${USERNAME}"'
         in dockerfile_text

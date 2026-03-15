@@ -338,6 +338,7 @@ def test_iam_policy_fields_maps_identity_and_resource_policy_types(
         ("policy", "RESOURCE_POLICY"),
         ("policyDocument", "RESOURCE_POLICY"),
     ]
+    assert list(guardrails_module.iam_policy_fields("aws:ec2/vpc:Vpc")) == []
 
 
 def test_write_iam_inputs_serializes_extracted_documents(

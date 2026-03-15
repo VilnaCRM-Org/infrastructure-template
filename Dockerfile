@@ -177,7 +177,8 @@ RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/ap
 RUN set -eux; \
     group_name="${USERNAME}"; \
     if getent group "${GID}" >/dev/null; then \
-        group_name="$(getent group "${GID}" | cut -d: -f1)"; \
+        group_entry="$(getent group "${GID}")"; \
+        group_name="${group_entry%%:*}"; \
     elif ! getent group "${USERNAME}" >/dev/null; then \
         groupadd --gid "${GID}" "${USERNAME}"; \
     fi; \
