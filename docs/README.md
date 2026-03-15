@@ -71,7 +71,8 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `pulumi-structural.yml` validates Pulumi project metadata.
 - `pulumi-unit.yml` runs unit tests with Pulumi mocks.
 - `pulumi-integration.yml` runs Pulumi Automation tests with a local file backend.
-- `pulumi-mutation.yml` executes mutation testing.
+- `pulumi-mutation.yml` executes focused mutation testing against the `pulumi/app`
+  unit-test surface so the job stays fast enough for pull requests.
 - `bats-tests.yml` validates the Makefile CLI surface.
 
 These checks do not require AWS or Pulumi credentials by default. If you add deploy workflows or provision real cloud resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md) to configure the required secrets.
@@ -88,6 +89,9 @@ These checks do not require AWS or Pulumi credentials by default. If you add dep
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
 - `make test-pulumi`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli` for focused suites.
+- `make test-mutation` defaults to the `tests/unit/test_environment_component.py`
+  and `tests/unit/test_guardrails.py` runner; override `MUTATION_TEST_TARGETS`
+  only when you intentionally want a slower broader mutation pass.
 - `make test` to run the structural, unit, integration, and CLI checks together.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.

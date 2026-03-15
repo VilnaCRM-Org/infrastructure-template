@@ -22,6 +22,8 @@ COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
 COVERAGE_OPTS            ?= --cov=./pulumi --cov-report=term-missing
 UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS) --cov-fail-under=100
+MUTATION_TEST_TARGETS    ?= tests/unit/test_environment_component.py tests/unit/test_guardrails.py
+MUTATION_TESTS_DIR       ?= tests/unit
 INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
 	-e COVERAGE_PROCESS_START=/workspace/.coveragerc \
 	-e COVERAGE_RCFILE=/workspace/.coveragerc
@@ -76,8 +78,11 @@ test-integration: ## Execute Pulumi automation-based integration tests.
 test-pulumi: ## Perform structural checks on Pulumi project configuration.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/pulumi
 
-test-mutation: ## Run mutation testing suite against Pulumi components.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
+test-mutation: ## Run focused mutation testing for the Pulumi application layer.
+	$(COMPOSE) run --rm \
+		-e MUTATION_TEST_TARGETS="$(MUTATION_TEST_TARGETS)" \
+		-e MUTATION_TESTS_DIR="$(MUTATION_TESTS_DIR)" \
+		$(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
 
 test-cli: ## Validate Makefile front-ends via Bats.
 	COMPOSE_TARGET=test $(COMPOSE) run --rm $(COMPOSE_SERVICE) bats tests/unit
