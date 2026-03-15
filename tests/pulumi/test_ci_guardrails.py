@@ -95,7 +95,10 @@ def test_codeql_workflow_covers_python_and_github_actions() -> None:
         "security-events": "write",
     }
     assert workflow["concurrency"] == {
-        "group": "${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}",
+        "group": (
+            "${{ github.workflow }}-"
+            "${{ github.event.pull_request.number || github.ref }}"
+        ),
         "cancel-in-progress": True,
     }
     assert "concurrency" not in workflow["jobs"]["analyze"]
