@@ -27,9 +27,16 @@ fi
 
 ln -sfn "${POLICY_VENV}" "${POLICY_VENV_LINK}"
 
-if ! "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1; then
+if ! ROOT_DIR="${ROOT_DIR}" "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1; then
+import os
+import sys
+
+sys.path.insert(0, os.environ["ROOT_DIR"])
 import pulumi
 import pulumi_policy
+import policy.config
+import policy.guardrails
+import policy.pack
 PY
   (
     cd "${ROOT_DIR}"
@@ -37,11 +44,18 @@ PY
   )
 fi
 
-if ! "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1; then
+if ! ROOT_DIR="${ROOT_DIR}" "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1; then
+import os
+import sys
+
+sys.path.insert(0, os.environ["ROOT_DIR"])
 import pulumi
 import pulumi_policy
+import policy.config
+import policy.guardrails
+import policy.pack
 PY
-  echo "error: shared policy interpreter is missing pulumi or pulumi-policy" >&2
+  echo "error: shared policy interpreter is missing Pulumi or repo-local policy modules" >&2
   echo "hint: rebuild the development image to refresh the uv-managed dependencies" >&2
   exit 1
 fi

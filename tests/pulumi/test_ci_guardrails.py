@@ -30,6 +30,9 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     """Keep the preview workflow aligned with the repo-local Make entrypoints."""
     workflow = _workflow("pulumi-pr-guardrails.yml")
     jobs = workflow["jobs"]
+    destructive_diff_runs = [
+        step.get("run") for step in jobs["destructive_diff"]["steps"] if step.get("run")
+    ]
 
     assert workflow["concurrency"]["cancel-in-progress"] is True
     assert jobs["preview"]["permissions"] == {"contents": "read", "id-token": "write"}
@@ -51,6 +54,10 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     assert any(
         step.get("run") == "make test-destructive-diff"
         for step in jobs["destructive_diff"]["steps"]
+    )
+    assert any(
+        'cp "${GITHUB_EVENT_PATH}" .artifacts/github-event.json' in run
+        for run in destructive_diff_runs
     )
     assert any(
         step.get("run") == "make test-iam-validation"
@@ -122,6 +129,10 @@ def test_nightly_guardrails_workflow_covers_drift_and_scorecard() -> None:
         "contents": "read",
         "id-token": "write",
     }
+    assert (
+        jobs["drift_detection"]["env"]["PULUMI_ACCESS_TOKEN"]
+        == "${{ secrets.PULUMI_ACCESS_TOKEN }}"
+    )
     assert any(
         step.get("run") == "make test-drift"
         for step in jobs["drift_detection"]["steps"]

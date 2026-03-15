@@ -11,30 +11,7 @@ import pytest
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 POLICY_DIR = PROJECT_ROOT / "policy"
 PREPARE_POLICY_PACK = PROJECT_ROOT / "scripts" / "prepare_policy_pack.sh"
-
-pytestmark = pytest.mark.skipif(
-    subprocess.run(
-        ["bash", "-lc", "command -v pulumi >/dev/null 2>&1"],
-        check=False,
-        cwd=PROJECT_ROOT,
-        timeout=10,
-    ).returncode
-    != 0,
-    reason="Pulumi CLI binary is not available in PATH.",
-)
-
-
-def _write_program(tmp_path: Path, *, acl: str) -> Path:
-    """Create a small Pulumi program that exercises the S3 ACL guardrail."""
-    work_dir = tmp_path / f"policy-{acl.replace('-', '_')}"
-    work_dir.mkdir()
-    (work_dir / ".state").mkdir()
-    (work_dir / "Pulumi.yaml").write_text(
-        "name: policy-pack-integration\nruntime:\n  name: python\n",
-        encoding="utf-8",
-    )
-    (work_dir / "__main__.py").write_text(
-        f"""import pulumi
+MAIN_PY_TEMPLATE = """import pulumi
 
 
 class BucketStub(pulumi.ComponentResource):
@@ -64,7 +41,31 @@ class BucketStub(pulumi.ComponentResource):
 
 
 BucketStub("bucket")
-""",
+"""
+
+pytestmark = pytest.mark.skipif(
+    subprocess.run(
+        ["bash", "-lc", "command -v pulumi >/dev/null 2>&1"],
+        check=False,
+        cwd=PROJECT_ROOT,
+        timeout=10,
+    ).returncode
+    != 0,
+    reason="Pulumi CLI binary is not available in PATH.",
+)
+
+
+def _write_program(tmp_path: Path, *, acl: str) -> Path:
+    """Create a small Pulumi program that exercises the S3 ACL guardrail."""
+    work_dir = tmp_path / f"policy-{acl.replace('-', '_')}"
+    work_dir.mkdir()
+    (work_dir / ".state").mkdir()
+    (work_dir / "Pulumi.yaml").write_text(
+        "name: policy-pack-integration\nruntime:\n  name: python\n",
+        encoding="utf-8",
+    )
+    (work_dir / "__main__.py").write_text(
+        MAIN_PY_TEMPLATE.format(acl=acl),
         encoding="utf-8",
     )
     return work_dir

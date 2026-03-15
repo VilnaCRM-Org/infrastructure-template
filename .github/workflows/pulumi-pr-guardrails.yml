@@ -84,6 +84,11 @@ jobs:
           name: pulumi-preview
           path: .artifacts/pulumi-preview
 
+      - name: Stage GitHub event payload for the guardrail helper
+        run: |
+          mkdir -p .artifacts
+          cp "${GITHUB_EVENT_PATH}" .artifacts/github-event.json
+
       - name: Enforce destructive diff gate
         run: make test-destructive-diff
 

@@ -7,7 +7,7 @@ import re
 from collections.abc import Callable
 
 import pytest
-from app.environment import EnvironmentSettings, resolve_config_value
+from app.environment import EnvironmentSettings
 from pulumi.runtime import mocks, settings, stack
 
 
@@ -44,11 +44,13 @@ def _run_with_mocks(program: Callable[[], None]) -> None:
         asyncio.set_event_loop(None)
 
 
-def test_resolve_config_value_preserves_explicit_configured_and_default_paths() -> None:
-    """Keep resolution semantics stable for explicit, configured, and default values."""
-    assert resolve_config_value("prod", "staging", default="dev") == "prod"
-    assert resolve_config_value(None, "staging", default="dev") == "staging"
-    assert resolve_config_value(None, None, default="dev") == "dev"
+def test_environment_settings_support_default_resolution_under_pulumi_mocks() -> None:
+    """Exercise the component path that falls back to committed defaults."""
+
+    def program() -> None:
+        EnvironmentSettings("integration-settings")
+
+    _run_with_mocks(program)
 
 
 @pytest.mark.parametrize(

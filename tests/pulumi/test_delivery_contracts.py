@@ -93,6 +93,10 @@ def _run_lines(steps: list[dict]) -> list[str]:
 def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
     """Keep the release workflows aligned with the documented secret contract."""
     secrets_doc = SECRETS_DOC.read_text(encoding="utf-8")
+    cancel_in_progress = {
+        "autorelease.yml": False,
+        "autoprerelase.yml": True,
+    }
 
     assert "fall back to `GITHUB_TOKEN`" in secrets_doc
 
@@ -109,7 +113,10 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         )
         assert any(step.get("name") == "Create Release" for step in steps)
         assert release_job["timeout-minutes"] == 10
-        assert workflow["concurrency"]["cancel-in-progress"] is False
+        assert (
+            workflow["concurrency"]["cancel-in-progress"]
+            is cancel_in_progress[workflow_name]
+        )
 
 
 def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
@@ -270,8 +277,13 @@ def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
     assert 'ln -sfn "${POLICY_VENV}" "${POLICY_VENV_LINK}"' in script_text
     assert 'UV_PROJECT_ENVIRONMENT="${POLICY_VENV}"' in script_text
     assert "uv sync --frozen --all-groups" in script_text
+    assert 'ROOT_DIR="${ROOT_DIR}"' in script_text
+    assert 'sys.path.insert(0, os.environ["ROOT_DIR"])' in script_text
     assert "import pulumi" in script_text
     assert "import pulumi_policy" in script_text
+    assert "import policy.config" in script_text
+    assert "import policy.guardrails" in script_text
+    assert "import policy.pack" in script_text
 
 
 def test_new_helper_scripts_keep_local_ci_behaviour_explicit() -> None:
@@ -283,6 +295,14 @@ def test_new_helper_scripts_keep_local_ci_behaviour_explicit() -> None:
 
     assert "docker compose version --short" in doctor_script
     assert "effective env file:" in doctor_script
+    assert '[[ ! -d "${PULUMI_DIR}" ]]' in doctor_script
+    assert "pulumi directory missing:" in doctor_script
+    assert 'ROOT_DIR="$(cd "${ROOT_DIR}" && pwd)"' in wily_script
+    assert (
+        'QUALITY_ARTIFACT_DIR="${QUALITY_ARTIFACT_DIR:-${ROOT_DIR}/.artifacts/quality}"'
+        in wily_script
+    )
+    assert 'cd "${ROOT_DIR}"' in wily_script
     assert "git rev-parse --verify HEAD" in wily_script
     assert "Wily maintainability report skipped" in wily_script
 

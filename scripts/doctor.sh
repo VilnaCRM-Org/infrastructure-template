@@ -21,6 +21,11 @@ printf "effective env file: %s\n" "${COMPOSE_ENV_FILE}"
 printf "compose service: %s\n" "${COMPOSE_SERVICE}"
 printf "pulumi directory: %s\n" "${PULUMI_DIR}"
 
+if [[ ! -d "${PULUMI_DIR}" ]]; then
+  echo "pulumi directory missing: ${PULUMI_DIR}" >&2
+  exit 1
+fi
+
 if [[ -f "${COMPOSE_ENV_FILE}" ]]; then
   printf "env file present: yes\n"
 else

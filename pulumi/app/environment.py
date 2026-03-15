@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from typing import Optional
 
 import pulumi
@@ -10,7 +11,7 @@ from app.guardrails import validate_environment_name, validate_service_name
 __all__ = ["EnvironmentSettings", "resolve_config_value"]
 
 
-def _stack_parts_from_outputs(parts: list[str]) -> tuple[str, str]:
+def _stack_parts_from_outputs(parts: Sequence[str]) -> tuple[str, str]:
     """Narrow Pulumi's list-shaped Output.all result to a stable tuple."""
     return parts[0], parts[1]
 

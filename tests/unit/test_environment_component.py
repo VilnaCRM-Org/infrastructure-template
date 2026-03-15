@@ -10,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from app.environment import EnvironmentSettings
+from app.environment import EnvironmentSettings, resolve_config_value
 from pulumi.runtime import mocks, settings, stack
 
 import pulumi
@@ -205,6 +205,13 @@ def test_service_name_defaults_to_project_name() -> None:
 
     with mocked_pulumi_context(project_name="project-fallback"):
         _run_pulumi_program(program)
+
+
+def test_resolve_config_value_preserves_explicit_configured_and_default_paths() -> None:
+    """Keep resolution semantics stable for explicit, configured, and default values."""
+    assert resolve_config_value("prod", "staging", default="dev") == "prod"
+    assert resolve_config_value(None, "staging", default="dev") == "staging"
+    assert resolve_config_value(None, None, default="dev") == "dev"
 
 
 def _assert_config_error(config_values: dict[str, object], message: str) -> None:

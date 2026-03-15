@@ -15,6 +15,15 @@ CONFIG = load_policy_config()
 PUBLIC_S3_ACLS = {"public-read", "public-read-write"}
 OPEN_CIDRS = ("0.0.0.0/0", "::/0")
 SENSITIVE_PORTS = (22, 3389)
+PUBLIC_ACCESS_NARROWING_KEYS = (
+    "aws:PrincipalArn",
+    "aws:PrincipalOrgID",
+    "aws:SourceAccount",
+    "aws:SourceArn",
+    "aws:SourceIp",
+    "aws:SourceVpc",
+    "aws:SourceVpce",
+)
 AWS_PROVIDER_TYPE_SUFFIX = "pulumi:providers:aws"
 S3_BUCKET_TYPE_SUFFIX = "s3/bucket:Bucket"
 S3_BUCKET_ACL_TYPE_SUFFIX = "s3/bucketAcl:BucketAcl"
@@ -346,6 +355,8 @@ def _statement_allows_public_access(statement: Mapping[str, Any]) -> bool:
     effect = _string_value(statement.get("Effect"))
     if effect != "Allow":
         return False
+    if _has_public_access_narrowing_condition(statement.get("Condition")):
+        return False
 
     principal = statement.get("Principal")
     if principal == "*":
@@ -358,6 +369,19 @@ def _statement_allows_public_access(statement: Mapping[str, Any]) -> bool:
             if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
                 if "*" in value:
                     return True
+    return False
+
+
+def _has_public_access_narrowing_condition(condition: object) -> bool:
+    """Treat well-known narrowing conditions as non-public access."""
+    if not isinstance(condition, Mapping):
+        return False
+
+    for value in condition.values():
+        if not isinstance(value, Mapping):
+            continue
+        if any(key in PUBLIC_ACCESS_NARROWING_KEYS for key in value):
+            return True
     return False
 
 
@@ -429,6 +453,8 @@ def _ports_in_range(props: Mapping[str, Any]) -> set[int]:
         protocol = protocol.lower()
     if protocol in (-1, "-1", "all"):
         return set(SENSITIVE_PORTS)
+    if protocol not in {"tcp", "udp", "6", "17", 6, 17}:
+        return set()
 
     from_port = props.get("fromPort")
     to_port = props.get("toPort")

@@ -112,7 +112,13 @@ make test-integration
 make test-mutation
 ```
 
-Run `make test` for the faster structural, policy, quality, repo-hygiene, unit, integration, coverage, and CLI battery during day-to-day development. Invoke `make test-security` and `make test-guardrails` when you are touching infrastructure safety controls. Use `make ci-pr` when you want the same non-mutation battery that GitHub runs before merge. Execute `make ci` when you want the full local superset, including the prerequisite check, image build, preview guardrails, security scans, and mutation suite. Use `make report-quality` when you want the scheduled Wily, Vulture, docstring-coverage, and SBOM reports locally.
+Use the local batteries that match the scope of your change:
+
+- `make test` runs the faster structural, policy, quality, repo-hygiene, unit, integration, coverage, and CLI battery.
+- `make test-security` and `make test-guardrails` focus on infrastructure safety controls.
+- `make ci-pr` mirrors the non-mutation GitHub pull-request battery before merge.
+- `make ci` runs the full local superset, including the prerequisite check, image build, preview guardrails, security scans, and mutation suite.
+- `make report-quality` generates the scheduled Wily, Vulture, docstring-coverage, and SBOM reports locally.
 
 If Pulumi provider plugin downloads hit GitHub rate limits during local preview
 or drift commands, pass `GITHUB_TOKEN="$(gh auth token)"` explicitly to that

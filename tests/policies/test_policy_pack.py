@@ -301,6 +301,18 @@ def test_public_s3_helpers_cover_acl_policy_and_allowlist_paths(
             }
         },
     )
+    assert policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {"Bool": "true"},
+                }
+            }
+        },
+    )
     assert not policy_runtime.has_public_s3_bucket_policy(
         "aws:s3/bucketPolicy:BucketPolicy",
         {
@@ -310,6 +322,23 @@ def test_public_s3_helpers_cover_acl_policy_and_allowlist_paths(
                     "Principal": {
                         "AWS": ["arn:aws:iam::123456789012:root"],
                         "CanonicalUser": "trusted-user",
+                    },
+                }
+            }
+        },
+    )
+    assert not policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {
+                        "StringEquals": {"aws:SecureTransport": "true"},
+                        "ForAnyValue:StringEquals": {
+                            "aws:SourceVpce": "vpce-1234567890abcdef0"
+                        },
                     },
                 }
             }
@@ -342,6 +371,34 @@ def test_public_s3_helpers_cover_acl_policy_and_allowlist_paths(
     )
     assert not policy_runtime.is_public_bucket_allowlisted(
         {"bucket": "private"}, config
+    )
+    assert not policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "*",
+                    "Condition": {
+                        "StringEquals": {"aws:SourceVpce": "vpce-1234567890abcdef0"}
+                    },
+                }
+            }
+        },
+    )
+    assert not policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": {"AWS": "*"},
+                    "Condition": {
+                        "StringEquals": {"aws:PrincipalOrgID": "o-exampleorg"}
+                    },
+                }
+            }
+        },
     )
 
 
@@ -611,6 +668,7 @@ def test_open_admin_ports_covers_supported_security_group_shapes(
         "aws:ec2/securityGroupRule:SecurityGroupRule",
         {
             "type": "ingress",
+            "protocol": "tcp",
             "fromPort": 22,
             "toPort": 22,
             "cidrBlocks": ["0.0.0.0/0"],
@@ -626,11 +684,13 @@ def test_open_admin_ports_covers_supported_security_group_shapes(
             "ingress": [
                 "ignore-me",
                 {
+                    "protocol": "tcp",
                     "fromPort": 443,
                     "toPort": 443,
                     "cidrBlocks": ["0.0.0.0/0"],
                 },
                 {
+                    "protocol": "tcp",
                     "fromPort": 3389,
                     "toPort": 3389,
                     "ipv6CidrBlocks": ["::/0"],
@@ -649,6 +709,32 @@ def test_open_admin_ports_covers_supported_security_group_shapes(
         policy_runtime.open_admin_ports(
             "aws:ec2/securityGroupRule:SecurityGroupRule",
             {"type": "ingress", "cidrBlocks": "0.0.0.0/0"},
+        )
+        == []
+    )
+    assert (
+        policy_runtime.open_admin_ports(
+            "aws:ec2/securityGroupRule:SecurityGroupRule",
+            {
+                "type": "ingress",
+                "protocol": "icmp",
+                "fromPort": 22,
+                "toPort": 22,
+                "cidrBlocks": ["0.0.0.0/0"],
+            },
+        )
+        == []
+    )
+    assert (
+        policy_runtime.open_admin_ports(
+            "aws:ec2/securityGroupRule:SecurityGroupRule",
+            {
+                "type": "ingress",
+                "protocol": "tcp",
+                "fromPort": "22",
+                "toPort": 22,
+                "cidrBlocks": ["0.0.0.0/0"],
+            },
         )
         == []
     )
@@ -774,6 +860,7 @@ def test_pack_validators_report_expected_messages(
         resource_type="aws:ec2/securityGroupRule:SecurityGroupRule",
         props={
             "type": "ingress",
+            "protocol": "tcp",
             "fromPort": 22,
             "toPort": 22,
             "cidrBlocks": ["0.0.0.0/0"],
@@ -786,6 +873,7 @@ def test_pack_validators_report_expected_messages(
             resource_type="aws:ec2/securityGroupRule:SecurityGroupRule",
             props={
                 "type": "egress",
+                "protocol": "tcp",
                 "fromPort": 22,
                 "toPort": 22,
                 "cidrBlocks": ["0.0.0.0/0"],
@@ -955,4 +1043,47 @@ def test_policy_main_registers_the_built_policy_pack(
     runpy.run_path(str(POLICY_MAIN), run_name="__main__")
 
     assert recorded["name"] == policy_runtime.POLICY_PACK_NAME
+    assert len(recorded["policies"]) == 8
+
+
+def test_policy_main_supports_direct_pack_startup_without_repo_root(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Keep direct Pulumi policy-pack startup working without the repo root package."""
+    recorded: dict[str, Any] = {}
+    policy_dir = str(POLICY_DIR)
+    project_root = str(PROJECT_ROOT.resolve())
+
+    def fake_policy_pack(*, name: str, policies: list[Any]) -> None:
+        recorded["name"] = name
+        recorded["policies"] = policies
+
+    monkeypatch.setattr("pulumi_policy.PolicyPack", fake_policy_pack)
+    for module_name in (
+        "config",
+        "guardrails",
+        "pack",
+        "policy",
+        "policy.config",
+        "policy.guardrails",
+        "policy.pack",
+    ):
+        monkeypatch.delitem(sys.modules, module_name, raising=False)
+
+    monkeypatch.setattr(
+        sys,
+        "path",
+        [
+            policy_dir,
+            *[
+                path
+                for path in sys.path
+                if str(Path(path or ".").resolve()) != project_root
+            ],
+        ],
+    )
+
+    runpy.run_path(str(POLICY_MAIN), run_name="__main__")
+
+    assert recorded["name"] == "vilnacrm-guardrails"
     assert len(recorded["policies"]) == 8

@@ -65,6 +65,16 @@ def test_security_scan_workflow_covers_repo_hygiene_and_dependency_review() -> N
     workflow = _workflow("security-scans.yml")
     jobs = workflow["jobs"]
     dependency_review_steps = jobs["dependency_review"]["steps"]
+    checkout_index = next(
+        index
+        for index, step in enumerate(dependency_review_steps)
+        if step.get("uses", "").startswith("actions/checkout@")
+    )
+    dependency_review_index = next(
+        index
+        for index, step in enumerate(dependency_review_steps)
+        if step.get("uses", "").startswith("actions/dependency-review-action@")
+    )
 
     assert "bandit" in jobs
     assert "dependency_review" in jobs
@@ -90,6 +100,7 @@ def test_security_scan_workflow_covers_repo_hygiene_and_dependency_review() -> N
     assert any(
         step.get("run") == "make test-dockerfile" for step in jobs["hadolint"]["steps"]
     )
+    assert checkout_index < dependency_review_index
     assert any(
         step.get("uses", "").startswith("actions/dependency-review-action@")
         for step in dependency_review_steps

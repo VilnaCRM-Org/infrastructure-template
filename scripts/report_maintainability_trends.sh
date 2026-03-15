@@ -2,7 +2,8 @@
 set -euo pipefail
 
 ROOT_DIR="${ROOT_DIR:-$(pwd)}"
-QUALITY_ARTIFACT_DIR="${QUALITY_ARTIFACT_DIR:-.artifacts/quality}"
+ROOT_DIR="$(cd "${ROOT_DIR}" && pwd)"
+QUALITY_ARTIFACT_DIR="${QUALITY_ARTIFACT_DIR:-${ROOT_DIR}/.artifacts/quality}"
 WILY_TARGETS="${WILY_TARGETS:-pulumi policy scripts}"
 WILY_CACHE_DIR="${QUALITY_ARTIFACT_DIR}/wily-cache"
 WILY_REPORT="${QUALITY_ARTIFACT_DIR}/wily-rank.txt"
@@ -10,6 +11,7 @@ WILY_REPORT="${QUALITY_ARTIFACT_DIR}/wily-rank.txt"
 read -r -a wily_targets <<<"${WILY_TARGETS}"
 
 mkdir -p "${QUALITY_ARTIFACT_DIR}"
+cd "${ROOT_DIR}"
 
 if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1 || ! git rev-parse --verify HEAD >/dev/null 2>&1; then
   cat >"${WILY_REPORT}" <<'EOF'

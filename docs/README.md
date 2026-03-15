@@ -183,9 +183,9 @@ Continuous integration runs automatically on every pull request. You can also va
 - Use `make test-policy` when you are changing guardrails or adding new AWS resource types that should be covered by the policy pack.
 - `make pulumi-preview` and `make pulumi-up` sync the shared `uv` environment if needed, refresh `policy/.venv`, and then run Pulumi with the repository policy pack enabled.
 - Run `make test` to execute the faster structural, policy, quality, repo-hygiene, unit, integration, coverage, and CLI checks together after a prerequisite sanity check.
-- Execute `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check, image build, security scans, preview generation, and policy suite.
+- Use `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check, image build, security scans, preview generation, and policy suite.
 - Execute `make ci` to run the full local equivalent of all GitHub checks, including the prerequisite check, image build, and mutation suite.
-- Execute `make report-quality` or `make nightly-quality` when you want the scheduled maintainability, dead-code, docstring, and SBOM reports locally.
+- Run `make report-quality` or `make nightly-quality` when you want the scheduled maintainability, dead-code, docstring, and SBOM reports locally.
 - If Pulumi plugin downloads hit GitHub rate limits locally, pass
   `GITHUB_TOKEN="$(gh auth token)"` explicitly to the preview-oriented target
   you are running instead of exporting it globally.

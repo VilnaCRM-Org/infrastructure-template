@@ -6,10 +6,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "${ROOT_DIR}"
 
 UV_BIN="${UV_BIN:-uv}"
-if ! command -v "${UV_BIN}" >/dev/null 2>&1; then
-  if [ -x "/usr/local/bin/uv" ]; then
-    UV_BIN="/usr/local/bin/uv"
-  fi
+if ! command -v "${UV_BIN}" >/dev/null 2>&1 && [ -x "/usr/local/bin/uv" ]; then
+  UV_BIN="/usr/local/bin/uv"
 fi
 
 if ! command -v "${UV_BIN}" >/dev/null 2>&1; then

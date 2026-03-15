@@ -7,6 +7,8 @@ access keys for these workflows.
 
 ## Repository variables for guardrail workflows
 
+Add these under **Settings → Secrets and variables → Actions → Variables → Repository variables**.
+
 | Variable | Purpose | Notes |
 | --- | --- | --- |
 | `AWS_OIDC_ROLE_ARN` | IAM role assumed by preview, IAM validation, and drift jobs | Repository variable, not a secret |
@@ -16,6 +18,8 @@ access keys for these workflows.
 | `PULUMI_DRIFT_STACKS` | Optional comma-separated stack list for nightly drift checks | Repository variable; defaults to committed `Pulumi.<stack>.yaml` files |
 
 ## Optional secrets for guardrail workflows
+
+Add these under **Settings → Secrets and variables → Actions → Secrets → Repository secrets**.
 
 | Secret | Purpose | Notes |
 | --- | --- | --- |
@@ -50,7 +54,8 @@ Choose one authentication strategy for the template sync workflows:
 ## Setting Secrets
 
 1. Navigate to **Settings → Secrets and variables → Actions** in your GitHub repository.
-2. Click **New repository secret** for each value listed above.
-3. If several repositories share the same infrastructure credentials, consider using organization secrets instead.
+2. Add `AWS_OIDC_ROLE_ARN`, `AWS_REGION`, `PULUMI_BACKEND_URL`, `PULUMI_PREVIEW_STACKS`, and `PULUMI_DRIFT_STACKS` under **Variables → Repository variables**.
+3. Add `PULUMI_ACCESS_TOKEN`, `PULUMI_CONFIG_PASSPHRASE`, and any release or template-sync credentials under **Secrets → Repository secrets**.
+4. If several repositories share the same infrastructure credentials, consider using organization secrets instead.
 
 Rotate credentials regularly and audit workflow runs for unexpected usage.

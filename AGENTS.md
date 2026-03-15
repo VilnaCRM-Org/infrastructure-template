@@ -18,7 +18,7 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 12. Reproduce PR safety checks with `make test-security`, `make test-repo-hygiene`, `make test-guardrails`, or `make ci-pr` before pushing infra-related workflow or policy changes.
 13. Do not add long-lived static AWS credentials to workflows; use the documented OIDC role variables instead.
 14. Treat `allow-destructive-infra-change` as the only supported override for destructive Pulumi diffs.
-15. Keep `make test-coverage` green when changing Python code; the repo expects 100% branch coverage across the covered Pulumi, policy, and helper modules.
+15. Keep `make test-coverage` green when changing Python code; the repo expects 100% branch coverage across the covered Pulumi, policy, and helper modules, with the unit, integration, and policy suites each held to 100% line coverage.
 16. Keep `make test-dependency-hygiene` green when editing `pyproject.toml`, `uv.lock`, or import relationships.
 17. Use `make report-quality` when you need the scheduled Wily, Vulture, docstring-coverage, and SBOM reports locally.
 18. If local Pulumi plugin downloads hit GitHub rate limits, pass `GITHUB_TOKEN="$(gh auth token)"` only to the specific preview-oriented Make command you are running.
