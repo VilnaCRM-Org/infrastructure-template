@@ -1,0 +1,29 @@
+name: Pulumi Integration Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  integration:
+    name: Integration
+    runs-on: ubuntu-latest
+    env:
+      PULUMI_SKIP_UPDATE_CHECK: "true"
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: |
+          mkdir -p "${HOME}/.aws"
+          cp -n .env.empty .env || touch .env
+
+      - name: Run integration suite inside Docker
+        run: make test-integration

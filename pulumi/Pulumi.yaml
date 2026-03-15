@@ -1,0 +1,10 @@
+name: infrastructure-template
+description: Reusable Pulumi infrastructure template for AWS cloud resources.
+runtime:
+  name: python
+  options:
+    toolchain: poetry
+config:
+  pulumi:tags:
+    value:
+      pulumi:template: aws-python

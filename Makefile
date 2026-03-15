@@ -1,25 +1,90 @@
 # Parameters
-PROJECT        = infrastructure-template
-DOCKER_IMAGE   = ghcr.io/boltops-tools/terraspace:alpine
-ENV_FILE       = .env
+PROJECT            = infrastructure-template
+ENV_FILE           = .env
+EMPTY_ENV_FILE     = .env.empty
+COMPOSE_SERVICE   ?= pulumi
+PULUMI_DIR        ?= pulumi
+EFFECTIVE_ENV_FILE := $(firstword $(wildcard $(ENV_FILE)) $(wildcard $(EMPTY_ENV_FILE)))
 
-# Executables: local only
-DOCKER         = docker
-DOCKER_RUN     = $(DOCKER) run --rm -ti
-DOCKER_VOLUMES = -v $(HOME)/.aws:/root/.aws -v terraform:/work
+COMPOSE_ENV_FILE := $(if $(EFFECTIVE_ENV_FILE),$(EFFECTIVE_ENV_FILE),$(EMPTY_ENV_FILE))
+UID ?= $(shell id -u 2>/dev/null || echo 1000)
+GID ?= $(shell id -g 2>/dev/null || echo 1000)
+USER ?= $(shell id -un 2>/dev/null || echo dev)
+
+export UID
+export GID
+export USER
 
 # Executables
-TERRASPACE     = $(DOCKER) terraspace
-TERRAFORM      = $(DOCKER_COMPOSE) terraform
+DOCKER_COMPOSE    = docker compose
+COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
+COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
+PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
+POETRY            = poetry -C $(PULUMI_DIR)
+COVERAGE_OPTS            ?= --cov --cov-config=.coveragerc --cov-report=term-missing
+UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS) --cov-fail-under=100
 
 # Misc
-.DEFAULT_GOAL  = help
-.RECIPEPREFIX  +=
-.PHONY: $(filter-out vendor node_modules,$(MAKECMDGOALS))
+.DEFAULT_GOAL     = help
+.RECIPEPREFIX    +=
+.PHONY: help start pulumi pulumi-preview pulumi-up pulumi-refresh pulumi-destroy \
+        sh down test-unit test-integration test-pulumi test-mutation test-cli test all clean
+
+all: help ## Display help (default goal).
 
 help:
 	@printf "\033[33mUsage:\033[0m\n  make [target] [arg=\"val\"...]\n\n\033[33mTargets:\033[0m\n"
 	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
 
-start: ## Docker container with terraspace and terraform
-	$(DOCKER_RUN) $(DOCKER_VOLUMES) --env-file $(ENV_FILE) $(DOCKER_IMAGE)
+start: ## Initialize and start the Pulumi development environment.
+	$(COMPOSE) up -d
+
+pulumi: ## Proxy arbitrary Pulumi commands (usage: make pulumi ARGS="version").
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) $(ARGS)
+
+pulumi-preview: ## Preview infrastructure changes from inside the Pulumi container.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) preview
+
+pulumi-up: ## Apply the current Pulumi infrastructure plan.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) up
+
+pulumi-refresh: ## Sync the Pulumi stack with live cloud resources.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) refresh
+
+pulumi-destroy: ## Tear down the Pulumi stack (irreversible; use with caution).
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) pulumi $(PULUMI_CWD_FLAG) destroy
+
+sh: ## Open a shell inside the Pulumi container.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) sh
+
+down: ## Stop the Docker Compose environment.
+	$(DOCKER_COMPOSE) down
+
+test-unit: ## Execute fast unit tests for the Pulumi application layer.
+	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
+		$(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/unit
+
+test-integration: ## Execute stack-level smoke tests with Pulumi mocks.
+	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(COVERAGE_OPTS)" \
+		$(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/integration
+
+test-pulumi: ## Perform structural checks on Pulumi project configuration and CI contracts.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/pulumi
+
+test-mutation: ## Run mutation testing suite against the Pulumi component layer.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
+
+test-cli: ## Validate Makefile front-ends via Bats.
+	COMPOSE_TARGET=test $(COMPOSE) run --build --rm $(COMPOSE_SERVICE) bats tests/unit
+
+test: ## Run the complete Pulumi-focused test battery.
+	$(MAKE) test-pulumi
+	$(MAKE) test-unit
+	$(MAKE) test-integration
+	$(MAKE) test-cli
+
+clean: ## Remove Docker Compose artifacts, Python caches, and build artifacts.
+	$(DOCKER_COMPOSE) down -v 2>/dev/null || true
+	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	find . -type f -name "*.pyc" -delete 2>/dev/null || true
+	rm -rf .pulumi-backend .venv htmlcov .pytest_cache 2>/dev/null || true
