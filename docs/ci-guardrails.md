@@ -4,6 +4,9 @@ This repository treats infrastructure pull requests as high-risk changes. The
 guardrail layer below is designed to catch the common failure modes of
 AI-generated Pulumi and AWS code before anyone merges or applies it.
 
+For the broader Python, dependency, workflow, Dockerfile, and scheduled
+maintainability checks, use [CI quality gates](ci-quality-gates.md).
+
 ## Required PR checks
 
 These checks are intended to be marked as required in branch protection:
@@ -15,13 +18,16 @@ These checks are intended to be marked as required in branch protection:
 | `IAM Validation` | `make test-iam-validation` | Validates previewed IAM policies with AWS IAM Access Analyzer |
 | `Secrets Scan` | `make test-secrets` | Runs Gitleaks against the working tree |
 | `Dependency Audit` | `make test-deps-security` | Audits Python dependencies with `pip-audit --strict` |
+| `Bandit` | `make test-bandit` | Lints repository Python code for common security hazards |
 | `Actionlint` | `make test-actionlint` | Lints GitHub Actions workflow syntax and common security issues |
 | `CodeQL (python)` | GitHub-native | Scans Python code for security issues |
 | `CodeQL (actions)` | GitHub-native | Scans workflow code for insecure patterns |
 
-`make test-security` aggregates the Gitleaks, dependency, and workflow lint
-checks. `make test-guardrails` aggregates preview generation, destructive diff
-gating, and IAM validation. `make ci-pr` and `make ci` include both batteries.
+`make test-security` aggregates Gitleaks, dependency audit, and Bandit.
+`make test-repo-hygiene` aggregates Actionlint, Yamllint, ShellCheck/`shfmt`,
+and Hadolint. `make test-guardrails` aggregates preview generation,
+destructive diff gating, and IAM validation. `make ci-pr` and `make ci`
+include all three batteries.
 
 ## Preview model
 
@@ -45,10 +51,14 @@ Stack selection follows this order:
 The current template ships with `Pulumi.dev.yaml`, so the default preview target
 is `dev`.
 
-For local runs, the Makefile exports `GITHUB_TOKEN` from `gh auth token` when
-the GitHub CLI is already authenticated. This avoids anonymous GitHub API rate
-limits during Pulumi provider plugin resolution without introducing a committed
-secret or a separate local setup step.
+If local Pulumi plugin downloads hit anonymous GitHub rate limits, pass a token
+explicitly only to the preview-oriented command you are running, for example:
+
+```bash
+GITHUB_TOKEN="$(gh auth token)" make test-preview
+```
+
+The Docker workspace does not inject `GITHUB_TOKEN` by default.
 
 ## Destructive change gate
 
@@ -110,7 +120,8 @@ Optional repository secrets:
 
 ### Example IAM trust policy
 
-Replace the account ID, organization, and repository name with your own values:
+Replace the account ID, organization, and repository name with your own values.
+`<ACCOUNT_ID>` must be the target 12-digit AWS account ID using digits only:
 
 ```json
 {

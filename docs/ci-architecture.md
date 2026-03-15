@@ -18,14 +18,15 @@ Every pull request check is driven by the same Docker workspace and the same
 | `pulumi-structural.yml` | `make test-pulumi` | Validates Pulumi metadata, workflow contracts, and Dockerfile safeguards |
 | `pulumi-policy.yml` | `make test-policy` | Validates the Pulumi policy pack and AWS guardrail coverage |
 | `pulumi-pr-guardrails.yml` | `make test-preview`, `make test-destructive-diff`, `make test-iam-validation` | Generates the PR preview artifact and enforces destructive/IAM guardrails |
-| `security-scans.yml` | `make test-secrets`, `make test-deps-security`, `make test-actionlint` | Runs secret scanning, dependency audit, and workflow linting |
+| `security-scans.yml` | `make test-secrets`, `make test-deps-security`, `make test-bandit`, `make test-actionlint`, `make test-yaml`, `make test-shell`, `make test-dockerfile` | Runs blocking security and repo-hygiene checks plus GitHub dependency review |
 | `codeql.yml` | GitHub-native | Scans Python code and workflow code with CodeQL |
-| `python-quality.yml` | `make test-ruff`, `make test-ty` | Fast Rust-based linting, formatting, and type diagnostics |
+| `python-quality.yml` | `make test-ruff`, `make test-ty`, `make test-maintainability`, `make test-architecture`, `make test-dependency-hygiene`, `make test-coverage` | Blocking Python quality, maintainability, architecture, dependency, and coverage gates |
 | `pulumi-unit.yml` | `make test-unit` | Mock-based Pulumi component tests with full coverage |
 | `pulumi-integration.yml` | `make test-integration` | Automation API lifecycle tests against a local file backend |
 | `pulumi-mutation.yml` | `make test-mutation` | Mutation analysis of the Pulumi component layer |
 | `bats-tests.yml` | `make test-cli` | CLI contract tests for the Makefile interface |
 | `pulumi-local.yml` | `make ci-pr` | Non-mutation PR-equivalent battery inside Docker |
+| `nightly-quality.yml` | `make report-quality` | Publishes maintainability, dead-code, docstring, and SBOM reports |
 | `nightly-guardrails.yml` | `make test-drift` | Runs scheduled drift detection and repository-health checks |
 
 ## Shared Controls
@@ -66,9 +67,10 @@ releases, or pull requests.
 The repository intentionally avoids workflow-only logic for the core validation
 battery.
 
-- `make test` is the fast inner-loop command for the prerequisite sanity check, Pulumi structural tests, policy, quality, unit, integration, and CLI checks.
+- `make test` is the fast inner-loop command for the prerequisite sanity check, Pulumi structural tests, policy, quality, repo hygiene, unit, integration, coverage, and CLI checks.
 - `make ci-pr` matches the non-mutation GitHub pull-request battery, including preview and security guardrails.
 - `make ci` is the full local superset, including the dedicated mutation suite.
+- `make report-quality` mirrors the scheduled quality-report workflow locally.
 - `make doctor` provides a quick prerequisite check before developers start
   debugging Docker or Pulumi behavior.
 
@@ -97,6 +99,7 @@ When a PR check fails:
 3. inspect the workflow job log only after the local path is understood
 4. fix the underlying contract rather than weakening the check
 
-CodeQL and Scorecard remain GitHub-native workflows. The repository keeps their
-definitions under structural test coverage, but they are not reproduced inside
-the local Docker battery.
+CodeQL, GitHub Dependency Review, artifact attestations, and Scorecard remain
+GitHub-native workflows. The repository keeps their definitions under
+structural test coverage, but they are not reproduced inside the local Docker
+battery.

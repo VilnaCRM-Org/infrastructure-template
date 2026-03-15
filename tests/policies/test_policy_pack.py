@@ -182,12 +182,19 @@ def test_load_policy_config_rejects_invalid_documents(
         policy_runtime.load_policy_config(path)
 
 
-def test_extract_tags_prefers_tags_and_falls_back_to_tags_all(
+def test_extract_tags_prefers_tags_all_and_merges_explicit_overrides(
     policy_runtime: SimpleNamespace,
 ) -> None:
-    """Support both provider tag shapes without guessing."""
-    assert policy_runtime.extract_tags({"tags": {"Project": "svc"}}) == {
-        "Project": "svc"
+    """Support provider default tags while letting resource tags override them."""
+    assert policy_runtime.extract_tags(
+        {
+            "tagsAll": {"Project": "defaults", "Owner": "platform"},
+            "tags": {"Project": "svc", "Environment": "dev"},
+        }
+    ) == {
+        "Project": "svc",
+        "Owner": "platform",
+        "Environment": "dev",
     }
     assert policy_runtime.extract_tags(
         {"tags": "invalid", "tagsAll": {"Environment": "dev"}}
@@ -296,6 +303,35 @@ def test_public_s3_helpers_cover_acl_policy_and_allowlist_paths(
     )
     assert not policy_runtime.has_public_s3_bucket_policy(
         "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": {
+                        "AWS": ["arn:aws:iam::123456789012:root"],
+                        "CanonicalUser": "trusted-user",
+                    },
+                }
+            }
+        },
+    )
+    assert not policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {"policyDocument": {"Statement": {"Effect": "Allow", "Principal": {}}}},
+    )
+    assert not policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
+        {
+            "policyDocument": {
+                "Statement": {
+                    "Effect": "Allow",
+                    "Principal": "arn:aws:iam::123456789012:root",
+                }
+            }
+        },
+    )
+    assert not policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/bucketPolicy:BucketPolicy",
         {"policy": "{not-json}"},
     )
     assert policy_runtime.is_public_bucket_allowlisted(
@@ -318,7 +354,7 @@ def test_invalid_region_checks_only_explicit_aws_regions(
 
     assert (
         policy_runtime.invalid_region(
-            "aws:providers:Provider",
+            "pulumi:providers:aws",
             {"region": "us-east-1"},
             config,
         )
@@ -326,7 +362,7 @@ def test_invalid_region_checks_only_explicit_aws_regions(
     )
     assert (
         policy_runtime.invalid_region(
-            "aws:providers:Provider",
+            "pulumi:providers:aws",
             {"region": "eu-central-1"},
             config,
         )
@@ -334,7 +370,7 @@ def test_invalid_region_checks_only_explicit_aws_regions(
     )
     assert (
         policy_runtime.invalid_region(
-            "aws:providers:Provider",
+            "pulumi:providers:aws",
             {"region": "us-east-1"},
             empty_allowlist,
         )
@@ -357,6 +393,13 @@ def test_storage_encryption_and_logging_violations_cover_supported_resources(
     assert policy_runtime.storage_encryption_violations("aws:s3/bucket:Bucket", {}) == [
         "S3 buckets must enable default server-side encryption."
     ]
+    assert (
+        policy_runtime.storage_encryption_violations(
+            "aws:s3/bucket:Bucket",
+            {"serverSideEncryptionConfiguration": {"rule": "AES256"}},
+        )
+        == []
+    )
     assert policy_runtime.storage_encryption_violations(
         "aws:ec2/volume:Volume", {"encrypted": False}
     ) == ["EBS volumes must enable encryption at rest."]
@@ -376,6 +419,13 @@ def test_storage_encryption_and_logging_violations_cover_supported_resources(
     assert policy_runtime.logging_violations("aws:s3/bucket:Bucket", {}) == [
         "S3 buckets must send access logs to a target bucket."
     ]
+    assert (
+        policy_runtime.logging_violations(
+            "aws:s3/bucket:Bucket",
+            {"logging": {"targetBucket": "access-log-bucket"}},
+        )
+        == []
+    )
     assert policy_runtime.logging_violations(
         "aws:lb/loadBalancer:LoadBalancer",
         {"accessLogs": {"enabled": False}},
@@ -461,6 +511,45 @@ def test_wildcard_iam_violations_support_allowlists_and_inline_policies(
         "assumeRolePolicy must not use wildcard IAM permissions without an "
         "explicit allowlist."
     ]
+    assert policy_runtime.wildcard_iam_violations(
+        "aws:iam/policy:Policy",
+        {
+            "policy": _json(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": ["s3:*"],
+                            "Resource": [
+                                "arn:aws:s3:::example",
+                                "arn:aws:s3:::example/*",
+                            ],
+                        }
+                    ],
+                }
+            )
+        },
+        config,
+    ) == ["policy must not use wildcard IAM permissions without an explicit allowlist."]
+    assert policy_runtime.wildcard_iam_violations(
+        "aws:iam/policy:Policy",
+        {
+            "policy": _json(
+                {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": "s3:GetObject",
+                            "Resource": "*",
+                        }
+                    ],
+                }
+            )
+        },
+        config,
+    ) == ["policy must not use wildcard IAM permissions without an explicit allowlist."]
 
 
 def test_production_database_violations_only_apply_to_production_like_stacks(
@@ -499,6 +588,19 @@ def test_production_database_violations_only_apply_to_production_like_stacks(
         "Production databases must keep final snapshots enabled.",
         "Production databases must not be publicly accessible.",
     ]
+    assert (
+        policy_runtime.production_database_violations(
+            "aws:rds/instance:Instance",
+            {
+                "tags": {"Environment": "production"},
+                "deletionProtection": True,
+                "skipFinalSnapshot": False,
+                "publiclyAccessible": False,
+            },
+            config,
+        )
+        == []
+    )
 
 
 def test_open_admin_ports_covers_supported_security_group_shapes(
@@ -522,11 +624,17 @@ def test_open_admin_ports_covers_supported_security_group_shapes(
         "aws:ec2/securityGroup:SecurityGroup",
         {
             "ingress": [
+                "ignore-me",
+                {
+                    "fromPort": 443,
+                    "toPort": 443,
+                    "cidrBlocks": ["0.0.0.0/0"],
+                },
                 {
                     "fromPort": 3389,
                     "toPort": 3389,
                     "ipv6CidrBlocks": ["::/0"],
-                }
+                },
             ]
         },
     ) == [3389]
@@ -541,6 +649,13 @@ def test_open_admin_ports_covers_supported_security_group_shapes(
         policy_runtime.open_admin_ports(
             "aws:ec2/securityGroupRule:SecurityGroupRule",
             {"type": "ingress", "cidrBlocks": "0.0.0.0/0"},
+        )
+        == []
+    )
+    assert (
+        policy_runtime.open_admin_ports(
+            "aws:s3/bucket:Bucket",
+            {"cidrBlocks": ["0.0.0.0/0"]},
         )
         == []
     )
@@ -570,6 +685,21 @@ def test_pack_validators_report_expected_messages(
         props={"tags": {"Project": "svc"}},
     )
     assert "Owner" in violations[0]
+    assert (
+        _collect_violations(
+            policy_runtime.require_default_tags,
+            resource_type="aws:s3/bucket:Bucket",
+            props={
+                "tags": {
+                    "Project": "svc",
+                    "Environment": "dev",
+                    "Owner": "platform",
+                    "CostCenter": "eng",
+                }
+            },
+        )
+        == []
+    )
 
     violations = _collect_violations(
         policy_runtime.enforce_allowed_regions,
@@ -577,6 +707,14 @@ def test_pack_validators_report_expected_messages(
         props={"region": "us-east-1"},
     )
     assert "allowlist" in violations[0]
+    assert (
+        _collect_violations(
+            policy_runtime.enforce_allowed_regions,
+            resource_type="aws:providers:Provider",
+            props={"region": "eu-central-1"},
+        )
+        == []
+    )
 
     violations = _collect_violations(
         policy_runtime.block_public_s3_exposure,
@@ -642,6 +780,19 @@ def test_pack_validators_report_expected_messages(
         },
     )
     assert "22" in violations[0]
+    assert (
+        _collect_violations(
+            policy_runtime.block_open_admin_ports,
+            resource_type="aws:ec2/securityGroupRule:SecurityGroupRule",
+            props={
+                "type": "egress",
+                "fromPort": 22,
+                "toPort": 22,
+                "cidrBlocks": ["0.0.0.0/0"],
+            },
+        )
+        == []
+    )
 
 
 def test_build_policies_exports_all_required_guardrails(

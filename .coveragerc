@@ -1,12 +1,21 @@
 [run]
+branch = True
 parallel = True
 
 [paths]
-source =
+pulumi =
     pulumi
-    policy
-    scripts
+    /workspace/pulumi
+    */pulumi
     */pulumi-program
+policy =
+    policy
+    /workspace/policy
+    */policy
+scripts =
+    scripts
+    /workspace/scripts
+    */scripts
 
 [report]
 show_missing = True

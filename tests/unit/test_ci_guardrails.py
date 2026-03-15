@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import runpy
 import subprocess
 import sys
@@ -63,11 +64,16 @@ def test_summarize_preview_and_find_destructive_steps(
             },
             {
                 "op": "replace",
+                "urn": "urn:pulumi:dev::stack::aws:cloudwatch/logGroup:LogGroup::logs",
+                "newState": {"type": "aws:cloudwatch/logGroup:LogGroup"},
+            },
+            {
+                "op": "replace",
                 "urn": "urn:pulumi:dev::stack::aws:rds/instance:Instance::db",
                 "newState": {"type": "aws:rds/instance:Instance"},
             },
         ],
-        summary={"create": 1, "replace": 1},
+        summary={"create": 1, "replace": 2},
     )
 
     preview = guardrails_module.load_preview(path)
@@ -201,9 +207,15 @@ def test_validate_iam_inputs_handles_success_and_failing_findings(
 ) -> None:
     """Surface Access Analyzer failures and risky findings clearly."""
     calls: list[list[str]] = []
+    envs: list[dict[str, str]] = []
+    for key in list(os.environ):
+        if key.startswith("AWS_"):
+            monkeypatch.delenv(key, raising=False)
+    monkeypatch.setenv("HOME", "/tmp/home")
+    monkeypatch.setenv("PATH", "/usr/bin")
 
     def fake_run(*args, **kwargs):
-        del kwargs
+        envs.append(dict(kwargs["env"]))
         calls.append(args[0])
         return subprocess.CompletedProcess(
             args=args[0],
@@ -212,9 +224,13 @@ def test_validate_iam_inputs_handles_success_and_failing_findings(
                 {
                     "findings": [
                         {
+                            "findingType": "SUGGESTION",
+                            "findingDetails": "consider narrowing scope",
+                        },
+                        {
                             "findingType": "SECURITY_WARNING",
                             "findingDetails": "too broad",
-                        }
+                        },
                     ]
                 }
             ),
@@ -235,6 +251,7 @@ def test_validate_iam_inputs_handles_success_and_failing_findings(
     )
 
     assert calls[0][:4] == ["aws", "accessanalyzer", "validate-policy", "--policy-type"]
+    assert sorted(envs[0]) == ["HOME", "PATH"]
     assert "too broad" in failures[0]
 
 
@@ -265,6 +282,23 @@ def test_validate_iam_inputs_raises_on_cli_failure(
                 }
             ]
         )
+
+
+def test_iam_policy_fields_maps_identity_and_resource_policy_types(
+    guardrails_module,
+) -> None:
+    """Keep the supported IAM-bearing resource field map stable."""
+    assert list(guardrails_module.iam_policy_fields("aws:iam/policy:Policy")) == [
+        ("policy", "IDENTITY_POLICY"),
+        ("policyDocument", "IDENTITY_POLICY"),
+        ("assumeRolePolicy", "RESOURCE_POLICY"),
+    ]
+    assert list(
+        guardrails_module.iam_policy_fields("aws:s3/bucketPolicy:BucketPolicy")
+    ) == [
+        ("policy", "RESOURCE_POLICY"),
+        ("policyDocument", "RESOURCE_POLICY"),
+    ]
 
 
 def test_write_iam_inputs_serializes_extracted_documents(

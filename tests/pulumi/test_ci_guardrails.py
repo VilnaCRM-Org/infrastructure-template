@@ -42,6 +42,9 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     assert any("make test-preview" in run for run in preview_runs)
     assert any("GITHUB_STEP_SUMMARY" in run for run in preview_runs)
     assert any(
+        "[[ -f .artifacts/pulumi-preview/summary.md ]]" in run for run in preview_runs
+    )
+    assert any(
         step.get("uses", "").startswith("actions/upload-artifact@")
         for step in jobs["preview"]["steps"]
     )
@@ -91,6 +94,10 @@ def test_codeql_workflow_covers_python_and_github_actions() -> None:
         "contents": "read",
         "security-events": "write",
     }
+    assert workflow["jobs"]["analyze"]["concurrency"] == {
+        "group": "codeql-${{ github.ref }}",
+        "cancel-in-progress": True,
+    }
     assert matrix_languages == ["python", "actions"]
     assert any("github/codeql-action/init@" in uses for uses in uses_steps)
     assert any("github/codeql-action/analyze@" in uses for uses in uses_steps)
@@ -126,10 +133,12 @@ def test_new_guardrail_scripts_and_configs_are_present() -> None:
     dockerfile_text = (PROJECT_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert GITLEAKS_CONFIG.exists()
-    assert "GITHUB_TOKEN" in preview_text
+    assert "gh auth token" not in preview_text
     assert "pulumi --cwd" in preview_text
     assert "preview \\" in preview_text
     assert '--stack "${stack}"' in preview_text
+    assert 'uv --project "${ROOT_DIR}" run python' in preview_text
+    assert "unable to select existing stack" in drift_text
     assert "expect-no-changes" in drift_text
     assert "actionlint" in dockerfile_text
     assert "gitleaks" in dockerfile_text

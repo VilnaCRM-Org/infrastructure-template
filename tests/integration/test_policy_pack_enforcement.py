@@ -87,35 +87,46 @@ def _preview_with_policy_pack(work_dir: Path) -> subprocess.CompletedProcess[str
         capture_output=True,
         timeout=120,
     )
-    subprocess.run(
-        ["pulumi", "--cwd", str(work_dir), "stack", "init", "dev"],
-        check=True,
-        cwd=PROJECT_ROOT,
-        env=env,
-        text=True,
-        capture_output=True,
-        timeout=120,
-    )
+    try:
+        subprocess.run(
+            ["pulumi", "--cwd", str(work_dir), "stack", "init", "dev"],
+            check=True,
+            cwd=PROJECT_ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=120,
+        )
 
-    return subprocess.run(
-        [
-            "pulumi",
-            "--cwd",
-            str(work_dir),
-            "preview",
-            "--stack",
-            "dev",
-            "--non-interactive",
-            "--policy-pack",
-            str(POLICY_DIR),
-        ],
-        check=False,
-        cwd=PROJECT_ROOT,
-        env=env,
-        text=True,
-        capture_output=True,
-        timeout=120,
-    )
+        return subprocess.run(
+            [
+                "pulumi",
+                "--cwd",
+                str(work_dir),
+                "preview",
+                "--stack",
+                "dev",
+                "--non-interactive",
+                "--policy-pack",
+                str(POLICY_DIR),
+            ],
+            check=False,
+            cwd=PROJECT_ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=120,
+        )
+    finally:
+        subprocess.run(
+            ["pulumi", "--cwd", str(work_dir), "stack", "rm", "dev", "--yes"],
+            check=False,
+            cwd=PROJECT_ROOT,
+            env=env,
+            text=True,
+            capture_output=True,
+            timeout=120,
+        )
 
 
 def test_policy_pack_allows_private_bucket_acl(tmp_path: Path) -> None:

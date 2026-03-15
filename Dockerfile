@@ -23,6 +23,9 @@ ARG ACTIONLINT_SHA256_ARM64=401942f9c24ed71e4fe71b76c7d638f66d8633575c4016efd297
 ARG GITLEAKS_VERSION=8.24.2
 ARG GITLEAKS_SHA256_AMD64=fa0500f6b7e41d28791ebc680f5dd9899cd42b58629218a5f041efa899151a8e
 ARG GITLEAKS_SHA256_ARM64=574a6d52573c61173add7ddb5e3cc68c0e82cb0735818a1eeb9a0a2de1643fbc
+ARG HADOLINT_VERSION=2.14.0
+ARG HADOLINT_SHA256_AMD64=6bf226944684f56c84dd014e8b979d27425c0148f61b3bd99bcc6f39e9dc5a47
+ARG HADOLINT_SHA256_ARM64=331f1d3511b84a4f1e3d18d52fec284723e4019552f4f47b19322a53ce9a40ed
 ENV DEBIAN_FRONTEND=noninteractive
 
 # Install only the transient packages required to download and unpack tooling.
@@ -31,6 +34,8 @@ RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/ap
     && apt-get install -y --no-install-recommends \
         ca-certificates \
         curl \
+        shellcheck \
+        shfmt \
         unzip \
     && rm -rf /var/lib/apt/lists/*
 
@@ -122,6 +127,20 @@ RUN bash -o pipefail -c 'set -euo pipefail \
     && install -m 0755 "/tmp/gitleaks" /usr/local/bin/gitleaks \
     && rm -rf /tmp/gitleaks /tmp/gitleaks.tar.gz'
 
+RUN bash -o pipefail -c 'set -euo pipefail \
+    && case "${TARGETARCH}" in \
+        amd64) hadolint_arch="x86_64"; hadolint_sha256="${HADOLINT_SHA256_AMD64}" ;; \
+        arm64) hadolint_arch="arm64"; hadolint_sha256="${HADOLINT_SHA256_ARM64}" ;; \
+        *) echo "Unsupported TARGETARCH: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac \
+    && curl --fail --silent --show-error --location \
+        --retry 5 --retry-delay 5 --retry-all-errors \
+        "https://github.com/hadolint/hadolint/releases/download/v${HADOLINT_VERSION}/hadolint-linux-${hadolint_arch}" \
+        --output /tmp/hadolint \
+    && echo "${hadolint_sha256}  /tmp/hadolint" | sha256sum -c - \
+    && install -m 0755 /tmp/hadolint /usr/local/bin/hadolint \
+    && rm -f /tmp/hadolint'
+
 FROM ${BASE_IMAGE} AS runtime-base
 
 ARG USERNAME=dev
@@ -145,6 +164,7 @@ RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/ap
     && apt-get update \
     && apt-get install -y --no-install-recommends \
         ca-certificates \
+        git \
         make \
     && rm -rf /var/lib/apt/lists/*
 
@@ -157,6 +177,9 @@ COPY --from=tooling /usr/local/bin/uv /usr/local/bin/uv
 COPY --from=tooling /usr/local/bin/uvx /usr/local/bin/uvx
 COPY --from=tooling /usr/local/bin/actionlint /usr/local/bin/actionlint
 COPY --from=tooling /usr/local/bin/gitleaks /usr/local/bin/gitleaks
+COPY --from=tooling /usr/local/bin/hadolint /usr/local/bin/hadolint
+COPY --from=tooling /usr/bin/shellcheck /usr/local/bin/shellcheck
+COPY --from=tooling /usr/bin/shfmt /usr/local/bin/shfmt
 
 RUN ln -sf /opt/pulumi/pulumi /usr/local/bin/pulumi \
     && ln -sf /usr/local/aws-cli/v2/current/bin/aws /usr/local/bin/aws \
@@ -177,7 +200,6 @@ WORKDIR /workspace
 RUN --mount=type=cache,target=/home/${USERNAME}/.cache/uv,uid=${UID},gid=${GID} \
     uv venv --seed "${UV_PROJECT_ENVIRONMENT}" \
     && uv sync --frozen --all-groups \
-    && chown -R "${USERNAME}:${GID}" "${UV_CACHE_DIR}" \
     && chown -R "${USERNAME}:${GID}" "${UV_PROJECT_ENVIRONMENT}"
 
 USER "${USERNAME}"

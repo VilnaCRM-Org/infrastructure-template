@@ -9,41 +9,39 @@ POLICY_PYTHON="${POLICY_VENV}/bin/python"
 REQUIREMENTS_FILE="${POLICY_DIR}/requirements.txt"
 
 if [ ! -f "${REQUIREMENTS_FILE}" ]; then
-    echo "error: policy requirements file not found at ${REQUIREMENTS_FILE}" >&2
-    exit 1
+  echo "error: policy requirements file not found at ${REQUIREMENTS_FILE}" >&2
+  exit 1
 fi
 
 if [ ! -x "${POLICY_PYTHON}" ]; then
-    echo "error: policy interpreter not found at ${POLICY_PYTHON}" >&2
-    echo "hint: rebuild the development image so the shared uv environment exists" >&2
-    exit 1
+  echo "error: policy interpreter not found at ${POLICY_PYTHON}" >&2
+  echo "hint: rebuild the development image so the shared uv environment exists" >&2
+  exit 1
 fi
 
 if [ -e "${POLICY_VENV_LINK}" ] && [ ! -L "${POLICY_VENV_LINK}" ]; then
-    echo "error: ${POLICY_VENV_LINK} must be a symlink to the shared uv environment" >&2
-    echo "hint: remove the existing path and rerun ./scripts/prepare_policy_pack.sh" >&2
-    exit 1
+  echo "error: ${POLICY_VENV_LINK} must be a symlink to the shared uv environment" >&2
+  echo "hint: remove the existing path and rerun ./scripts/prepare_policy_pack.sh" >&2
+  exit 1
 fi
 
 ln -sfn "${POLICY_VENV}" "${POLICY_VENV_LINK}"
 
-if ! "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1
+if ! "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1; then
 import pulumi
 import pulumi_policy
 PY
-then
-    (
-        cd "${ROOT_DIR}"
-        UV_PROJECT_ENVIRONMENT="${POLICY_VENV}" uv sync --frozen --all-groups >/dev/null
-    )
+  (
+    cd "${ROOT_DIR}"
+    UV_PROJECT_ENVIRONMENT="${POLICY_VENV}" uv sync --frozen --all-groups >/dev/null
+  )
 fi
 
-if ! "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1
+if ! "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1; then
 import pulumi
 import pulumi_policy
 PY
-then
-    echo "error: shared policy interpreter is missing pulumi or pulumi-policy" >&2
-    echo "hint: rebuild the development image to refresh the uv-managed dependencies" >&2
-    exit 1
+  echo "error: shared policy interpreter is missing pulumi or pulumi-policy" >&2
+  echo "hint: rebuild the development image to refresh the uv-managed dependencies" >&2
+  exit 1
 fi

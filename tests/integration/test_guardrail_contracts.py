@@ -2,12 +2,46 @@
 
 from __future__ import annotations
 
+import asyncio
 import re
 from collections.abc import Callable
 
 import pytest
-from app.environment import resolve_config_value
-from app.guardrails import validate_environment_name, validate_service_name
+from app.environment import EnvironmentSettings, resolve_config_value
+from pulumi.runtime import mocks, settings, stack
+
+
+class _IntegrationMocks(mocks.Mocks):
+    """Pulumi mocks that keep component construction local to the test process."""
+
+    def new_resource(self, args: mocks.MockResourceArgs) -> tuple[str, dict]:
+        """Echo inputs so component registration can complete under test."""
+        return f"{args.name}_id", args.inputs
+
+    def call(self, args: mocks.MockCallArgs) -> dict:
+        """Return invoke inputs unchanged for deterministic tests."""
+        return args.inputs
+
+
+def _run_with_mocks(program: Callable[[], None]) -> None:
+    """Execute a Pulumi program inside the integration suite process."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        test_mocks = _IntegrationMocks()
+        monitor = mocks.MockMonitor(test_mocks)
+        mocks.set_mocks(
+            test_mocks,
+            project="infrastructure-template",
+            stack="integration",
+            monitor=monitor,
+        )
+        loop.run_until_complete(stack.run_pulumi_func(program))
+        loop.run_until_complete(asyncio.sleep(0))
+    finally:
+        settings.reset_options(project=None, stack=None)
+        loop.close()
+        asyncio.set_event_loop(None)
 
 
 def test_resolve_config_value_preserves_explicit_configured_and_default_paths() -> None:
@@ -18,25 +52,33 @@ def test_resolve_config_value_preserves_explicit_configured_and_default_paths() 
 
 
 @pytest.mark.parametrize(
-    ("validator", "value", "message"),
+    ("kwargs", "message"),
     [
-        (validate_environment_name, 1, "environment must be a string"),
-        (validate_environment_name, "", "environment must not be empty"),
         (
-            validate_environment_name,
-            " qa ",
+            {"environment": 1, "service_name": "billing"},  # type: ignore[dict-item]
+            "environment must be a string",
+        ),
+        (
+            {"environment": "", "service_name": "billing"},
+            "environment must not be empty",
+        ),
+        (
+            {"environment": " qa ", "service_name": "billing"},
             "environment must not contain surrounding whitespace",
         ),
         (
-            validate_service_name,
-            "Billing_API",
+            {"environment": "dev", "service_name": "Billing_API"},
             "service name must use lowercase letters, digits, and hyphens only",
         ),
     ],
 )
-def test_identifier_guardrails_reject_invalid_integration_inputs(
-    validator: Callable[[object], str], value: object, message: str
+def test_environment_settings_reject_invalid_identifier_inputs(
+    kwargs: dict[str, object], message: str
 ) -> None:
-    """Exercise invalid metadata branches in the integration battery as well."""
+    """Exercise identifier validation through the Pulumi component path."""
+
+    def program() -> None:
+        EnvironmentSettings("integration-settings", **kwargs)
+
     with pytest.raises(ValueError, match=rf"^{re.escape(message)}\.$"):
-        validator(value)
+        _run_with_mocks(program)

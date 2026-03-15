@@ -53,7 +53,11 @@ jobs:
         run: |
           export PULUMI_BACKEND_URL="${PULUMI_BACKEND_URL:-file:///workspace/.pulumi-backend}"
           make test-preview
-          cat .artifacts/pulumi-preview/summary.md >> "${GITHUB_STEP_SUMMARY}"
+          if [[ -f .artifacts/pulumi-preview/summary.md ]]; then
+            cat .artifacts/pulumi-preview/summary.md >> "${GITHUB_STEP_SUMMARY}"
+          else
+            printf "Pulumi preview completed without a rendered summary artifact.\n" >> "${GITHUB_STEP_SUMMARY}"
+          fi
 
       - name: Upload preview artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

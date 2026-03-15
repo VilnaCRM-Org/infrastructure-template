@@ -15,7 +15,7 @@ CONFIG = load_policy_config()
 PUBLIC_S3_ACLS = {"public-read", "public-read-write"}
 OPEN_CIDRS = ("0.0.0.0/0", "::/0")
 SENSITIVE_PORTS = (22, 3389)
-AWS_PROVIDER_TYPE_SUFFIX = "providers:Provider"
+AWS_PROVIDER_TYPE_SUFFIX = "pulumi:providers:aws"
 S3_BUCKET_TYPE_SUFFIX = "s3/bucket:Bucket"
 S3_BUCKET_ACL_TYPE_SUFFIX = "s3/bucketAcl:BucketAcl"
 S3_BUCKET_ACL_V2_TYPE_SUFFIX = "s3/bucketAclV2:BucketAclV2"
@@ -40,13 +40,16 @@ IDENTITY_POLICY_TYPE_SUFFIXES = (
 
 def extract_tags(props: Mapping[str, Any]) -> Mapping[str, Any] | None:
     """Return the resource tag mapping when the provider exposes one."""
-    tags = props.get("tags")
-    if isinstance(tags, Mapping):
-        return tags
-
     tags_all = props.get("tagsAll")
+    tags = props.get("tags")
+    if isinstance(tags_all, Mapping) and isinstance(tags, Mapping):
+        return {**tags_all, **tags}
+
     if isinstance(tags_all, Mapping):
         return tags_all
+
+    if isinstance(tags, Mapping):
+        return tags
 
     return None
 
@@ -239,21 +242,40 @@ def production_database_violations(
 def open_admin_ports(resource_type: str, props: Mapping[str, Any]) -> list[int]:
     """Return sensitive ports exposed to the public internet."""
     exposed_ports: set[int] = set()
-
-    if _matches_resource_type(resource_type, SECURITY_GROUP_RULE_TYPE_SUFFIX):
-        if props.get("type") == "ingress" and _is_open_to_world(props):
-            exposed_ports.update(_ports_in_range(props))
-
-    if _matches_resource_type(resource_type, SECURITY_GROUP_INGRESS_RULE_TYPE_SUFFIX):
-        if _is_open_to_world(props):
-            exposed_ports.update(_ports_in_range(props))
-
-    if _matches_resource_type(resource_type, SECURITY_GROUP_TYPE_SUFFIX):
-        for rule in props.get("ingress", []) or []:
-            if isinstance(rule, Mapping) and _is_open_to_world(rule):
-                exposed_ports.update(_ports_in_range(rule))
+    for rule in _open_admin_port_rules(resource_type, props):
+        exposed_ports.update(_ports_in_range(rule))
 
     return sorted(exposed_ports)
+
+
+def _open_admin_port_rules(
+    resource_type: str, props: Mapping[str, Any]
+) -> Sequence[Mapping[str, Any]]:
+    """Yield ingress rules that are open to the public internet."""
+    if _matches_resource_type(resource_type, SECURITY_GROUP_RULE_TYPE_SUFFIX):
+        return [props] if _is_public_ingress_rule(props) else []
+
+    if _matches_resource_type(resource_type, SECURITY_GROUP_INGRESS_RULE_TYPE_SUFFIX):
+        return [props] if _is_open_to_world(props) else []
+
+    if _matches_resource_type(resource_type, SECURITY_GROUP_TYPE_SUFFIX):
+        return _public_ingress_rules(props.get("ingress", []) or [])
+
+    return []
+
+
+def _is_public_ingress_rule(props: Mapping[str, Any]) -> bool:
+    """Return whether a classic security-group rule is public ingress."""
+    return props.get("type") == "ingress" and _is_open_to_world(props)
+
+
+def _public_ingress_rules(rules: Sequence[object]) -> list[Mapping[str, Any]]:
+    """Filter nested ingress rules down to the public ones."""
+    public_rules: list[Mapping[str, Any]] = []
+    for rule in rules:
+        if isinstance(rule, Mapping) and _is_open_to_world(rule):
+            public_rules.append(cast(Mapping[str, Any], rule))
+    return public_rules
 
 
 def _policy_documents(
@@ -345,13 +367,27 @@ def _statement_contains_wildcard_permissions(statement: Mapping[str, Any]) -> bo
     if effect != "Allow":
         return False
 
-    return _contains_wildcard(statement.get("Action")) or _contains_wildcard(
-        statement.get("Resource")
-    )
+    return _contains_action_wildcard(
+        statement.get("Action")
+    ) or _contains_resource_wildcard(statement.get("Resource"))
 
 
-def _contains_wildcard(value: object) -> bool:
-    """Handle both scalar and list forms of wildcard policy values."""
+def _contains_action_wildcard(value: object) -> bool:
+    """Detect wildcard IAM actions, including service-level wildcards like s3:*."""
+    if value == "*":
+        return True
+    if isinstance(value, str):
+        return value.endswith(":*")
+    if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
+        return any(
+            item == "*" or (isinstance(item, str) and item.endswith(":*"))
+            for item in value
+        )
+    return False
+
+
+def _contains_resource_wildcard(value: object) -> bool:
+    """Detect only full-resource wildcards, not common ARN suffix patterns."""
     if value == "*":
         return True
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
@@ -369,6 +405,8 @@ def _is_open_to_world(props: Mapping[str, Any]) -> bool:
 
 def _matches_resource_type(resource_type: str, suffix: str) -> bool:
     """Allow equivalent package prefixes while keeping the module/type contract."""
+    if suffix.startswith("pulumi:providers:"):
+        return resource_type.startswith(suffix)
     return resource_type.endswith(suffix)
 
 

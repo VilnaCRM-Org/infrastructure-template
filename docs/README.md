@@ -9,6 +9,7 @@ We follow a docs-as-code workflow: every guide lives alongside the source and ev
 - [Development](#development)
 - [Python Tooling](#python-tooling)
 - [CI/CD and Secrets](#cicd-and-secrets)
+- [CI Quality Gates](#ci-quality-gates)
 - [CI Guardrails](#ci-guardrails)
 - [CI Architecture](#ci-architecture)
 - [Pulumi Guardrails](#pulumi-guardrails)
@@ -56,6 +57,9 @@ ci                Run the full local equivalent of all GitHub checks, including 
 ci-pr             Run the non-mutation GitHub pull-request battery locally.
 doctor            Check local prerequisites and effective paths without printing secrets.
 help              Print the available make targets.
+nightly-quality   Run the scheduled quality-report battery locally.
+report-quality    Generate the scheduled maintainability, dead-code, docstring, and SBOM reports.
+report-sbom       Generate a CycloneDX SBOM for the synced Python environment.
 start             Initialize and start the Pulumi development environment.
 pulumi-preview    Preview infrastructure changes with the policy pack enforced.
 pulumi-up         Apply the current infrastructure plan with the policy pack enforced.
@@ -63,10 +67,13 @@ pulumi-refresh    Sync the Pulumi stack with live cloud resources.
 pulumi-destroy    Tear down the stack (irreversible; use with caution).
 sh                Open a shell inside the Pulumi container.
 down              Stop the Docker Compose environment.
-test              Run the aggregate structural, policy, quality, unit, integration, and CLI battery.
+test              Run the aggregate structural, policy, quality, repo-hygiene, unit, integration, coverage, and CLI battery.
+test-coverage     Combined 100% branch-coverage gate after unit, integration, and policy suites.
+test-crossguard   Alias for the Pulumi CrossGuard policy-pack suite.
 test-pulumi       Structural validation for manifests, workflows, and supply-chain guards.
 test-policy       Pulumi policy-pack tests and guardrail coverage.
-test-quality      Rust-based linting, formatting, and typing checks.
+test-quality      Blocking Python quality, maintainability, architecture, and dependency checks.
+test-repo-hygiene Workflow, YAML, shell, and Dockerfile linting.
 test-ruff         Ruff lint and format drift checks.
 test-ty           Ty static typing diagnostics for the Pulumi and policy layers.
 test-unit         Pulumi component tests with mocks.
@@ -117,9 +124,11 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `pulumi-integration.yml` runs Pulumi Automation tests with a local file backend.
 - `pulumi-policy.yml` executes the Pulumi policy-pack suite.
 - `pulumi-mutation.yml` executes mutation testing.
-- `python-quality.yml` runs Ruff and Ty as dedicated quality checks.
+- `python-quality.yml` runs Ruff, Ty, maintainability, architecture, dependency-hygiene, and coverage checks.
+- `security-scans.yml` runs secrets, Bandit, dependency audit/review, workflow linting, YAML linting, shell hygiene, and Hadolint.
 - `bats-tests.yml` validates the Makefile CLI surface.
 - `pulumi-local.yml` runs `make ci-pr`, the non-mutation pull-request battery inside Docker.
+- `nightly-quality.yml` publishes maintainability, dead-code, docstring, and SBOM reports.
 
 These checks do not require AWS or Pulumi credentials by default. They use
 concurrency groups, bounded job timeouts, pinned actions, and a shared
@@ -127,6 +136,12 @@ concurrency groups, bounded job timeouts, pinned actions, and a shared
 validation stay aligned. If you add deploy workflows or provision real cloud
 resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md)
 to configure the required secrets.
+
+## CI Quality Gates
+
+Use the [CI quality gates guide](ci-quality-gates.md) for blocking thresholds,
+architecture contracts, dependency hygiene, repo-hygiene checks, and scheduled
+maintainability monitoring.
 
 ## CI Guardrails
 
@@ -164,12 +179,16 @@ them enforced.
 Continuous integration runs automatically on every pull request. You can also validate locally:
 
 - Start with `make doctor` if you need a quick sanity check of Docker, Compose, and the effective env file.
-- Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-policy`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`, `make test-security`, `make test-guardrails`.
+- Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-policy`, `make test-crossguard`, `make test-quality`, `make test-repo-hygiene`, `make test-unit`, `make test-integration`, `make test-coverage`, `make test-mutation`, `make test-cli`, `make test-security`, `make test-guardrails`.
 - Use `make test-policy` when you are changing guardrails or adding new AWS resource types that should be covered by the policy pack.
 - `make pulumi-preview` and `make pulumi-up` sync the shared `uv` environment if needed, refresh `policy/.venv`, and then run Pulumi with the repository policy pack enabled.
-- Run `make test` to execute the faster structural, policy, quality, unit, integration, and CLI checks together after a prerequisite sanity check.
+- Run `make test` to execute the faster structural, policy, quality, repo-hygiene, unit, integration, coverage, and CLI checks together after a prerequisite sanity check.
 - Execute `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check, image build, security scans, preview generation, and policy suite.
 - Execute `make ci` to run the full local equivalent of all GitHub checks, including the prerequisite check, image build, and mutation suite.
+- Execute `make report-quality` or `make nightly-quality` when you want the scheduled maintainability, dead-code, docstring, and SBOM reports locally.
+- If Pulumi plugin downloads hit GitHub rate limits locally, pass
+  `GITHUB_TOKEN="$(gh auth token)"` explicitly to the preview-oriented target
+  you are running instead of exporting it globally.
 - `make pulumi-preview` to review planned resources before applying.
 - `make pulumi-up` followed by `pulumi stack output` to inspect applied results.
 - GitHub Actions mirrors `make ci-pr` through the `Pulumi Local Test Battery` workflow, while mutation remains isolated in `pulumi-mutation.yml`.

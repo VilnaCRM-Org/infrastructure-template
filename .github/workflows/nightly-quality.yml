@@ -1,0 +1,111 @@
+name: Nightly Quality
+
+on:
+  schedule:
+    - cron: "30 3 * * 2"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  maintainability_trends:
+    name: Wily Maintainability Trends
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Generate Wily report
+        run: make report-maintainability-trends
+
+      - name: Upload Wily artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: wily-maintainability
+          path: .artifacts/quality/wily-rank.txt
+
+  dead_code:
+    name: Vulture Dead Code
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Generate dead-code report
+        run: make report-dead-code
+
+      - name: Upload Vulture artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: vulture-report
+          path: .artifacts/quality/vulture.txt
+
+  docstrings:
+    name: Docstring Coverage
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Generate docstring report
+        run: make report-docstrings
+
+      - name: Upload docstring artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: docstr-coverage-report
+          path: .artifacts/quality/docstr-coverage.txt
+
+  sbom:
+    name: CycloneDX SBOM
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      attestations: write
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Generate SBOM
+        run: make report-sbom
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: python-environment-sbom
+          path: .artifacts/sbom/python-environment.cdx.json
+
+      - name: Attest SBOM provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be
+        with:
+          subject-path: .artifacts/sbom/python-environment.cdx.json

@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pulumi.automation as auto
 import pytest
+from pulumi.automation.errors import RuntimeError as AutomationRuntimeError
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 PULUMI_WORKDIR = PROJECT_ROOT / "pulumi"
@@ -101,7 +102,7 @@ def test_invalid_stack_config_fails_preview(
     stack.set_config(config_key, auto.ConfigValue(value=config_value))
 
     try:
-        with pytest.raises(Exception) as exc_info:
+        with pytest.raises(AutomationRuntimeError) as exc_info:
             stack.preview()
         assert re.search(
             rf"^\s*ValueError: {re.escape(message)}\.$",

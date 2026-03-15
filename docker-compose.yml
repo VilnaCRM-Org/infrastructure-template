@@ -20,6 +20,7 @@ services:
     env_file:
       - path: .env
         required: false
+    # Pass GITHUB_TOKEN explicitly to the relevant Make targets only when needed.
     environment:
       - PULUMI_ACCESS_TOKEN
       - PULUMI_BACKEND_URL
@@ -30,7 +31,6 @@ services:
       - AWS_PROFILE
       - AWS_REGION
       - AWS_DEFAULT_REGION
-      - GITHUB_TOKEN
       - PYTHONPATH=/workspace/pulumi
     tty: true
     stdin_open: true

@@ -19,31 +19,48 @@ assert_compose_env_file() {
   [[ "$output" == *"doctor"* ]]
   [[ "$output" == *"down"* ]]
   [[ "$output" == *"help"* ]]
+  [[ "$output" == *"nightly-quality"* ]]
   [[ "$output" == *"pulumi-preview"* ]]
   [[ "$output" == *"pulumi-up"* ]]
   [[ "$output" == *"pulumi-refresh"* ]]
   [[ "$output" == *"pulumi-destroy"* ]]
+  [[ "$output" == *"report-dead-code"* ]]
+  [[ "$output" == *"report-docstrings"* ]]
+  [[ "$output" == *"report-maintainability-trends"* ]]
+  [[ "$output" == *"report-quality"* ]]
+  [[ "$output" == *"report-sbom"* ]]
   [[ "$output" == *"sh"* ]]
   [[ "$output" == *"start"* ]]
   [[ "$output" == *"test"* ]]
   [[ "$output" == *"test-cli"* ]]
   [[ "$output" == *"test-actionlint"* ]]
+  [[ "$output" == *"test-architecture"* ]]
+  [[ "$output" == *"test-bandit"* ]]
+  [[ "$output" == *"test-coverage"* ]]
+  [[ "$output" == *"test-crossguard"* ]]
+  [[ "$output" == *"test-dependency-hygiene"* ]]
   [[ "$output" == *"test-deps-security"* ]]
+  [[ "$output" == *"test-dockerfile"* ]]
   [[ "$output" == *"test-destructive-diff"* ]]
   [[ "$output" == *"test-drift"* ]]
   [[ "$output" == *"test-guardrails"* ]]
   [[ "$output" == *"test-iam-validation"* ]]
   [[ "$output" == *"test-integration"* ]]
+  [[ "$output" == *"test-lockfile"* ]]
+  [[ "$output" == *"test-maintainability"* ]]
   [[ "$output" == *"test-mutation"* ]]
   [[ "$output" == *"test-policy"* ]]
   [[ "$output" == *"test-pulumi"* ]]
   [[ "$output" == *"test-quality"* ]]
   [[ "$output" == *"test-preview"* ]]
+  [[ "$output" == *"test-repo-hygiene"* ]]
   [[ "$output" == *"test-ruff"* ]]
+  [[ "$output" == *"test-shell"* ]]
   [[ "$output" == *"test-security"* ]]
   [[ "$output" == *"test-secrets"* ]]
   [[ "$output" == *"test-ty"* ]]
   [[ "$output" == *"test-unit"* ]]
+  [[ "$output" == *"test-yaml"* ]]
 }
 
 @test "make all delegates to the help output" {
@@ -70,9 +87,8 @@ assert_compose_env_file() {
 @test "make doctor checks prerequisites without printing env values" {
   run make -n doctor
   [ "$status" -eq 0 ]
-  [[ "$output" == *"docker compose version"* ]]
-  [[ "$output" == *"effective env file:"* ]]
-  [[ "$output" == *"compose service:"* ]]
+  [[ "$output" == *"COMPOSE_ENV_FILE="* ]]
+  [[ "$output" == *"./scripts/doctor.sh"* ]]
   [[ "$output" != *"AWS_SECRET_ACCESS_KEY"* ]]
 }
 
@@ -177,12 +193,27 @@ assert_compose_env_file() {
   [[ "$output" == *"coverage report --show-missing --include='policy/*' --fail-under=100"* ]]
 }
 
+@test "make test-crossguard delegates to the policy suite" {
+  run make -n test-crossguard
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make test-policy"* ]]
+}
+
 @test "make test-ruff executes Ruff lint and formatting checks" {
   run make -n test-ruff
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"uv run ruff check pulumi policy scripts tests"* ]]
   [[ "$output" == *"uv run ruff format --check pulumi policy scripts tests"* ]]
+}
+
+@test "make test-maintainability executes Radon and Xenon gates" {
+  run make -n test-maintainability
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"uv run radon cc -s -a pulumi policy scripts"* ]]
+  [[ "$output" == *"uv run radon mi -s -n B pulumi policy scripts"* ]]
+  [[ "$output" == *"uv run xenon --max-absolute B --max-modules B --max-average A pulumi policy scripts"* ]]
 }
 
 @test "make test-ty executes the Ty type checker" {
@@ -198,11 +229,76 @@ assert_compose_env_file() {
   [[ "$output" == *"scripts"* ]]
 }
 
+@test "make test-architecture executes Import Linter with repo-local paths" {
+  run make -n test-architecture
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"PYTHONPATH=/workspace/pulumi:/workspace"* ]]
+  [[ "$output" == *"uv run lint-imports --config pyproject.toml"* ]]
+}
+
+@test "make test-lockfile executes uv lock check" {
+  run make -n test-lockfile
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"uv lock --check"* ]]
+}
+
+@test "make test-dependency-hygiene executes lockfile and deptry checks" {
+  run make -n test-dependency-hygiene
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make test-lockfile"* ]]
+  [[ "$output" == *"uv run deptry ."* ]]
+}
+
+@test "make test-coverage combines suite coverage and enforces branch threshold" {
+  run make -n test-coverage
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *".coverage.unit"* ]]
+  [[ "$output" == *".coverage.integration"* ]]
+  [[ "$output" == *".coverage.policy"* ]]
+  [[ "$output" == *"uv run coverage combine --keep .coverage.unit .coverage.integration .coverage.policy"* ]]
+  [[ "$output" == *"coverage report --show-missing --fail-under=100"* ]]
+}
+
+@test "make test-bandit executes Bandit against runtime sources" {
+  run make -n test-bandit
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"uv run bandit -q -c pyproject.toml -r pulumi policy scripts"* ]]
+}
+
 @test "make test-actionlint executes actionlint inside the container" {
   run make -n test-actionlint
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"actionlint -color"* ]]
+}
+
+@test "make test-yaml executes yamllint against operational YAML" {
+  run make -n test-yaml
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"uv run yamllint -c .yamllint.yml"* ]]
+  [[ "$output" == *"docker-compose.yml"* ]]
+  [[ "$output" == *"policy"* ]]
+  [[ "$output" == *"pulumi"* ]]
+}
+
+@test "make test-shell executes ShellCheck and shfmt" {
+  run make -n test-shell
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"shellcheck scripts/"* ]]
+  [[ "$output" == *"shfmt -d -i 2 -ci scripts"* ]]
+}
+
+@test "make test-dockerfile executes hadolint" {
+  run make -n test-dockerfile
+  [ "$status" -eq 0 ]
+  assert_compose_env_file
+  [[ "$output" == *"hadolint --config .hadolint.yaml Dockerfile"* ]]
 }
 
 @test "make test-secrets executes gitleaks against the working tree" {
@@ -246,7 +342,7 @@ assert_compose_env_file() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"make test-secrets"* ]]
   [[ "$output" == *"make test-deps-security"* ]]
-  [[ "$output" == *"make test-actionlint"* ]]
+  [[ "$output" == *"make test-bandit"* ]]
 }
 
 @test "make test-guardrails delegates to preview, destructive diff, and IAM validation" {
@@ -269,6 +365,18 @@ assert_compose_env_file() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"make test-ruff"* ]]
   [[ "$output" == *"make test-ty"* ]]
+  [[ "$output" == *"make test-maintainability"* ]]
+  [[ "$output" == *"make test-architecture"* ]]
+  [[ "$output" == *"make test-dependency-hygiene"* ]]
+}
+
+@test "make test-repo-hygiene delegates to workflow, yaml, shell, and Dockerfile checks" {
+  run make -n test-repo-hygiene
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make test-actionlint"* ]]
+  [[ "$output" == *"make test-yaml"* ]]
+  [[ "$output" == *"make test-shell"* ]]
+  [[ "$output" == *"make test-dockerfile"* ]]
 }
 
 @test "make test-mutation executes the mutation helper script" {
@@ -316,4 +424,47 @@ assert_compose_env_file() {
   [[ "$output" == *"find . -type d -name __pycache__"* ]]
   [[ "$output" == *"find . -type f -name \"*.pyc\""* ]]
   [[ "$output" == *"rm -rf .venv dist build *.egg-info"* ]]
+}
+
+@test "make report-quality delegates to every scheduled quality report" {
+  run make -n report-quality
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make report-maintainability-trends"* ]]
+  [[ "$output" == *"make report-dead-code"* ]]
+  [[ "$output" == *"make report-docstrings"* ]]
+  [[ "$output" == *"make report-sbom"* ]]
+}
+
+@test "make nightly-quality delegates to the quality report battery" {
+  run make -n nightly-quality
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make report-quality"* ]]
+}
+
+@test "make report-maintainability-trends generates the Wily report" {
+  run make -n report-maintainability-trends
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"./scripts/report_maintainability_trends.sh"* ]]
+  [[ "$output" == *"QUALITY_ARTIFACT_DIR="* ]]
+}
+
+@test "make report-dead-code executes Vulture with repo config" {
+  run make -n report-dead-code
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"uv run vulture --config pyproject.toml"* ]]
+  [[ "$output" == *"vulture.txt"* ]]
+}
+
+@test "make report-docstrings executes docstr-coverage with repo config" {
+  run make -n report-docstrings
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"uv run docstr-coverage --fail-under 100"* ]]
+  [[ "$output" == *"docstr-coverage.txt"* ]]
+}
+
+@test "make report-sbom generates a CycloneDX SBOM" {
+  run make -n report-sbom
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"uv run cyclonedx-py environment"* ]]
+  [[ "$output" == *"python-environment.cdx.json"* ]]
 }

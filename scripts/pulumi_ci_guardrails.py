@@ -5,7 +5,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import subprocess
+import subprocess  # nosec B404
 import sys
 from collections.abc import Iterable, Sequence
 from pathlib import Path
@@ -98,7 +98,7 @@ def extract_iam_validation_inputs(
             continue
 
         resource_type = step_resource_type(step)
-        for field_name, policy_type in iam_policy_fields(resource_type, state):
+        for field_name, policy_type in iam_policy_fields(resource_type):
             document = parse_policy_document(state.get(field_name))
             if document is None:
                 continue
@@ -154,6 +154,11 @@ def load_destructive_override(event_path: str | None) -> bool:
 def validate_iam_inputs(inputs: Sequence[dict[str, str]]) -> list[str]:
     """Validate IAM policy documents with AWS IAM Access Analyzer."""
     failures: list[str] = []
+    aws_env = {
+        key: value
+        for key, value in os.environ.items()
+        if key.startswith("AWS_") or key in {"HOME", "PATH"}
+    }
 
     for item in inputs:
         command = [
@@ -167,10 +172,12 @@ def validate_iam_inputs(inputs: Sequence[dict[str, str]]) -> list[str]:
             "--output",
             "json",
         ]
-        result = subprocess.run(
+        # Fixed argv list for AWS CLI Access Analyzer invocation.
+        result = subprocess.run(  # nosec B603
             command,
             check=False,
             capture_output=True,
+            env=aws_env,
             text=True,
             timeout=120,
         )
@@ -191,11 +198,8 @@ def validate_iam_inputs(inputs: Sequence[dict[str, str]]) -> list[str]:
     return failures
 
 
-def iam_policy_fields(
-    resource_type: str, state: dict[str, Any]
-) -> Iterable[tuple[str, str]]:
-    """Yield policy-bearing fields for a resource preview state."""
-    del state  # the shape is only needed for field existence checks at the call site
+def iam_policy_fields(resource_type: str) -> Iterable[tuple[str, str]]:
+    """Yield policy-bearing fields for a resource type."""
     if "iam/" in resource_type:
         yield ("policy", "IDENTITY_POLICY")
         yield ("policyDocument", "IDENTITY_POLICY")
@@ -246,8 +250,8 @@ def write_iam_inputs(path: Path, *, preview_paths: Sequence[Path]) -> None:
     path.write_text(json.dumps(items, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def cli(argv: Sequence[str] | None = None) -> int:
-    """Run the requested guardrail helper command."""
+def _build_parser() -> argparse.ArgumentParser:
+    """Construct the CLI parser for the guardrail helper entrypoints."""
     parser = argparse.ArgumentParser()
     subparsers = parser.add_subparsers(dest="command", required=True)
 
@@ -267,60 +271,78 @@ def cli(argv: Sequence[str] | None = None) -> int:
 
     validate_iam_parser = subparsers.add_parser("validate-iam")
     validate_iam_parser.add_argument("preview_files", nargs="+", type=Path)
+    return parser
 
-    args = parser.parse_args(argv)
+
+def _run_summarize(preview_files: Sequence[Path]) -> int:
+    """Print Markdown summaries for each preview artifact."""
+    for preview_file in preview_files:
+        sys.stdout.write(summarize_preview(preview_file))
+    return 0
+
+
+def _run_destructive_gate(
+    preview_files: Sequence[Path], *, event_path: str | None
+) -> int:
+    """Fail unless dangerous preview steps were explicitly approved."""
+    override = load_destructive_override(event_path)
+    findings: list[str] = []
+    for preview_file in preview_files:
+        for step in find_destructive_steps(preview_steps(load_preview(preview_file))):
+            findings.append(f"{step.get('op')} {step_resource_type(step)}")
+
+    if findings and not override:
+        for finding in findings:
+            print(f"destructive change blocked: {finding}", file=sys.stderr)
+        print(
+            f"Apply the `{DESTRUCTIVE_OVERRIDE_LABEL}` label only after manual review.",
+            file=sys.stderr,
+        )
+        return 1
+    return 0
+
+
+def _run_validate_iam(preview_files: Sequence[Path]) -> int:
+    """Validate every extracted IAM document and surface actionable findings."""
+    inputs: list[dict[str, str]] = []
+    for preview_file in preview_files:
+        inputs.extend(extract_iam_validation_inputs(preview_file))
+
+    if not inputs:
+        print("No IAM policy documents were present in the Pulumi preview.")
+        return 0
+
+    try:
+        failures = validate_iam_inputs(inputs)
+    except RuntimeError as exc:
+        print(str(exc), file=sys.stderr)
+        return 1
+
+    if failures:
+        for failure in failures:
+            print(failure, file=sys.stderr)
+        return 1
+
+    print(f"Validated {len(inputs)} IAM policy document(s) with Access Analyzer.")
+    return 0
+
+
+def cli(argv: Sequence[str] | None = None) -> int:
+    """Run the requested guardrail helper command."""
+    args = _build_parser().parse_args(argv)
 
     if args.command == "summarize":
-        for preview_file in args.preview_files:
-            sys.stdout.write(summarize_preview(preview_file))
-        return 0
+        return _run_summarize(args.preview_files)
 
     if args.command == "destructive-gate":
-        override = load_destructive_override(args.event_path)
-        findings: list[str] = []
-        for preview_file in args.preview_files:
-            for step in find_destructive_steps(
-                preview_steps(load_preview(preview_file))
-            ):
-                findings.append(f"{step.get('op')} {step_resource_type(step)}")
-
-        if findings and not override:
-            for finding in findings:
-                print(f"destructive change blocked: {finding}", file=sys.stderr)
-            print(
-                f"Apply the `{DESTRUCTIVE_OVERRIDE_LABEL}` label only after "
-                "manual review.",
-                file=sys.stderr,
-            )
-            return 1
-        return 0
+        return _run_destructive_gate(args.preview_files, event_path=args.event_path)
 
     if args.command == "iam-inputs":
         write_iam_inputs(args.output, preview_paths=args.preview_files)
         return 0
 
     if args.command == "validate-iam":
-        inputs: list[dict[str, str]] = []
-        for preview_file in args.preview_files:
-            inputs.extend(extract_iam_validation_inputs(preview_file))
-
-        if not inputs:
-            print("No IAM policy documents were present in the Pulumi preview.")
-            return 0
-
-        try:
-            failures = validate_iam_inputs(inputs)
-        except RuntimeError as exc:
-            print(str(exc), file=sys.stderr)
-            return 1
-
-        if failures:
-            for failure in failures:
-                print(failure, file=sys.stderr)
-            return 1
-
-        print(f"Validated {len(inputs)} IAM policy document(s) with Access Analyzer.")
-        return 0
+        return _run_validate_iam(args.preview_files)
 
     raise AssertionError(f"Unhandled command: {args.command}")  # pragma: no cover
 

@@ -6,8 +6,10 @@ Run `make doctor` first if you suspect the problem is your local Docker or
 Compose setup rather than the repository itself.
 
 All coverage-bearing Python suites in this repository are locked to 100% line
-coverage. If unit, integration, or policy changes reduce coverage, the
-corresponding `make` target fails locally and in CI.
+coverage. The combined quality gate is also locked to 100% branch coverage
+across the Pulumi runtime, policy pack, and Python helper scripts. If unit,
+integration, or policy changes reduce coverage, the corresponding `make` target
+fails locally and in CI.
 
 ## Structural tests
 
@@ -41,6 +43,8 @@ Coverage:
 - Required tag, public S3 ACL, and open admin-port guardrails
 - 100% line coverage for the policy-pack Python surface
 
+`make test-crossguard` is an alias for this same suite.
+
 ## Quality checks
 
 Run with:
@@ -54,10 +58,29 @@ Coverage:
 - `ruff check` for fast linting
 - `ruff format --check` for formatting drift
 - `ty check` for static typing diagnostics on the Pulumi application layer
+- Ruff McCabe complexity with a maximum score of 10
+- `radon mi` and `xenon` gates for maintainability and cyclomatic complexity
+- Import Linter contracts that keep runtime code and policy code isolated
+- Deptry and `uv lock --check` for dependency hygiene
 
 Ty currently ignores a small set of false positives caused by Pulumi's dynamic
 `Output.apply` API and the coverage bootstrap shim. The CI command keeps those
 exceptions explicit instead of silently disabling the type check.
+
+## Repo hygiene checks
+
+Run with:
+
+```bash
+make test-repo-hygiene
+```
+
+Coverage:
+
+- `make test-actionlint` for GitHub workflow linting
+- `make test-yaml` for Pulumi stacks and operational YAML
+- `make test-shell` for ShellCheck and `shfmt`
+- `make test-dockerfile` for Hadolint
 
 ## Security and preview guardrails
 
@@ -72,14 +95,15 @@ Coverage:
 
 - `make test-secrets` runs Gitleaks against the working tree
 - `make test-deps-security` runs `pip-audit --strict`
-- `make test-actionlint` lints all workflow files
+- `make test-bandit` runs Bandit against repository Python code
 - `make test-preview` generates the Pulumi preview artifact consumed by later checks
 - `make test-destructive-diff` blocks deletes and replacements of critical infrastructure without an explicit PR override label
 - `make test-iam-validation` validates previewed IAM policies with AWS IAM Access Analyzer
 
-CodeQL and OpenSSF Scorecard are GitHub-native only. The repository keeps those
-workflow definitions under structural test coverage, but there is no local
-Docker equivalent for the scans themselves.
+Dependency Review, CodeQL, SBOM attestations, and OpenSSF Scorecard are
+GitHub-native only. The repository keeps those workflow definitions under
+structural test coverage, but there is no local Docker equivalent for the
+services themselves.
 
 ## Unit tests
 
@@ -126,6 +150,21 @@ repository tree so Pulumi always sees a stable interpreter with `pip`
 available for plugin discovery. The policy-pack bootstrap reuses that same
 environment and resyncs it from `uv.lock` when Python dependencies drift.
 
+## Combined coverage gate
+
+Run with:
+
+```bash
+make test-coverage
+```
+
+Coverage:
+
+- merges `.coverage.unit`, `.coverage.integration`, and `.coverage.policy`
+- enforces 100% branch coverage across `pulumi/*`, `policy/*`, and `scripts/*`
+- prevents hidden branch regressions even when each individual suite still has
+  100% line coverage
+
 ## Mutation tests
 
 Run with:
@@ -163,12 +202,25 @@ Coverage:
 - `make test-unit`
 - `make test-integration`
 - `make test-pulumi`
+- `make test-crossguard`
 - `make test-quality`
+- `make test-repo-hygiene`
 - `make test-ruff`
 - `make test-ty`
+- `make test-maintainability`
+- `make test-architecture`
+- `make test-dependency-hygiene`
+- `make test-lockfile`
+- `make test-coverage`
+- `make test-bandit`
+- `make test-yaml`
+- `make test-shell`
+- `make test-dockerfile`
 - `make test-mutation`
 - `make test-cli`
 - `make test`
+- `make report-quality`
+- `make nightly-quality`
 - `make clean`
 
 ## Full local run
@@ -181,12 +233,20 @@ make ci-pr
 make ci
 ```
 
-Run `make test` during normal iteration when you want the fast structural, policy, quality, unit, integration, and CLI suites after a prerequisite sanity check. For the same non-mutation battery that GitHub runs in `pulumi-local.yml`, run `make ci-pr`. Before pushing, execute `make ci` to run the full local equivalent of every GitHub check, including the prerequisite check, Docker build, and mutation suite.
+Run `make test` during normal iteration when you want the fast structural, policy, quality, repo-hygiene, unit, integration, coverage, and CLI suites after a prerequisite sanity check. For the same non-mutation battery that GitHub runs in `pulumi-local.yml`, run `make ci-pr`. Before pushing, execute `make ci` to run the full local equivalent of every GitHub check, including the prerequisite check, Docker build, and mutation suite.
 
 GitHub Actions now mirrors `make ci-pr` through the `Pulumi Local Test Battery` workflow, while `Pulumi Mutation Tests` keeps mutation analysis isolated as a separate check.
-The `Pulumi Policy Tests` workflow runs the policy-pack coverage suite, and the `Python Quality Checks` workflow runs Ruff and Ty as dedicated quality gates.
-`Pulumi PR Guardrails` runs preview, destructive diff, and IAM validation. The
-`Security Scans` workflow runs Gitleaks, dependency audit, and Actionlint.
+The `Pulumi Policy Tests` workflow runs the policy-pack coverage suite, and the
+`Python Quality Checks` workflow runs Ruff, Ty, maintainability, architecture,
+dependency-hygiene, and coverage gates. `Pulumi PR Guardrails` runs preview,
+destructive diff, and IAM validation. The `Security Scans` workflow runs
+Gitleaks, Bandit, dependency audit/review, workflow linting, YAML linting,
+shell hygiene, and Hadolint. `Nightly Quality` publishes Wily, Vulture,
+docstring-coverage, and SBOM artifacts.
+
+If Pulumi provider plugin downloads hit GitHub rate limits during local preview
+or drift commands, pass `GITHUB_TOKEN="$(gh auth token)"` only to that single
+invocation.
 
 Use `make pulumi-preview` before any real cloud deployment. The preview and
 apply targets automatically enable the repository policy pack.

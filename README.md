@@ -43,6 +43,7 @@ All project docs live under `docs/` to keep everything version controlled. Start
 - [Development Environment](docs/README.md#development)
 - [PyCharm Autocomplete](docs/pycharm-autocomplete.md)
 - [CI/CD and Secrets](docs/README.md#cicd-and-secrets)
+- [CI Quality Gates](docs/ci-quality-gates.md)
 - [CI Guardrails](docs/ci-guardrails.md)
 - [CI Architecture](docs/ci-architecture.md)
 - [Security Baseline](docs/security-baseline.md)
@@ -111,7 +112,11 @@ make test-integration
 make test-mutation
 ```
 
-Run `make test` for the faster structural, policy, quality, unit, integration, and CLI battery during day-to-day development. Invoke `make test-security` and `make test-guardrails` when you are touching infrastructure safety controls. Use `make ci-pr` when you want the same non-mutation battery that GitHub runs before merge. Execute `make ci` when you want the full local superset, including the prerequisite check, image build, preview guardrails, security scans, and mutation suite.
+Run `make test` for the faster structural, policy, quality, repo-hygiene, unit, integration, coverage, and CLI battery during day-to-day development. Invoke `make test-security` and `make test-guardrails` when you are touching infrastructure safety controls. Use `make ci-pr` when you want the same non-mutation battery that GitHub runs before merge. Execute `make ci` when you want the full local superset, including the prerequisite check, image build, preview guardrails, security scans, and mutation suite. Use `make report-quality` when you want the scheduled Wily, Vulture, docstring-coverage, and SBOM reports locally.
+
+If Pulumi provider plugin downloads hit GitHub rate limits during local preview
+or drift commands, pass `GITHUB_TOKEN="$(gh auth token)"` explicitly to that
+single Make invocation instead of exporting it globally.
 
 Run `make doctor` when you need a fast prerequisite check before debugging local
 Docker or Compose behavior.

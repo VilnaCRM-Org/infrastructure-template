@@ -48,6 +48,32 @@ jobs:
       - name: Audit Python dependencies
         run: make test-deps-security
 
+  bandit:
+    name: Bandit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Run Bandit
+        run: make test-bandit
+
+  dependency_review:
+    name: Dependency Review
+    if: ${{ github.event_name == 'pull_request' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Review dependency changes
+        uses: actions/dependency-review-action@2031cfc080254a8a887f58cffee85186f0e49e48
+
   actionlint:
     name: Actionlint
     runs-on: ubuntu-latest
@@ -62,3 +88,48 @@ jobs:
 
       - name: Lint workflows
         run: make test-actionlint
+
+  yamllint:
+    name: Yamllint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Lint repository YAML
+        run: make test-yaml
+
+  shell_hygiene:
+    name: Shell Hygiene
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Lint shell scripts
+        run: make test-shell
+
+  hadolint:
+    name: Hadolint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
+        with:
+          persist-credentials: false
+
+      - name: Prepare Docker context
+        run: ./scripts/prepare_docker_context.sh
+
+      - name: Lint Dockerfile
+        run: make test-dockerfile

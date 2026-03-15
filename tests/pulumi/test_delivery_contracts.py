@@ -25,13 +25,30 @@ PULL_REQUEST_WORKFLOW_TIMEOUTS = {
     "pulumi-policy.yml": {"policy": 15},
     "pulumi-structural.yml": {"structural": 15},
     "pulumi-unit.yml": {"unit": 15},
-    "python-quality.yml": {"ruff": 15, "ty": 15},
+    "python-quality.yml": {
+        "ruff": 15,
+        "ty": 15,
+        "maintainability": 15,
+        "architecture": 15,
+        "dependency_hygiene": 15,
+        "coverage": 30,
+    },
+    "security-scans.yml": {
+        "secrets": 10,
+        "dependency_audit": 15,
+        "bandit": 10,
+        "actionlint": 10,
+        "yamllint": 10,
+        "shell_hygiene": 10,
+        "hadolint": 10,
+    },
 }
 DOCS_INDEX = PROJECT_ROOT / "docs" / "README.md"
 ROOT_README = PROJECT_ROOT / "README.md"
 PREPARE_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_docker_context.sh"
 PREPARE_POLICY_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_policy_pack.sh"
 DETAILED_DOCS = (
+    "ci-quality-gates.md",
     "ci-guardrails.md",
     "ci-architecture.md",
     "pulumi-guardrails.md",
@@ -163,7 +180,6 @@ def test_docker_compose_keeps_workspace_and_credentials_contract() -> None:
         "AWS_PROFILE",
         "AWS_REGION",
         "AWS_DEFAULT_REGION",
-        "GITHUB_TOKEN",
         "PYTHONPATH=/workspace/pulumi",
     ]
 
@@ -258,14 +274,30 @@ def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
     assert "import pulumi_policy" in script_text
 
 
+def test_new_helper_scripts_keep_local_ci_behaviour_explicit() -> None:
+    """Keep extracted helper scripts discoverable and safe to execute locally."""
+    doctor_script = (PROJECT_ROOT / "scripts" / "doctor.sh").read_text(encoding="utf-8")
+    wily_script = (
+        PROJECT_ROOT / "scripts" / "report_maintainability_trends.sh"
+    ).read_text(encoding="utf-8")
+
+    assert "docker compose version --short" in doctor_script
+    assert "effective env file:" in doctor_script
+    assert "git rev-parse --verify HEAD" in wily_script
+    assert "Wily maintainability report skipped" in wily_script
+
+
 def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
-    """Prevent drift in the 100%-coverage contract for Python test suites."""
+    """Prevent drift in the line- and branch-coverage contracts for Python suites."""
     makefile_text = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
     coverage_config = (PROJECT_ROOT / ".coveragerc").read_text(encoding="utf-8")
 
+    assert "branch = True" in coverage_config
     assert "rm -f .coverage.unit .coverage.unit.*" in makefile_text
     assert "rm -f .coverage.integration .coverage.integration.*" in makefile_text
     assert "rm -f .coverage.policy .coverage.policy.*" in makefile_text
+    assert "TOTAL_COVERAGE_INCLUDE   ?= pulumi/*,policy/*,scripts/*" in makefile_text
+    assert "BRANCH_COVERAGE_MIN      ?= 100" in makefile_text
     assert "UNIT_COVERAGE_INCLUDE    ?= pulumi/*,scripts/*" in makefile_text
     assert (
         "coverage report --show-missing --include='$(UNIT_COVERAGE_INCLUDE)' "
@@ -282,7 +314,18 @@ def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
     assert "coverage report --show-missing --include='policy/*' --fail-under=100" in (
         makefile_text
     )
+    assert (
+        "coverage combine --keep .coverage.unit .coverage.integration "
+        ".coverage.policy" in makefile_text
+    )
+    assert (
+        "coverage report --show-missing --fail-under=$(BRANCH_COVERAGE_MIN) "
+        '--include="$(TOTAL_COVERAGE_INCLUDE)"' in makefile_text
+    )
     assert "scripts" in coverage_config
+    assert "/workspace/pulumi" in coverage_config
+    assert "/workspace/policy" in coverage_config
+    assert "/workspace/scripts" in coverage_config
     assert "pulumi/sitecustomize.py" not in coverage_config
 
 
@@ -297,21 +340,38 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make -n ci-pr",
         "make -n doctor",
         "make -n start",
+        "make -n nightly-quality",
         "make -n pulumi-preview",
         "make -n pulumi-up",
         "make -n pulumi-refresh",
         "make -n pulumi-destroy",
+        "make -n report-dead-code",
+        "make -n report-docstrings",
+        "make -n report-maintainability-trends",
+        "make -n report-quality",
+        "make -n report-sbom",
         "make -n sh",
         "make -n down",
         "make -n test-actionlint",
+        "make -n test-architecture",
+        "make -n test-bandit",
+        "make -n test-coverage",
+        "make -n test-crossguard",
+        "make -n test-dependency-hygiene",
         "make -n test-deps-security",
+        "make -n test-dockerfile",
         "make -n test-destructive-diff",
         "make -n test-drift",
         "make -n test-guardrails",
         "make -n test-iam-validation",
         "make -n test-preview",
+        "make -n test-lockfile",
+        "make -n test-maintainability",
+        "make -n test-repo-hygiene",
+        "make -n test-shell",
         "make -n test-security",
         "make -n test-secrets",
+        "make -n test-yaml",
         "make -n test-quality",
         "make -n test-ruff",
         "make -n test-ty",
@@ -359,7 +419,23 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
         "pulumi-policy.yml": ["make test-policy"],
         "pulumi-structural.yml": ["make test-pulumi"],
         "pulumi-unit.yml": ["make test-unit"],
-        "python-quality.yml": ["make test-ruff", "make test-ty"],
+        "python-quality.yml": [
+            "make test-ruff",
+            "make test-ty",
+            "make test-maintainability",
+            "make test-architecture",
+            "make test-dependency-hygiene",
+            "make test-coverage",
+        ],
+        "security-scans.yml": [
+            "make test-secrets",
+            "make test-deps-security",
+            "make test-bandit",
+            "make test-actionlint",
+            "make test-yaml",
+            "make test-shell",
+            "make test-dockerfile",
+        ],
     }
 
     for workflow_name, commands in expected_runs.items():
@@ -481,8 +557,8 @@ def test_bats_workflow_runs_on_push_and_pull_request() -> None:
     assert "pull_request" in triggers
 
 
-def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
-    """Keep the Rust-based Python quality gates wired into CI."""
+def test_quality_workflow_runs_quality_gates_on_push_and_pull_request() -> None:
+    """Keep the blocking Python quality gates wired into CI."""
     workflow = yaml.safe_load(
         (WORKFLOWS_DIR / "python-quality.yml").read_text(encoding="utf-8")
     )
@@ -491,16 +567,43 @@ def test_quality_workflow_runs_ruff_and_ty_on_push_and_pull_request() -> None:
 
     assert "ruff" in jobs, "python-quality.yml missing 'ruff' job"
     assert "ty" in jobs, "python-quality.yml missing 'ty' job"
-    assert "env" not in jobs["ruff"]
-    assert "env" not in jobs["ty"]
+    assert "maintainability" in jobs
+    assert "architecture" in jobs
+    assert "dependency_hygiene" in jobs
+    assert "coverage" in jobs
+    assert (
+        jobs["coverage"]["env"]["PULUMI_BACKEND_URL"]
+        == "file:///workspace/.pulumi-backend"
+    )
+    assert jobs["coverage"]["env"]["PULUMI_CONFIG_PASSPHRASE"] == ""
 
     ruff_runs = [step.get("run") for step in jobs.get("ruff", {}).get("steps", [])]
     ty_runs = [step.get("run") for step in jobs.get("ty", {}).get("steps", [])]
+    maintainability_runs = [
+        step.get("run") for step in jobs.get("maintainability", {}).get("steps", [])
+    ]
+    architecture_runs = [
+        step.get("run") for step in jobs.get("architecture", {}).get("steps", [])
+    ]
+    dependency_hygiene_runs = [
+        step.get("run") for step in jobs.get("dependency_hygiene", {}).get("steps", [])
+    ]
+    coverage_runs = [
+        step.get("run") for step in jobs.get("coverage", {}).get("steps", [])
+    ]
 
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
     assert any(run and "make test-ruff" in run for run in ruff_runs)
     assert any(run and "make test-ty" in run for run in ty_runs)
+    assert any(
+        run and "make test-maintainability" in run for run in maintainability_runs
+    )
+    assert any(run and "make test-architecture" in run for run in architecture_runs)
+    assert any(
+        run and "make test-dependency-hygiene" in run for run in dependency_hygiene_runs
+    )
+    assert any(run and "make test-coverage" in run for run in coverage_runs)
 
 
 def test_policy_workflow_runs_on_push_and_pull_request() -> None:
@@ -534,13 +637,14 @@ def test_operator_docs_are_present_and_indexed() -> None:
 
 
 def test_testing_docs_call_out_full_coverage_contract() -> None:
-    """Keep the operator docs explicit about mandatory 100% line coverage."""
+    """Keep the operator docs explicit about mandatory coverage contracts."""
     testing_doc = (PROJECT_ROOT / "docs" / "testing.md").read_text(encoding="utf-8")
     guardrails_doc = (PROJECT_ROOT / "docs" / "pulumi-guardrails.md").read_text(
         encoding="utf-8"
     )
 
     assert "100% line coverage" in testing_doc
+    assert "100% branch coverage" in testing_doc
     assert "100% line coverage" in guardrails_doc
 
 

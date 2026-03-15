@@ -5,15 +5,15 @@ validation, and nightly drift detection are designed to use short-lived AWS
 credentials issued through GitHub Actions OIDC. Do not add long-lived static AWS
 access keys for these workflows.
 
-## Required variables for guardrail workflows
+## Repository variables for guardrail workflows
 
 | Variable | Purpose | Notes |
 | --- | --- | --- |
 | `AWS_OIDC_ROLE_ARN` | IAM role assumed by preview, IAM validation, and drift jobs | Repository variable, not a secret |
 | `AWS_REGION` | Region used by `configure-aws-credentials` | Repository variable |
 | `PULUMI_BACKEND_URL` | Shared backend used by real previews and drift checks | Repository variable |
-| `PULUMI_PREVIEW_STACKS` | Optional comma-separated stack list for PR previews | Defaults to committed `Pulumi.<stack>.yaml` files |
-| `PULUMI_DRIFT_STACKS` | Optional comma-separated stack list for nightly drift checks | Defaults to committed `Pulumi.<stack>.yaml` files |
+| `PULUMI_PREVIEW_STACKS` | Optional comma-separated stack list for PR previews | Repository variable; defaults to committed `Pulumi.<stack>.yaml` files |
+| `PULUMI_DRIFT_STACKS` | Optional comma-separated stack list for nightly drift checks | Repository variable; defaults to committed `Pulumi.<stack>.yaml` files |
 
 ## Optional secrets for guardrail workflows
 
