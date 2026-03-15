@@ -155,6 +155,16 @@ def test_extract_iam_validation_inputs_covers_identity_resource_and_inline_polic
             },
             {
                 "op": "create",
+                "urn": "urn:pulumi:dev::stack::aws:s3/bucket:Bucket::inline-bucket",
+                "newState": {
+                    "type": "aws:s3/bucket:Bucket",
+                    "policy": json.dumps(
+                        {"Statement": [{"Effect": "Allow", "Principal": "*"}]}
+                    ),
+                },
+            },
+            {
+                "op": "create",
                 "urn": "urn:pulumi:dev::stack::custom::bad",
                 "newState": "invalid",
             },
@@ -169,11 +179,13 @@ def test_extract_iam_validation_inputs_covers_identity_resource_and_inline_polic
         "RESOURCE_POLICY",
         "IDENTITY_POLICY",
         "RESOURCE_POLICY",
+        "RESOURCE_POLICY",
     ]
     assert any(item["field"] == "inlinePolicies[2].policy" for item in items)
     assert any(
         item["resource_type"] == "aws:s3/bucketPolicy:BucketPolicy" for item in items
     )
+    assert any(item["resource_type"] == "aws:s3/bucket:Bucket" for item in items)
 
 
 def test_load_destructive_override_reads_github_event_payload(
@@ -319,6 +331,10 @@ def test_iam_policy_fields_maps_identity_and_resource_policy_types(
     assert list(
         guardrails_module.iam_policy_fields("aws:s3/bucketPolicy:BucketPolicy")
     ) == [
+        ("policy", "RESOURCE_POLICY"),
+        ("policyDocument", "RESOURCE_POLICY"),
+    ]
+    assert list(guardrails_module.iam_policy_fields("aws:s3/bucket:Bucket")) == [
         ("policy", "RESOURCE_POLICY"),
         ("policyDocument", "RESOURCE_POLICY"),
     ]

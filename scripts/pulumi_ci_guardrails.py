@@ -260,6 +260,7 @@ def iam_policy_fields(resource_type: str) -> Iterable[tuple[str, str]]:
     if any(
         suffix in resource_type
         for suffix in (
+            "s3/bucket:Bucket",
             "s3/bucketPolicy:",
             "sns/topicPolicy:",
             "sqs/queuePolicy:",

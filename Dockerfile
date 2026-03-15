@@ -174,8 +174,20 @@ RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/ap
         make \
     && rm -rf /var/lib/apt/lists/*
 
-RUN groupadd --gid "${GID}" "${USERNAME}" \
-    && useradd --uid "${UID}" --gid "${GID}" --create-home "${USERNAME}"
+RUN set -eux; \
+    group_name="${USERNAME}"; \
+    if getent group "${GID}" >/dev/null; then \
+        group_name="$(getent group "${GID}" | cut -d: -f1)"; \
+    elif ! getent group "${USERNAME}" >/dev/null; then \
+        groupadd --gid "${GID}" "${USERNAME}"; \
+    fi; \
+    if ! id -u "${USERNAME}" >/dev/null 2>&1; then \
+        if getent passwd "${UID}" >/dev/null; then \
+            useradd --gid "${group_name}" --create-home "${USERNAME}"; \
+        else \
+            useradd --uid "${UID}" --gid "${group_name}" --create-home "${USERNAME}"; \
+        fi; \
+    fi
 
 COPY --from=tooling /opt/pulumi /opt/pulumi
 COPY --from=tooling /usr/local/aws-cli /usr/local/aws-cli

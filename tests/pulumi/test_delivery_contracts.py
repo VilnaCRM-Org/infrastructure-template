@@ -23,7 +23,11 @@ PULL_REQUEST_WORKFLOW_TIMEOUTS = {
     "pulumi-local.yml": {"local_battery": 30},
     "pulumi-mutation.yml": {"mutation": 45},
     "pulumi-policy.yml": {"policy": 15},
-    "pulumi-pr-guardrails.yml": {"preview": 20},
+    "pulumi-pr-guardrails.yml": {
+        "preview": 20,
+        "destructive_diff": 10,
+        "iam_validation": 15,
+    },
     "pulumi-structural.yml": {"structural": 15},
     "pulumi-unit.yml": {"unit": 15},
     "python-quality.yml": {
@@ -149,6 +153,13 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     assert "PYTHONDONTWRITEBYTECODE=1" in dockerfile_text
     assert "PYTHONUNBUFFERED=1" in dockerfile_text
     assert "uv venv --seed" in dockerfile_text
+    assert 'getent group "${GID}"' in dockerfile_text
+    assert 'getent passwd "${UID}"' in dockerfile_text
+    assert 'useradd --gid "${group_name}" --create-home "${USERNAME}"' in dockerfile_text
+    assert (
+        'useradd --uid "${UID}" --gid "${group_name}" --create-home "${USERNAME}"'
+        in dockerfile_text
+    )
     assert UV_LOCKFILE.exists()
     assert dockerfile_text.count('case "${TARGETARCH}" in') >= 3
     assert "/opt/pulumi/pulumi-language-dotnet" in dockerfile_text
