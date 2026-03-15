@@ -50,6 +50,10 @@ GitHub Actions now includes a dedicated `python-quality.yml` workflow that runs:
 
 - `make test-ruff`
 - `make test-ty`
+- `make test-maintainability`
+- `make test-architecture`
+- `make test-dependency-hygiene`
+- `make test-coverage`
 
 The aggregate `pulumi-local.yml` workflow also covers the quality gates by
 running `make ci-pr`, which includes the non-mutation structural, quality, unit,

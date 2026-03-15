@@ -1,0 +1,5 @@
+config:
+  aws:region: eu-central-1
+  infrastructure-template:amiId: ami-xxxxxxxxxxxxxxxxx
+  infrastructure-template:instanceType: t3.micro
+  infrastructure-template:nameTag: ExampleAppServerInstance

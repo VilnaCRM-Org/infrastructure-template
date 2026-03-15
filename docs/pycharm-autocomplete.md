@@ -47,32 +47,28 @@ start the container again (`docker compose up -d`) and PyCharm will reconnect.
 ## 3. Optional: local virtual environment fallback
 
 If you cannot use Docker on your machine, you can still create a local virtual
-environment mirroring the container dependencies. Choose where you want it to
-live:
-
-- `pulumi/.venv` keeps the interpreter alongside prospective Pulumi code.
-- `.venv` at the repository root works equally well.
-
-Run the commands below from the repository root (replace `pulumi/.venv` with
-`.venv` if you pick the root location).
+environment mirroring the container dependencies. Keep it outside the checkout
+so bind mounts and file watches never hide or replace the interpreter that
+Pulumi Automation uses.
 
 ```bash
-uv venv --seed pulumi/.venv
+export UV_PROJECT_ENVIRONMENT="${HOME}/.venvs/infrastructure-template"
+uv venv --seed "${UV_PROJECT_ENVIRONMENT}"
 
 # macOS/Linux
-UV_PROJECT_ENVIRONMENT=pulumi/.venv uv sync --all-groups
+uv sync --all-groups
 
 # Windows PowerShell
-$env:UV_PROJECT_ENVIRONMENT="pulumi/.venv"; uv sync --all-groups
+$env:UV_PROJECT_ENVIRONMENT="$HOME/.venvs/infrastructure-template"; uv venv --seed $env:UV_PROJECT_ENVIRONMENT; uv sync --all-groups
 
 # Windows cmd.exe
-set UV_PROJECT_ENVIRONMENT=pulumi/.venv && uv sync --all-groups
+set UV_PROJECT_ENVIRONMENT=%USERPROFILE%\\.venvs\\infrastructure-template && uv venv --seed %UV_PROJECT_ENVIRONMENT% && uv sync --all-groups
 ```
 
-When adding the interpreter in PyCharm, select the relevant path:
+When adding the interpreter in PyCharm, select the explicit environment path:
 
-- macOS/Linux: `pulumi/.venv/bin/python` or `.venv/bin/python`
-- Windows (PowerShell/cmd): `pulumi\.venv\Scripts\python.exe` or `.venv\Scripts\python.exe`
+- macOS/Linux: `${HOME}/.venvs/infrastructure-template/bin/python`
+- Windows (PowerShell/cmd): `%USERPROFILE%\\.venvs\\infrastructure-template\\Scripts\\python.exe`
 
 ## 4. Verify autocomplete
 
