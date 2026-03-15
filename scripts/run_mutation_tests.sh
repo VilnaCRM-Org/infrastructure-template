@@ -20,6 +20,11 @@ MUTATION_PATHS="${MUTATION_PATHS:-pulumi/app}"
 MUTATION_TEST_TARGETS="${MUTATION_TEST_TARGETS:-${DEFAULT_MUTATION_TEST_TARGETS}}"
 MUTATION_TESTS_DIR="${MUTATION_TESTS_DIR:-tests/unit}"
 MUTATION_RUNNER="${MUTATION_RUNNER:-${UV_BIN} run pytest -q ${MUTATION_TEST_TARGETS}}"
+MUTATION_COVERAGE_TARGETS="${MUTATION_COVERAGE_TARGETS:-${MUTATION_TEST_TARGETS}}"
+
+rm -f .coverage .coverage.*
+"${UV_BIN}" run pytest -q --cov=pulumi/app --cov-branch --cov-report= \
+  ${MUTATION_COVERAGE_TARGETS}
 
 "${UV_BIN}" run mutmut run \
   --paths-to-mutate "${MUTATION_PATHS}" \
