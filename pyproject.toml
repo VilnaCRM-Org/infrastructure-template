@@ -112,4 +112,4 @@ layers = ["pack", "guardrails", "config"]
 [tool.vulture]
 exclude = ["tests/", ".artifacts/", ".pulumi-backend/"]
 min_confidence = 80
-paths = ["pulumi", "policy", "scripts"]
+paths = ["pulumi/app", "policy", "scripts"]

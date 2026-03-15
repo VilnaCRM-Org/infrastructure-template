@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, cast
+from types import MappingProxyType
+from typing import Any, Mapping, cast
 
 import yaml
 
@@ -21,7 +22,7 @@ class PolicyConfig:
     production_environments: tuple[str, ...]
     public_s3_bucket_allowlist: frozenset[str]
     wildcard_iam_allowlist: frozenset[str]
-    annotations: dict[str, str]
+    annotations: Mapping[str, str]
 
 
 def load_policy_config(path: Path | None = None) -> PolicyConfig:
@@ -53,9 +54,11 @@ def load_policy_config(path: Path | None = None) -> PolicyConfig:
                 "allowlists.wildcard_iam",
             )
         ),
-        annotations=_string_mapping(
-            document.get("annotations"),
-            label="annotations",
+        annotations=MappingProxyType(
+            _string_mapping(
+                document.get("annotations"),
+                label="annotations",
+            )
         ),
     )
 

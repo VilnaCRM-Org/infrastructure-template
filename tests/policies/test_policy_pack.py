@@ -8,7 +8,7 @@ import runpy
 import sys
 from pathlib import Path
 from types import SimpleNamespace
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from pulumi_policy import EnforcementLevel
@@ -160,6 +160,27 @@ def test_load_policy_config_defaults_optional_sections(
     assert config.annotations == {}
     assert config.public_s3_bucket_allowlist == frozenset()
     assert config.wildcard_iam_allowlist == frozenset()
+
+
+def test_load_policy_config_freezes_annotations_mapping(
+    policy_runtime: SimpleNamespace, tmp_path: Path
+) -> None:
+    """Keep annotations immutable once the config has been loaded."""
+    path = tmp_path / "guardrails.yaml"
+    path.write_text(
+        (
+            "required_tags:\n"
+            "  - Project\n"
+            "annotations:\n"
+            "  public_s3_tag: AllowPublicBucket\n"
+        ),
+        encoding="utf-8",
+    )
+
+    config = policy_runtime.load_policy_config(path)
+
+    with pytest.raises(TypeError):
+        cast(Any, config.annotations)["public_s3_tag"] = "Override"
 
 
 @pytest.mark.parametrize(
