@@ -487,6 +487,8 @@ assert_help_target() {
   run make -n report-dead-code
   [ "$status" -eq 0 ]
   [[ "$output" == *"uv run vulture --config pyproject.toml"* ]]
+  [[ "$output" == *'status=$?'* ]]
+  [[ "$output" == *'"$status" -ne 3'* ]]
   [[ "$output" == *"vulture.txt"* ]]
 }
 

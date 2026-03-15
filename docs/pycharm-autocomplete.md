@@ -58,7 +58,15 @@ Run the commands below from the repository root (replace `pulumi/.venv` with
 
 ```bash
 uv venv --seed pulumi/.venv
+
+# macOS/Linux
 UV_PROJECT_ENVIRONMENT=pulumi/.venv uv sync --all-groups
+
+# Windows PowerShell
+$env:UV_PROJECT_ENVIRONMENT="pulumi/.venv"; uv sync --all-groups
+
+# Windows cmd.exe
+set UV_PROJECT_ENVIRONMENT=pulumi/.venv && uv sync --all-groups
 ```
 
 When adding the interpreter in PyCharm, select the relevant path:

@@ -186,6 +186,22 @@ def test_extract_iam_validation_inputs_covers_identity_resource_and_inline_polic
         item["resource_type"] == "aws:s3/bucketPolicy:BucketPolicy" for item in items
     )
     assert any(item["resource_type"] == "aws:s3/bucket:Bucket" for item in items)
+    assert any(
+        item["field"] == "assumeRolePolicy"
+        and item["validate_policy_resource_type"]
+        == "AWS::IAM::AssumeRolePolicyDocument"
+        for item in items
+    )
+    assert any(
+        item["resource_type"] == "aws:s3/bucketPolicy:BucketPolicy"
+        and item["validate_policy_resource_type"] == "AWS::S3::Bucket"
+        for item in items
+    )
+    assert any(
+        item["resource_type"] == "aws:s3/bucket:Bucket"
+        and item["validate_policy_resource_type"] == "AWS::S3::Bucket"
+        for item in items
+    )
 
 
 def test_load_destructive_override_reads_github_event_payload(
@@ -258,11 +274,14 @@ def test_validate_iam_inputs_handles_success_and_failing_findings(
                 "field": "policy",
                 "policy_type": "IDENTITY_POLICY",
                 "policy_document": json.dumps({"Statement": []}),
+                "validate_policy_resource_type": "AWS::IAM::AssumeRolePolicyDocument",
             }
         ]
     )
 
     assert calls[0][:4] == ["aws", "accessanalyzer", "validate-policy", "--policy-type"]
+    assert "--validate-policy-resource-type" in calls[0]
+    assert "AWS::IAM::AssumeRolePolicyDocument" in calls[0]
     assert sorted(envs[0]) == ["HOME", "PATH"]
     assert "too broad" in failures[0]
 
@@ -339,6 +358,52 @@ def test_iam_policy_fields_maps_identity_and_resource_policy_types(
         ("policyDocument", "RESOURCE_POLICY"),
     ]
     assert list(guardrails_module.iam_policy_fields("aws:ec2/vpc:Vpc")) == []
+
+
+def test_validate_policy_resource_type_maps_specific_access_analyzer_modes(
+    guardrails_module,
+) -> None:
+    """Enable the strictest Access Analyzer checks for supported resource policies."""
+    assert (
+        guardrails_module._validate_policy_resource_type(
+            "aws:iam/role:Role",
+            "assumeRolePolicy",
+            "RESOURCE_POLICY",
+        )
+        == "AWS::IAM::AssumeRolePolicyDocument"
+    )
+    assert (
+        guardrails_module._validate_policy_resource_type(
+            "aws:s3/bucketPolicy:BucketPolicy",
+            "policy",
+            "RESOURCE_POLICY",
+        )
+        == "AWS::S3::Bucket"
+    )
+    assert (
+        guardrails_module._validate_policy_resource_type(
+            "aws:s3/bucket:Bucket",
+            "policy",
+            "RESOURCE_POLICY",
+        )
+        == "AWS::S3::Bucket"
+    )
+    assert (
+        guardrails_module._validate_policy_resource_type(
+            "aws:iam/policy:Policy",
+            "policy",
+            "IDENTITY_POLICY",
+        )
+        is None
+    )
+    assert (
+        guardrails_module._validate_policy_resource_type(
+            "aws:sns/topicPolicy:TopicPolicy",
+            "policy",
+            "RESOURCE_POLICY",
+        )
+        is None
+    )
 
 
 def test_write_iam_inputs_serializes_extracted_documents(

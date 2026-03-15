@@ -253,7 +253,11 @@ report-maintainability-trends: ## Build and publish Wily maintainability trend r
 report-dead-code: ## Run the advisory dead-code report for reusable Python modules.
 	mkdir -p $(QUALITY_ARTIFACT_DIR)
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc '\
-		uv run vulture --config pyproject.toml > $(QUALITY_ARTIFACT_DIR)/vulture.txt'
+		uv run vulture --config pyproject.toml > $(QUALITY_ARTIFACT_DIR)/vulture.txt; \
+		status=$$?; \
+		if [ "$$status" -ne 0 ] && [ "$$status" -ne 3 ]; then \
+			exit "$$status"; \
+		fi'
 
 report-docstrings: ## Run the advisory docstring coverage report for reusable modules.
 	mkdir -p $(QUALITY_ARTIFACT_DIR)

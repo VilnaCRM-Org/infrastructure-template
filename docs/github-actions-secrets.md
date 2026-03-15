@@ -12,8 +12,8 @@ Add these under **Settings → Secrets and variables → Actions → Variables �
 | Variable | Purpose | Notes |
 | --- | --- | --- |
 | `AWS_OIDC_ROLE_ARN` | IAM role assumed by preview, IAM validation, and drift jobs | Repository variable, not a secret |
-| `AWS_REGION` | Region used by `configure-aws-credentials` | Repository variable |
-| `PULUMI_BACKEND_URL` | Shared backend used by real previews and drift checks | Repository variable |
+| `AWS_REGION` | Region used by `configure-aws-credentials` | Required |
+| `PULUMI_BACKEND_URL` | Shared backend used by real previews and drift checks | Required |
 | `PULUMI_PREVIEW_STACKS` | Optional comma-separated stack list for PR previews | Repository variable; defaults to committed `Pulumi.<stack>.yaml` files |
 | `PULUMI_DRIFT_STACKS` | Optional comma-separated stack list for nightly drift checks | Repository variable; defaults to committed `Pulumi.<stack>.yaml` files |
 

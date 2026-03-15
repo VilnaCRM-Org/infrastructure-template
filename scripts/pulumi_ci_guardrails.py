@@ -104,15 +104,21 @@ def extract_iam_validation_inputs(
             document = parse_policy_document(state.get(field_name))
             if document is None:
                 continue
-            inputs.append(
-                {
-                    "urn": str(step.get("urn", "")),
-                    "resource_type": resource_type,
-                    "field": field_name,
-                    "policy_type": policy_type,
-                    "policy_document": json.dumps(document, sort_keys=True),
-                }
+            item = {
+                "urn": str(step.get("urn", "")),
+                "resource_type": resource_type,
+                "field": field_name,
+                "policy_type": policy_type,
+                "policy_document": json.dumps(document, sort_keys=True),
+            }
+            validate_policy_resource_type = _validate_policy_resource_type(
+                resource_type,
+                field_name,
+                policy_type,
             )
+            if validate_policy_resource_type is not None:
+                item["validate_policy_resource_type"] = validate_policy_resource_type
+            inputs.append(item)
 
         inline_policies = state.get("inlinePolicies")
         if isinstance(inline_policies, list):
@@ -176,7 +182,7 @@ def _aws_validation_env() -> dict[str, str]:
 
 def _access_analyzer_command(item: dict[str, str]) -> list[str]:
     """Build a fixed AWS CLI argv list for policy validation."""
-    return [
+    command = [
         "aws",
         "accessanalyzer",
         "validate-policy",
@@ -187,6 +193,15 @@ def _access_analyzer_command(item: dict[str, str]) -> list[str]:
         "--output",
         "json",
     ]
+    validate_policy_resource_type = item.get("validate_policy_resource_type")
+    if validate_policy_resource_type is not None:
+        command.extend(
+            [
+                "--validate-policy-resource-type",
+                validate_policy_resource_type,
+            ]
+        )
+    return command
 
 
 def _run_access_analyzer_validation(
@@ -270,6 +285,19 @@ def iam_policy_fields(resource_type: str) -> Iterable[tuple[str, str]]:
     ):
         yield ("policy", "RESOURCE_POLICY")
         yield ("policyDocument", "RESOURCE_POLICY")
+
+
+def _validate_policy_resource_type(
+    resource_type: str, field_name: str, policy_type: str
+) -> str | None:
+    """Map preview resource types to Access Analyzer resource validators."""
+    if policy_type != "RESOURCE_POLICY":
+        return None
+    if field_name == "assumeRolePolicy":
+        return "AWS::IAM::AssumeRolePolicyDocument"
+    if "s3/bucket:Bucket" in resource_type or "s3/bucketPolicy:" in resource_type:
+        return "AWS::S3::Bucket"
+    return None
 
 
 def parse_policy_document(value: object) -> dict[str, Any] | None:

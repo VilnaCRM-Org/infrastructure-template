@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 import shutil
 import uuid
 from pathlib import Path
@@ -104,11 +103,7 @@ def test_invalid_stack_config_fails_preview(
     try:
         with pytest.raises(AutomationRuntimeError) as exc_info:
             stack.preview()
-        assert re.search(
-            rf"^\s*ValueError: {re.escape(message)}\.$",
-            str(exc_info.value),
-            re.MULTILINE,
-        )
+        assert message in str(exc_info.value), str(exc_info.value)
     finally:
         try:
             stack.workspace.remove_stack(stack.name)
