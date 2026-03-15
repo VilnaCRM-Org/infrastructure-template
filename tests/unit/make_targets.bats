@@ -8,59 +8,76 @@ assert_compose_env_file() {
     || [[ "$output" == *"docker compose --env-file .env.empty "* ]]
 }
 
+plain_output() {
+  printf '%s' "$1" | sed -E $'s/\\x1B\\[[0-9;]*[mK]//g'
+}
+
+assert_help_target() {
+  local target="$1"
+  local plain
+  plain="$(plain_output "$output")"
+  printf '%s\n' "$plain" | grep -Eq "^[[:space:]]+${target}[[:space:]]+"
+}
+
 @test "make help lists every public target" {
   run make help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"all"* ]]
-  [[ "$output" == *"build"* ]]
-  [[ "$output" == *"ci"* ]]
-  [[ "$output" == *"ci-pr"* ]]
-  [[ "$output" == *"clean"* ]]
-  [[ "$output" == *"doctor"* ]]
-  [[ "$output" == *"down"* ]]
-  [[ "$output" == *"help"* ]]
-  [[ "$output" == *"nightly-quality"* ]]
-  [[ "$output" == *"pulumi-preview"* ]]
-  [[ "$output" == *"pulumi-up"* ]]
-  [[ "$output" == *"pulumi-refresh"* ]]
-  [[ "$output" == *"pulumi-destroy"* ]]
-  [[ "$output" == *"report-dead-code"* ]]
-  [[ "$output" == *"report-docstrings"* ]]
-  [[ "$output" == *"report-maintainability-trends"* ]]
-  [[ "$output" == *"report-quality"* ]]
-  [[ "$output" == *"report-sbom"* ]]
-  [[ "$output" == *"sh"* ]]
-  [[ "$output" == *"start"* ]]
-  [[ "$output" == *"test"* ]]
-  [[ "$output" == *"test-cli"* ]]
-  [[ "$output" == *"test-actionlint"* ]]
-  [[ "$output" == *"test-architecture"* ]]
-  [[ "$output" == *"test-bandit"* ]]
-  [[ "$output" == *"test-coverage"* ]]
-  [[ "$output" == *"test-crossguard"* ]]
-  [[ "$output" == *"test-dependency-hygiene"* ]]
-  [[ "$output" == *"test-deps-security"* ]]
-  [[ "$output" == *"test-dockerfile"* ]]
-  [[ "$output" == *"test-destructive-diff"* ]]
-  [[ "$output" == *"test-drift"* ]]
-  [[ "$output" == *"test-guardrails"* ]]
-  [[ "$output" == *"test-iam-validation"* ]]
-  [[ "$output" == *"test-integration"* ]]
-  [[ "$output" == *"test-lockfile"* ]]
-  [[ "$output" == *"test-maintainability"* ]]
-  [[ "$output" == *"test-mutation"* ]]
-  [[ "$output" == *"test-policy"* ]]
-  [[ "$output" == *"test-pulumi"* ]]
-  [[ "$output" == *"test-quality"* ]]
-  [[ "$output" == *"test-preview"* ]]
-  [[ "$output" == *"test-repo-hygiene"* ]]
-  [[ "$output" == *"test-ruff"* ]]
-  [[ "$output" == *"test-shell"* ]]
-  [[ "$output" == *"test-security"* ]]
-  [[ "$output" == *"test-secrets"* ]]
-  [[ "$output" == *"test-ty"* ]]
-  [[ "$output" == *"test-unit"* ]]
-  [[ "$output" == *"test-yaml"* ]]
+  local expected_targets=(
+    all
+    build
+    ci
+    ci-pr
+    clean
+    doctor
+    down
+    help
+    nightly-quality
+    pulumi-preview
+    pulumi-up
+    pulumi-refresh
+    pulumi-destroy
+    report-dead-code
+    report-docstrings
+    report-maintainability-trends
+    report-quality
+    report-sbom
+    sh
+    start
+    test
+    test-cli
+    test-actionlint
+    test-architecture
+    test-bandit
+    test-coverage
+    test-crossguard
+    test-dependency-hygiene
+    test-deps-security
+    test-dockerfile
+    test-destructive-diff
+    test-drift
+    test-guardrails
+    test-iam-validation
+    test-integration
+    test-lockfile
+    test-maintainability
+    test-mutation
+    test-policy
+    test-pulumi
+    test-quality
+    test-preview
+    test-repo-hygiene
+    test-ruff
+    test-shell
+    test-security
+    test-secrets
+    test-ty
+    test-unit
+    test-yaml
+  )
+
+  for target in "${expected_targets[@]}"; do
+    assert_help_target "$target"
+  done
 }
 
 @test "make all delegates to the help output" {

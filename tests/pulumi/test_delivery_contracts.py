@@ -86,7 +86,11 @@ def _run_lines(steps: list[dict]) -> list[str]:
         run = step.get("run")
         if not run:
             continue
-        lines.extend(line.strip() for line in run.splitlines() if line.strip())
+        lines.extend(
+            line.strip()
+            for line in run.splitlines()
+            if line.strip() and not line.lstrip().startswith("#")
+        )
     return lines
 
 
@@ -462,15 +466,13 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
         workflow = yaml.safe_load(
             (WORKFLOWS_DIR / workflow_name).read_text(encoding="utf-8")
         )
-        runs = [
-            step.get("run")
-            for job in workflow["jobs"].values()
-            for step in job.get("steps", [])
-            if step.get("run")
+        steps = [
+            step for job in workflow["jobs"].values() for step in job.get("steps", [])
         ]
+        run_lines = _run_lines(steps)
 
         for command in commands:
-            assert any(command in run for run in runs), (
+            assert any(command in line for line in run_lines), (
                 f"{workflow_name} is missing `{command}`"
             )
 
