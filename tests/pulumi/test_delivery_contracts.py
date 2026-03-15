@@ -338,6 +338,9 @@ def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
 def test_new_helper_scripts_keep_local_ci_behaviour_explicit() -> None:
     """Keep extracted helper scripts discoverable and safe to execute locally."""
     doctor_script = (PROJECT_ROOT / "scripts" / "doctor.sh").read_text(encoding="utf-8")
+    preview_summary_script = (
+        PROJECT_ROOT / "scripts" / "publish_pulumi_preview_summary.sh"
+    ).read_text(encoding="utf-8")
     wily_script = (
         PROJECT_ROOT / "scripts" / "report_maintainability_trends.sh"
     ).read_text(encoding="utf-8")
@@ -356,6 +359,9 @@ def test_new_helper_scripts_keep_local_ci_behaviour_explicit() -> None:
     assert 'cd "${ROOT_DIR}"' in wily_script
     assert "git rev-parse --verify HEAD" in wily_script
     assert "Wily maintainability report skipped" in wily_script
+    assert "PULUMI_REQUIRE_SHARED_BACKEND" in preview_summary_script
+    assert "make test-preview" in preview_summary_script
+    assert "GITHUB_STEP_SUMMARY" in preview_summary_script
 
 
 def test_coverage_bearing_make_targets_enforce_full_line_coverage() -> None:
@@ -511,7 +517,7 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
         "pulumi-mutation.yml": ["make test-mutation"],
         "pulumi-policy.yml": ["make test-policy"],
         "pulumi-pr-guardrails.yml": [
-            "make test-preview",
+            "./scripts/publish_pulumi_preview_summary.sh",
             "make test-destructive-diff",
             "make test-iam-validation",
         ],

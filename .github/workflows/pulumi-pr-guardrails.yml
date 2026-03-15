@@ -40,14 +40,7 @@ jobs:
         run: ./scripts/prepare_docker_context.sh
 
       - name: Run preview guardrail
-        run: |
-          export PULUMI_BACKEND_URL="${PULUMI_BACKEND_URL:-file:///workspace/.pulumi-backend}"
-          make test-preview
-          if [[ -f .artifacts/pulumi-preview/summary.md ]]; then
-            cat .artifacts/pulumi-preview/summary.md >> "${GITHUB_STEP_SUMMARY}"
-          else
-            printf "Pulumi preview completed without a rendered summary artifact.\n" >> "${GITHUB_STEP_SUMMARY}"
-          fi
+        run: ./scripts/publish_pulumi_preview_summary.sh
 
       - name: Upload preview artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -87,15 +80,17 @@ jobs:
       - name: Prepare Docker context
         run: ./scripts/prepare_docker_context.sh
 
-      - name: Run preview guardrail
+      - name: Require shared Pulumi backend
         run: |
-          export PULUMI_BACKEND_URL="${PULUMI_BACKEND_URL:-file:///workspace/.pulumi-backend}"
-          make test-preview
-          if [[ -f .artifacts/pulumi-preview/summary.md ]]; then
-            cat .artifacts/pulumi-preview/summary.md >> "${GITHUB_STEP_SUMMARY}"
-          else
-            printf "Pulumi preview completed without a rendered summary artifact.\n" >> "${GITHUB_STEP_SUMMARY}"
+          if [[ -z "${PULUMI_BACKEND_URL:-}" ]]; then
+            echo "error: set the PULUMI_BACKEND_URL repository variable for privileged previews." >&2
+            exit 1
           fi
+
+      - name: Run preview guardrail
+        env:
+          PULUMI_REQUIRE_SHARED_BACKEND: "true"
+        run: ./scripts/publish_pulumi_preview_summary.sh
 
       - name: Upload privileged preview artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02

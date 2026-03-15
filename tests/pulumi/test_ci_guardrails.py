@@ -11,6 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR = PROJECT_ROOT / ".github" / "workflows"
 GUARDRAILS_DOC = PROJECT_ROOT / "docs" / "ci-guardrails.md"
 PREVIEW_SCRIPT = PROJECT_ROOT / "scripts" / "run_pulumi_preview.sh"
+PREVIEW_SUMMARY_SCRIPT = PROJECT_ROOT / "scripts" / "publish_pulumi_preview_summary.sh"
 DRIFT_SCRIPT = PROJECT_ROOT / "scripts" / "run_pulumi_drift_check.sh"
 GITLEAKS_CONFIG = PROJECT_ROOT / ".gitleaks.toml"
 ACTION_SHA_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
@@ -42,9 +43,6 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     destructive_diff_runs = [
         step.get("run") for step in jobs["destructive_diff"]["steps"] if step.get("run")
     ]
-    preview_runs = [
-        step.get("run") for step in jobs["preview"]["steps"] if step.get("run")
-    ]
     preview_upload_step = next(
         (
             step
@@ -66,6 +64,30 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
             step
             for step in jobs["preview_privileged"]["steps"]
             if step.get("name") == "Configure AWS credentials via OIDC"
+        ),
+        None,
+    )
+    require_backend_step = next(
+        (
+            step
+            for step in jobs["preview_privileged"]["steps"]
+            if step.get("name") == "Require shared Pulumi backend"
+        ),
+        None,
+    )
+    preview_run_step = next(
+        (
+            step
+            for step in jobs["preview"]["steps"]
+            if step.get("name") == "Run preview guardrail"
+        ),
+        None,
+    )
+    preview_privileged_run_step = next(
+        (
+            step
+            for step in jobs["preview_privileged"]["steps"]
+            if step.get("name") == "Run preview guardrail"
         ),
         None,
     )
@@ -117,10 +139,15 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     }
     assert jobs["iam_validation"]["if"] == same_repo_only
     assert destructive_diff_if == same_repo_or_skipped
-    assert jobs["destructive_diff"]["needs"] == ["preview", "preview_privileged"]
-    assert jobs["iam_validation"]["needs"] == ["preview", "preview_privileged"]
+    assert set(jobs["destructive_diff"]["needs"]) == {"preview", "preview_privileged"}
+    assert set(jobs["iam_validation"]["needs"]) == {"preview", "preview_privileged"}
     assert preview_privileged_oidc_step is not None, "preview OIDC step not found"
     assert iam_oidc_step is not None, "IAM validation OIDC step not found"
+    assert require_backend_step is not None, "shared backend check step not found"
+    assert preview_run_step is not None, "preview run step not found"
+    assert preview_privileged_run_step is not None, (
+        "privileged preview run step not found"
+    )
     assert preview_upload_step is not None, "preview artifact upload step not found"
     assert preview_upload_step["with"]["name"] == "pulumi-preview-unprivileged"
     assert preview_privileged_upload_step is not None, (
@@ -133,11 +160,15 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         in preview_privileged_oidc_step["if"]
     )
     assert preview_privileged_oidc_step["if"] == iam_oidc_step["if"]
-    assert any("make test-preview" in run for run in preview_runs)
-    assert any("GITHUB_STEP_SUMMARY" in run for run in preview_runs)
-    assert any(
-        "[[ -f .artifacts/pulumi-preview/summary.md ]]" in run for run in preview_runs
+    assert preview_run_step["run"] == "./scripts/publish_pulumi_preview_summary.sh"
+    assert preview_privileged_run_step["run"] == (
+        "./scripts/publish_pulumi_preview_summary.sh"
     )
+    assert preview_privileged_run_step["env"] == {
+        "PULUMI_REQUIRE_SHARED_BACKEND": "true"
+    }
+    assert '[[ -z "${PULUMI_BACKEND_URL:-}" ]]' in require_backend_step["run"]
+    assert "PULUMI_BACKEND_URL repository variable" in require_backend_step["run"]
     assert any(
         step.get("run") == "./scripts/prepare_docker_context.sh"
         for step in jobs["preview"]["steps"]
@@ -251,13 +282,18 @@ def test_nightly_guardrails_workflow_covers_drift_and_scorecard() -> None:
 def test_new_guardrail_scripts_and_configs_are_present() -> None:
     """Keep the repo-local building blocks for CI guardrails discoverable."""
     preview_text = PREVIEW_SCRIPT.read_text(encoding="utf-8")
+    preview_summary_text = PREVIEW_SUMMARY_SCRIPT.read_text(encoding="utf-8")
     drift_text = DRIFT_SCRIPT.read_text(encoding="utf-8")
     dockerfile_text = (PROJECT_ROOT / "Dockerfile").read_text(encoding="utf-8")
 
     assert GITLEAKS_CONFIG.exists()
+    assert PREVIEW_SUMMARY_SCRIPT.exists()
     assert "gh auth token" not in preview_text
     assert "pulumi --cwd" in preview_text
     assert 'login --non-interactive "${BACKEND_URL}"' in preview_text
+    assert "PULUMI_REQUIRE_SHARED_BACKEND" in preview_summary_text
+    assert "make test-preview" in preview_summary_text
+    assert "GITHUB_STEP_SUMMARY" in preview_summary_text
     assert "preview \\" in preview_text
     assert '--stack "${stack}"' in preview_text
     assert 'uv --project "${ROOT_DIR}" run python' in preview_text
