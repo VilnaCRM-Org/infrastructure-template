@@ -6,6 +6,11 @@ PULUMI_DIR="${PULUMI_DIR:-${ROOT_DIR}/pulumi}"
 POLICY_PACK_DIR="${POLICY_PACK_DIR:-${ROOT_DIR}/policy}"
 BACKEND_URL="${PULUMI_BACKEND_URL:-}"
 
+if [[ ! -d "${PULUMI_DIR}" ]]; then
+  echo "error: PULUMI_DIR '${PULUMI_DIR}' does not exist" >&2
+  exit 1
+fi
+
 # Shared backends may still use passphrase encryption; default to empty only when unset.
 export PULUMI_CONFIG_PASSPHRASE="${PULUMI_CONFIG_PASSPHRASE-}"
 

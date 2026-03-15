@@ -29,7 +29,7 @@ def _load_sitecustomize(
     assert spec.loader is not None
 
     module = importlib.util.module_from_spec(spec)
-    sys.modules[module_name] = module
+    monkeypatch.setitem(sys.modules, module_name, module)
     spec.loader.exec_module(module)
 
 

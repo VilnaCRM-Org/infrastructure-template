@@ -46,7 +46,10 @@ def _run_with_mocks(program: Callable[[], None]) -> None:
     finally:
         settings.reset_options(project=None, stack=None)
         loop.close()
-        asyncio.set_event_loop(previous_loop)
+        if previous_loop is not None and not previous_loop.is_closed():
+            asyncio.set_event_loop(previous_loop)
+        else:
+            asyncio.set_event_loop(None)
 
 
 def test_environment_settings_support_default_resolution_under_pulumi_mocks() -> None:

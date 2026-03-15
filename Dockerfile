@@ -4,7 +4,9 @@
 ARG BASE_IMAGE=python:3.11.9-slim-bookworm@sha256:8fb099199b9f2d70342674bd9dbccd3ed03a258f26bbd1d556822c6dfc60c317
 FROM ${BASE_IMAGE} AS tooling
 
-ARG TARGETARCH=amd64
+# TARGETARCH is supplied by BuildKit; do not default it or cross-platform builds
+# can silently fetch the wrong binaries for the host architecture.
+ARG TARGETARCH
 ARG USERNAME=dev
 ARG UID=1000
 ARG GID=1000

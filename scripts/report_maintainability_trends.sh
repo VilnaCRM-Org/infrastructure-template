@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="${ROOT_DIR:-$(pwd)}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR="${ROOT_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 ROOT_DIR="$(cd "${ROOT_DIR}" && pwd)"
 QUALITY_ARTIFACT_DIR="${QUALITY_ARTIFACT_DIR:-${ROOT_DIR}/.artifacts/quality}"
 WILY_TARGETS="${WILY_TARGETS:-pulumi policy scripts}"

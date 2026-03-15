@@ -8,6 +8,8 @@ import os
 import subprocess  # nosec B404
 import sys
 from collections.abc import Iterable, Sequence
+from concurrent.futures import ThreadPoolExecutor
+from functools import partial
 from pathlib import Path
 from typing import Any, cast
 
@@ -155,11 +157,11 @@ def validate_iam_inputs(inputs: Sequence[dict[str, str]]) -> list[str]:
     """Validate IAM policy documents with AWS IAM Access Analyzer."""
     failures: list[str] = []
     aws_env = _aws_validation_env()
+    load_response = partial(_load_validation_response, aws_env=aws_env)
 
-    for item in inputs:
-        result = _run_access_analyzer_validation(item, aws_env)
-        response = json.loads(result.stdout or "{}")
-        failures.extend(_validation_failures(item, response))
+    with ThreadPoolExecutor(max_workers=max(1, min(4, len(inputs)))) as executor:
+        for item, response in executor.map(load_response, inputs):
+            failures.extend(_validation_failures(item, response))
     return failures
 
 
@@ -214,6 +216,14 @@ def _run_access_analyzer_validation(
             f"({item['field']}): {_subprocess_failure_details(result)}"
         )
     return result
+
+
+def _load_validation_response(
+    item: dict[str, str], *, aws_env: dict[str, str]
+) -> tuple[dict[str, str], dict[str, Any]]:
+    """Run Access Analyzer for one item and decode the JSON response."""
+    result = _run_access_analyzer_validation(item, aws_env)
+    return item, json.loads(result.stdout or "{}")
 
 
 def _subprocess_failure_details(

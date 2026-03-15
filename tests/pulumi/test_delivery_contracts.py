@@ -23,6 +23,7 @@ PULL_REQUEST_WORKFLOW_TIMEOUTS = {
     "pulumi-local.yml": {"local_battery": 30},
     "pulumi-mutation.yml": {"mutation": 45},
     "pulumi-policy.yml": {"policy": 15},
+    "pulumi-pr-guardrails.yml": {"preview": 20},
     "pulumi-structural.yml": {"structural": 15},
     "pulumi-unit.yml": {"unit": 15},
     "python-quality.yml": {
@@ -130,7 +131,8 @@ def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
     assert "python:3.11.9-slim-bookworm@" in dockerfile_text
     assert "FROM ${BASE_IMAGE} AS tooling" in dockerfile_text
     assert "FROM ${BASE_IMAGE} AS runtime-base" in dockerfile_text
-    assert "TARGETARCH=amd64" in dockerfile_text
+    assert "ARG TARGETARCH" in dockerfile_text
+    assert "ARG TARGETARCH=amd64" not in dockerfile_text
     assert "PULUMI_SHA256_AMD64" in dockerfile_text
     assert "PULUMI_SHA256_ARM64" in dockerfile_text
     assert "AWSCLI_SHA256_AMD64" in dockerfile_text
@@ -301,6 +303,7 @@ def test_new_helper_scripts_keep_local_ci_behaviour_explicit() -> None:
     assert "effective env file:" in doctor_script
     assert '[[ ! -d "${PULUMI_DIR}" ]]' in doctor_script
     assert "pulumi directory missing:" in doctor_script
+    assert 'ROOT_DIR="${ROOT_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"' in wily_script
     assert 'ROOT_DIR="$(cd "${ROOT_DIR}" && pwd)"' in wily_script
     assert (
         'QUALITY_ARTIFACT_DIR="${QUALITY_ARTIFACT_DIR:-${ROOT_DIR}/.artifacts/quality}"'
@@ -441,6 +444,11 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
         "pulumi-local.yml": ["make ci-pr"],
         "pulumi-mutation.yml": ["make test-mutation"],
         "pulumi-policy.yml": ["make test-policy"],
+        "pulumi-pr-guardrails.yml": [
+            "make test-preview",
+            "make test-destructive-diff",
+            "make test-iam-validation",
+        ],
         "pulumi-structural.yml": ["make test-pulumi"],
         "pulumi-unit.yml": ["make test-unit"],
         "python-quality.yml": [

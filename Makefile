@@ -131,6 +131,9 @@ test-ruff: ## Run Ruff lint and format checks against Python sources.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff check pulumi policy scripts tests
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ruff format --check pulumi policy scripts tests
 
+# Ty still needs a few targeted ignores for Pulumi's dynamic resource APIs and
+# the coverage bootstrap shim: missing-argument, invalid-argument-type, and
+# conflicting-declarations are false positives there, not blanket suppressions.
 test-ty: ## Run the Ty static type checker against Python sources.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run ty check \
 		--extra-search-path policy \

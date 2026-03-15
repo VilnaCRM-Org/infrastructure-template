@@ -66,14 +66,24 @@ def test_security_scan_workflow_covers_repo_hygiene_and_dependency_review() -> N
     jobs = workflow["jobs"]
     dependency_review_steps = jobs["dependency_review"]["steps"]
     checkout_index = next(
-        index
-        for index, step in enumerate(dependency_review_steps)
-        if step.get("uses", "").startswith("actions/checkout@")
+        (
+            index
+            for index, step in enumerate(dependency_review_steps)
+            if step.get("uses", "").startswith("actions/checkout@")
+        ),
+        None,
     )
     dependency_review_index = next(
-        index
-        for index, step in enumerate(dependency_review_steps)
-        if step.get("uses", "").startswith("actions/dependency-review-action@")
+        (
+            index
+            for index, step in enumerate(dependency_review_steps)
+            if step.get("uses", "").startswith("actions/dependency-review-action@")
+        ),
+        None,
+    )
+    assert checkout_index is not None, "actions/checkout step not found"
+    assert dependency_review_index is not None, (
+        "actions/dependency-review-action step not found"
     )
 
     assert "bandit" in jobs

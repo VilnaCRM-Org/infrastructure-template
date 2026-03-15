@@ -455,7 +455,7 @@ def _is_open_to_world(props: Mapping[str, Any]) -> bool:
 def _matches_resource_type(resource_type: str, suffix: str) -> bool:
     """Allow equivalent package prefixes while keeping the module/type contract."""
     if suffix.startswith("pulumi:providers:"):
-        return resource_type.startswith(suffix)
+        return resource_type == suffix or resource_type.startswith(f"{suffix}:")
     return resource_type.endswith(suffix)
 
 
@@ -467,8 +467,8 @@ def _matches_any_resource_type(resource_type: str, suffixes: Sequence[str]) -> b
 def _contains_open_cidr(value: Any) -> bool:
     """Handle both provider scalar and list representations for CIDR blocks."""
     if isinstance(value, Sequence) and not isinstance(value, (str, bytes)):
-        return any(cidr in OPEN_CIDRS for cidr in value)
-    return value in OPEN_CIDRS
+        return any(_is_open_cidr(cidr) for cidr in value)
+    return isinstance(value, str) and _is_open_cidr(value)
 
 
 def _is_positive_condition_operator(operator: str) -> bool:

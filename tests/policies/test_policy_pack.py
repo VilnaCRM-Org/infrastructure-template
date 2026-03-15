@@ -534,6 +534,14 @@ def test_invalid_region_checks_only_explicit_aws_regions(
         )
         is None
     )
+    assert (
+        policy_runtime.invalid_region(
+            "pulumi:providers:awsx",
+            {"region": "us-east-1"},
+            config,
+        )
+        is None
+    )
 
 
 def test_storage_encryption_and_logging_violations_cover_supported_resources(
@@ -800,7 +808,7 @@ def test_open_admin_ports_covers_supported_security_group_shapes(
             "protocol": "tcp",
             "fromPort": 22,
             "toPort": 22,
-            "cidrBlocks": ["0.0.0.0/0"],
+            "cidrBlocks": ["0.0.0.0/00"],
         },
     ) == [22]
     assert policy_runtime.open_admin_ports(

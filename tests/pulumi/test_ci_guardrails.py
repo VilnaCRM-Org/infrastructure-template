@@ -33,11 +33,35 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     destructive_diff_runs = [
         step.get("run") for step in jobs["destructive_diff"]["steps"] if step.get("run")
     ]
+    preview_oidc_step = next(
+        (
+            step
+            for step in jobs["preview"]["steps"]
+            if step.get("name") == "Configure AWS credentials via OIDC"
+        ),
+        None,
+    )
+    iam_oidc_step = next(
+        (
+            step
+            for step in jobs["iam_validation"]["steps"]
+            if step.get("name") == "Configure AWS credentials via OIDC"
+        ),
+        None,
+    )
 
     assert workflow["concurrency"]["cancel-in-progress"] is True
     assert jobs["preview"]["permissions"] == {"contents": "read", "id-token": "write"}
     assert jobs["destructive_diff"]["needs"] == "preview"
     assert jobs["iam_validation"]["needs"] == "preview"
+    assert preview_oidc_step is not None, "preview OIDC step not found"
+    assert iam_oidc_step is not None, "IAM validation OIDC step not found"
+    assert "github.event_name != 'pull_request'" in preview_oidc_step["if"]
+    assert (
+        "github.event.pull_request.head.repo.full_name == github.repository"
+        in preview_oidc_step["if"]
+    )
+    assert preview_oidc_step["if"] == iam_oidc_step["if"]
 
     preview_runs = [
         step.get("run") for step in jobs["preview"]["steps"] if step.get("run")
@@ -155,7 +179,9 @@ def test_new_guardrail_scripts_and_configs_are_present() -> None:
     assert '--stack "${stack}"' in preview_text
     assert 'uv --project "${ROOT_DIR}" run python' in preview_text
     assert "unable to select existing stack" in drift_text
+    assert "PULUMI_DIR '${PULUMI_DIR}' does not exist" in drift_text
     assert "expect-no-changes" in drift_text
+    assert "ARG TARGETARCH=amd64" not in dockerfile_text
     assert "actionlint" in dockerfile_text
     assert "gitleaks" in dockerfile_text
 

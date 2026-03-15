@@ -124,8 +124,9 @@ def _preview_with_policy_pack(work_dir: Path) -> subprocess.CompletedProcess[str
 def test_policy_pack_allows_private_bucket_acl(tmp_path: Path) -> None:
     """Keep the happy path green for compliant resource definitions."""
     result = _preview_with_policy_pack(_write_program(tmp_path, acl="private"))
+    combined_output = f"{result.stdout}\n{result.stderr}"
 
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, combined_output
 
 
 def test_policy_pack_blocks_public_bucket_acl(tmp_path: Path) -> None:
