@@ -1,6 +1,7 @@
 """Unit tests for Pulumi input guardrails."""
 
 import re
+from collections.abc import Callable
 
 import pytest
 from app.guardrails import validate_environment_name, validate_service_name
@@ -34,7 +35,7 @@ def test_validate_service_name_accepts_stable_slug() -> None:
     ],
 )
 def test_identifier_guardrails_reject_invalid_values(
-    validator, value: object, message: str
+    validator: Callable[[object], str], value: object, message: str
 ) -> None:
     """Reject empty, padded, and malformed identifiers."""
     with pytest.raises(ValueError, match=rf"^{re.escape(message)}\.$"):

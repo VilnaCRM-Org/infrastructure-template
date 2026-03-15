@@ -15,3 +15,4 @@ else
 fi
 
 mkdir -p .pulumi-backend
+chmod 700 .pulumi-backend

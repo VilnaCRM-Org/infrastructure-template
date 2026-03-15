@@ -3,7 +3,8 @@ set -euo pipefail
 
 ROOT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 POLICY_DIR="${ROOT_DIR}/policy"
-POLICY_VENV="${POLICY_VENV:-/home/dev/.venvs/infrastructure-template}"
+POLICY_VENV="${POLICY_VENV:-${HOME}/.venvs/infrastructure-template}"
+POLICY_VENV_LINK="${POLICY_DIR}/.venv"
 POLICY_PYTHON="${POLICY_VENV}/bin/python"
 REQUIREMENTS_FILE="${POLICY_DIR}/requirements.txt"
 
@@ -17,6 +18,14 @@ if [ ! -x "${POLICY_PYTHON}" ]; then
     echo "hint: rebuild the development image so the shared uv environment exists" >&2
     exit 1
 fi
+
+if [ -e "${POLICY_VENV_LINK}" ] && [ ! -L "${POLICY_VENV_LINK}" ]; then
+    echo "error: ${POLICY_VENV_LINK} must be a symlink to the shared uv environment" >&2
+    echo "hint: remove the existing path and rerun ./scripts/prepare_policy_pack.sh" >&2
+    exit 1
+fi
+
+ln -sfn "${POLICY_VENV}" "${POLICY_VENV_LINK}"
 
 if ! "${POLICY_PYTHON}" - <<'PY' >/dev/null 2>&1
 import pulumi

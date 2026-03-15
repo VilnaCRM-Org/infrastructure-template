@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 
+# 1-32 lowercase alphanumeric chars; hyphens are allowed only in the middle.
 _IDENTIFIER_PATTERN = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$")
 
 

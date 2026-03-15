@@ -116,7 +116,8 @@ Docker or Compose behavior.
 `make pulumi-preview` and `make pulumi-up` automatically enable the repository
 policy pack. If the shared `uv` environment inside the container is missing the
 policy runtime dependencies, the bootstrap helper resyncs it from `uv.lock`
-before Pulumi starts.
+before Pulumi starts and refreshes `policy/.venv` so Pulumi can start the
+policy runtime consistently in Docker, CI, and local shells.
 
 ## Security
 

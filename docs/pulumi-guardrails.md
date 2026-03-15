@@ -30,9 +30,11 @@ test:
 - `policy/guardrails.py` contains pure validation helpers
 - `policy/pack.py` defines the Pulumi policy validators and policy list
 - `policy/__main__.py` registers the `PolicyPack`
-- `policy/PulumiPolicy.yaml` defines the runtime contract for Pulumi
+- `policy/PulumiPolicy.yaml` points Pulumi at a repo-local `policy/.venv`
+  path so the policy runtime stays portable across CI, Docker, and local shells
 - `scripts/prepare_policy_pack.sh` keeps the shared `uv` environment ready for
-  Pulumi's Python policy runtime
+  Pulumi's Python policy runtime and refreshes `policy/.venv` as a symlink to
+  the shared interpreter
 
 ## Local validation
 
@@ -51,7 +53,8 @@ policy guardrails fail fast when tests drift.
 default. Before Pulumi starts, the repository checks that the shared
 container-managed `uv` environment contains both `pulumi` and
 `pulumi-policy`; if the branch changed Python dependencies, the helper resyncs
-the environment from `uv.lock`.
+the environment from `uv.lock` and repoints `policy/.venv` at that shared
+interpreter.
 
 For the full non-mutation PR battery:
 

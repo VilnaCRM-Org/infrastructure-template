@@ -25,10 +25,7 @@ def test_policy_pack_manifest_declares_python_runtime() -> None:
     lines = {line.strip() for line in content.splitlines() if line.strip()}
 
     assert manifest["runtime"]["name"] == "python"
-    assert (
-        manifest["runtime"]["options"]["virtualenv"]
-        == "/home/dev/.venvs/infrastructure-template"
-    )
+    assert manifest["runtime"]["options"]["virtualenv"] == ".venv"
     assert "guardrails" in manifest["description"]
-    assert "pulumi>=3.138,<4" in lines
+    assert "pulumi>=3.200.0,<4" in lines
     assert "pulumi-policy>=1.20.0,<2" in lines

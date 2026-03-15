@@ -14,9 +14,6 @@ ARG PULUMI_SHA256_ARM64=905106b80be34963361737b6c4d471b45d77461c3455b137cefd66b2
 ARG AWSCLI_VERSION=2.16.9
 ARG AWSCLI_SHA256_AMD64=8c09f0aa7743fb04a28ac7a6f3c2822d6ffcc58bcace2beaf55258ee0f67c4cb
 ARG AWSCLI_SHA256_ARM64=82636f7ec20c57beeed19a14f8684113e0edfb30e79f1a615809de2dfb482712
-ARG CA_CERTIFICATES_VERSION=20230311
-ARG UNZIP_VERSION=6.0-28
-ARG CURL_VERSION=7.88.1-10+deb12u14
 ARG UV_VERSION=0.9.21
 ARG UV_SHA256_AMD64=0a1ab27383c28ef1c041f85cbbc609d8e3752dfb4b238d2ad97b208a52232baf
 ARG UV_SHA256_ARM64=416984484783a357170c43f98e7d2d203f1fb595d6b3b95131513c53e50986ef
@@ -26,9 +23,9 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/99retries \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates="${CA_CERTIFICATES_VERSION}" \
-        curl="${CURL_VERSION}" \
-        unzip="${UNZIP_VERSION}" \
+        ca-certificates \
+        curl \
+        unzip \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Pulumi CLI once and expose it on the PATH for all users
@@ -94,8 +91,6 @@ FROM ${BASE_IMAGE} AS runtime-base
 ARG USERNAME=dev
 ARG UID=1000
 ARG GID=1000
-ARG CA_CERTIFICATES_VERSION=20230311
-ARG MAKE_VERSION=4.3-4.1
 ENV DEBIAN_FRONTEND=noninteractive
 ENV HOME=/home/${USERNAME}
 ENV PATH="/opt/pulumi:/home/${USERNAME}/.local/bin:/home/${USERNAME}/.pulumi/bin:${PATH}"
@@ -113,8 +108,8 @@ ENV PULUMI_PYTHON_CMD=${UV_PROJECT_ENVIRONMENT}/bin/python
 RUN printf 'Acquire::Retries "5";\nAcquire::http::Timeout "30";\n' > /etc/apt/apt.conf.d/99retries \
     && apt-get update \
     && apt-get install -y --no-install-recommends \
-        ca-certificates="${CA_CERTIFICATES_VERSION}" \
-        make="${MAKE_VERSION}" \
+        ca-certificates \
+        make \
     && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd --gid "${GID}" "${USERNAME}" \

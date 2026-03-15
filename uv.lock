@@ -206,7 +206,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "pulumi", specifier = ">=3.138,<4" },
+    { name = "pulumi", specifier = ">=3.200.0,<4" },
     { name = "pulumi-aws", specifier = ">=7.0,<8" },
     { name = "pyyaml", specifier = ">=6,<7" },
 ]

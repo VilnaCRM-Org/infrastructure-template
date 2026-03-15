@@ -62,12 +62,12 @@ pulumi-refresh    Sync the Pulumi stack with live cloud resources.
 pulumi-destroy    Tear down the stack (irreversible; use with caution).
 sh                Open a shell inside the Pulumi container.
 down              Stop the Docker Compose environment.
-test              Run the aggregate structural, quality, unit, integration, and CLI battery.
+test              Run the aggregate structural, policy, quality, unit, integration, and CLI battery.
 test-pulumi       Structural validation for manifests, workflows, and supply-chain guards.
 test-policy       Pulumi policy-pack tests and guardrail coverage.
 test-quality      Rust-based linting, formatting, and typing checks.
 test-ruff         Ruff lint and format drift checks.
-test-ty           Ty static typing diagnostics for the Pulumi layer.
+test-ty           Ty static typing diagnostics for the Pulumi and policy layers.
 test-unit         Pulumi component tests with mocks.
 test-integration  Pulumi Automation smoke tests with a local backend.
 test-mutation     Mutation analysis of the component layer.
@@ -159,8 +159,8 @@ Continuous integration runs automatically on every pull request. You can also va
 - Start with `make doctor` if you need a quick sanity check of Docker, Compose, and the effective env file.
 - Use the focused suites when you only need one slice: `make build`, `make test-pulumi`, `make test-policy`, `make test-quality`, `make test-unit`, `make test-integration`, `make test-mutation`, `make test-cli`.
 - Use `make test-policy` when you are changing guardrails or adding new AWS resource types that should be covered by the policy pack.
-- `make pulumi-preview` and `make pulumi-up` sync the shared `uv` environment if needed and then run Pulumi with the repository policy pack enabled.
-- Run `make test` to execute the faster structural, quality, unit, integration, and CLI checks together after a prerequisite sanity check.
+- `make pulumi-preview` and `make pulumi-up` sync the shared `uv` environment if needed, refresh `policy/.venv`, and then run Pulumi with the repository policy pack enabled.
+- Run `make test` to execute the faster structural, policy, quality, unit, integration, and CLI checks together after a prerequisite sanity check.
 - Execute `make ci-pr` to mirror the non-mutation GitHub pull-request battery, including the prerequisite check, image build, and policy suite.
 - Execute `make ci` to run the full local equivalent of all GitHub checks, including the prerequisite check, image build, and mutation suite.
 - `make pulumi-preview` to review planned resources before applying.

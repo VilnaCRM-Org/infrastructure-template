@@ -105,7 +105,9 @@ def _contains_open_cidr(value: Any) -> bool:
 
 def _ports_in_range(props: Mapping[str, Any]) -> set[int]:
     """Return tracked sensitive ports within the rule's from/to range."""
-    protocol = props.get("ipProtocol")
+    protocol = props.get("ipProtocol", props.get("protocol"))
+    if isinstance(protocol, str):
+        protocol = protocol.lower()
     if protocol in (-1, "-1", "all"):
         return set(SENSITIVE_PORTS)
 

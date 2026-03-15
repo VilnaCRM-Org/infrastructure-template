@@ -191,6 +191,7 @@ def test_prepare_docker_context_script_creates_expected_files(tmp_path: Path) ->
     )
     assert stat.S_IMODE((repo_dir / ".env").stat().st_mode) == 0o600
     assert (repo_dir / ".pulumi-backend").is_dir()
+    assert stat.S_IMODE((repo_dir / ".pulumi-backend").stat().st_mode) == 0o700
 
 
 def test_prepare_docker_context_script_preserves_existing_env_file(
@@ -242,7 +243,11 @@ def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
     script_text = PREPARE_POLICY_SCRIPT.read_text(encoding="utf-8")
 
     assert PREPARE_POLICY_SCRIPT.exists()
-    assert "/home/dev/.venvs/infrastructure-template" in script_text
+    assert 'POLICY_VENV="${POLICY_VENV:-${HOME}/.venvs/infrastructure-template}"' in (
+        script_text
+    )
+    assert 'POLICY_VENV_LINK="${POLICY_DIR}/.venv"' in script_text
+    assert 'ln -sfn "${POLICY_VENV}" "${POLICY_VENV_LINK}"' in script_text
     assert 'UV_PROJECT_ENVIRONMENT="${POLICY_VENV}"' in script_text
     assert "uv sync --frozen --all-groups" in script_text
     assert "import pulumi" in script_text

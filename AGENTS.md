@@ -14,7 +14,7 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 8. Use `make ci-pr` when you want the non-mutation GitHub PR battery, `make ci` for the full local superset including mutation, and `make test` for the faster non-mutation developer battery.
 9. Use `make doctor` before debugging local Docker or Compose issues.
 10. Reuse `./scripts/prepare_docker_context.sh` when changing Docker-backed CI jobs so setup remains consistent across workflows.
-11. Keep `./scripts/prepare_policy_pack.sh`, `policy/PulumiPolicy.yaml`, and the shared `uv` environment contract aligned when changing Pulumi policy-pack behavior.
+11. Keep `./scripts/prepare_policy_pack.sh`, `policy/PulumiPolicy.yaml`, `policy/.venv`, and the shared `uv` environment contract aligned when changing Pulumi policy-pack behavior.
 
 ## Secret handling
 

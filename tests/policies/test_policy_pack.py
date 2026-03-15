@@ -24,6 +24,8 @@ def policy_runtime(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
     for module_name in ("guardrails", "pack", "policy.guardrails", "policy.pack"):
         monkeypatch.delitem(sys.modules, module_name, raising=False)
 
+    injected_modules: set[str] = set()
+
     def load_module(module_name: str, path: Path):
         """Load a policy module from disk without leaving global imports behind."""
         spec = importlib.util.spec_from_file_location(module_name, path)
@@ -31,24 +33,34 @@ def policy_runtime(monkeypatch: pytest.MonkeyPatch) -> SimpleNamespace:
         assert spec.loader is not None
 
         module = importlib.util.module_from_spec(spec)
+        injected_modules.add(module_name)
         sys.modules[module_name] = module
-        spec.loader.exec_module(module)
+        try:
+            spec.loader.exec_module(module)
+        except Exception:
+            injected_modules.discard(module_name)
+            sys.modules.pop(module_name, None)
+            raise
         return module
 
     guardrails = load_module("guardrails", POLICY_DIR / "guardrails.py")
     pack = load_module("pack", POLICY_DIR / "pack.py")
 
-    yield SimpleNamespace(
-        extract_tags=guardrails.extract_tags,
-        has_public_s3_acl=guardrails.has_public_s3_acl,
-        missing_required_tags=guardrails.missing_required_tags,
-        open_admin_ports=guardrails.open_admin_ports,
-        POLICY_PACK_NAME=pack.POLICY_PACK_NAME,
-        block_open_admin_ports=pack.block_open_admin_ports,
-        block_public_s3_acls=pack.block_public_s3_acls,
-        build_policies=pack.build_policies,
-        require_default_tags=pack.require_default_tags,
-    )
+    try:
+        yield SimpleNamespace(
+            extract_tags=guardrails.extract_tags,
+            has_public_s3_acl=guardrails.has_public_s3_acl,
+            missing_required_tags=guardrails.missing_required_tags,
+            open_admin_ports=guardrails.open_admin_ports,
+            POLICY_PACK_NAME=pack.POLICY_PACK_NAME,
+            block_open_admin_ports=pack.block_open_admin_ports,
+            block_public_s3_acls=pack.block_public_s3_acls,
+            build_policies=pack.build_policies,
+            require_default_tags=pack.require_default_tags,
+        )
+    finally:
+        for module_name in injected_modules:
+            sys.modules.pop(module_name, None)
 
 
 def _policy_args(resource_type: str, props: dict[str, Any]) -> SimpleNamespace:
@@ -189,6 +201,14 @@ def test_open_admin_ports_detects_modern_ingress_rules_and_all_protocols(
         {
             "cidrIpv6": "::/0",
             "ipProtocol": "all",
+        },
+    ) == [22, 3389]
+    assert policy_runtime.open_admin_ports(
+        "aws:ec2/securityGroupRule:SecurityGroupRule",
+        {
+            "type": "ingress",
+            "cidrBlocks": ["0.0.0.0/0"],
+            "protocol": "-1",
         },
     ) == [22, 3389]
 

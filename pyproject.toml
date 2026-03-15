@@ -9,7 +9,7 @@ authors = [
     { name = "Mykyta Mozghovoi", email = "n.mozgowoi2017@gmail.com" },
 ]
 dependencies = [
-    "pulumi>=3.138,<4",
+    "pulumi>=3.200.0,<4",
     "pulumi-aws>=7.0,<8",
     "pyyaml>=6,<7",
 ]
