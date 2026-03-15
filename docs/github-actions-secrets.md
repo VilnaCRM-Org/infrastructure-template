@@ -24,7 +24,7 @@ Add these under **Settings → Secrets and variables → Actions → Secrets →
 | Secret | Purpose | Notes |
 | --- | --- | --- |
 | `PULUMI_ACCESS_TOKEN` | Authenticate against the Pulumi Service backend | Only required when the backend is Pulumi Cloud |
-| `PULUMI_CONFIG_PASSPHRASE` | Unlock passphrase-protected backends | Optional when the backend uses passphrase encryption |
+| `PULUMI_CONFIG_PASSPHRASE` | Unlock passphrase-protected backends | Required when the backend uses passphrase encryption; optional otherwise |
 
 ## OIDC role setup
 

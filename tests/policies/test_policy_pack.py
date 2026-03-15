@@ -7,7 +7,7 @@ import json
 import runpy
 import sys
 from pathlib import Path
-from types import SimpleNamespace
+from types import MappingProxyType, SimpleNamespace
 from typing import Any, cast
 
 import pytest
@@ -106,6 +106,8 @@ def _custom_config(policy_runtime: SimpleNamespace, **overrides: object) -> obje
         },
     }
     defaults.update(overrides)
+    annotations = cast(dict[str, str], defaults["annotations"])
+    defaults["annotations"] = MappingProxyType(dict(annotations))
     return policy_runtime.PolicyConfig(**defaults)
 
 
@@ -304,8 +306,12 @@ def test_public_s3_helpers_cover_acl_policy_and_allowlist_paths(
             }
         },
     )
-    assert not policy_runtime.has_public_s3_bucket_policy(
+    assert policy_runtime.has_public_s3_bucket_policy(
         "aws:s3/bucket:Bucket",
+        {"policy": public_policy},
+    )
+    assert not policy_runtime.has_public_s3_bucket_policy(
+        "aws:s3/object:Object",
         {"policy": public_policy},
     )
     assert not policy_runtime.has_public_s3_bucket_policy(

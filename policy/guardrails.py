@@ -9,7 +9,9 @@ from typing import Any, cast
 
 try:
     from policy.config import PolicyConfig, load_policy_config
-except ModuleNotFoundError:  # pragma: no cover - exercised by direct policy startup.
+except ModuleNotFoundError as exc:  # pragma: no cover - direct policy startup.
+    if exc.name not in {"policy", "policy.config"}:
+        raise
     from config import PolicyConfig, load_policy_config
 
 CONFIG = load_policy_config()
@@ -96,7 +98,9 @@ def has_public_s3_acl(resource_type: str, props: Mapping[str, Any]) -> bool:
 
 def has_public_s3_bucket_policy(resource_type: str, props: Mapping[str, Any]) -> bool:
     """Detect bucket policies that allow public access."""
-    if not _matches_resource_type(resource_type, S3_BUCKET_POLICY_TYPE_SUFFIX):
+    if not _matches_any_resource_type(
+        resource_type, (S3_BUCKET_POLICY_TYPE_SUFFIX, S3_BUCKET_TYPE_SUFFIX)
+    ):
         return False
 
     for statement in _policy_statements(props):
