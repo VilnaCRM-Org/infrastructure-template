@@ -1,6 +1,7 @@
 #!/usr/bin/env bats
 
-# Dry-run the Makefile surface so CLI regressions are caught without requiring live infrastructure.
+# Unit-level checks for the Makefile interface. These tests inspect commands with dry runs so we
+# do not require Docker or cloud credentials during CI.
 
 assert_compose_env_file() {
   [[ "$output" == *"docker compose --env-file .env "* ]] \
@@ -36,49 +37,49 @@ assert_compose_env_file() {
   [[ "$output" == *"Targets:"* ]]
 }
 
-@test "make start uses docker compose with the fallback env file" {
+@test "make start uses docker compose with .env" {
   run make -n start
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"up -d"* ]]
 }
 
-@test "make pulumi proxies arbitrary commands into the workspace container" {
+@test "make pulumi proxies arbitrary Pulumi commands inside the container" {
   run make -n pulumi ARGS="version"
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"pulumi --cwd pulumi version"* ]]
 }
 
-@test "make pulumi-preview runs preview inside the workspace container" {
+@test "make pulumi-preview executes preview inside container" {
   run make -n pulumi-preview
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"pulumi --cwd pulumi preview"* ]]
 }
 
-@test "make pulumi-up runs update inside the workspace container" {
+@test "make pulumi-up executes deployment inside container" {
   run make -n pulumi-up
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"pulumi --cwd pulumi up"* ]]
 }
 
-@test "make pulumi-refresh runs refresh inside the workspace container" {
+@test "make pulumi-refresh executes refresh inside container" {
   run make -n pulumi-refresh
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"pulumi --cwd pulumi refresh"* ]]
 }
 
-@test "make pulumi-destroy runs destroy inside the workspace container" {
+@test "make pulumi-destroy executes destroy inside container" {
   run make -n pulumi-destroy
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"pulumi --cwd pulumi destroy"* ]]
 }
 
-@test "make sh opens a throwaway shell in the workspace container" {
+@test "make sh opens a throwaway shell in the Pulumi container" {
   run make -n sh
   [ "$status" -eq 0 ]
   assert_compose_env_file
@@ -96,16 +97,17 @@ assert_compose_env_file() {
   run make -n test-unit
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"PYTEST_ADDOPTS="* ]]
   [[ "$output" == *"pytest -q tests/unit"* ]]
+  [[ "$output" == *"PYTEST_ADDOPTS="* ]]
 }
 
-@test "make test-integration executes the integration suite with coverage" {
+@test "make test-integration executes the integration suite and coverage merge" {
   run make -n test-integration
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"PYTEST_ADDOPTS="* ]]
   [[ "$output" == *"pytest -q tests/integration"* ]]
+  [[ "$output" == *"coverage combine"* ]]
+  [[ "$output" == *"coverage report --show-missing"* ]]
 }
 
 @test "make test-pulumi executes the structural suite" {
@@ -145,5 +147,5 @@ assert_compose_env_file() {
   [[ "$output" == *"docker compose down -v"* ]]
   [[ "$output" == *"find . -type d -name __pycache__"* ]]
   [[ "$output" == *"find . -type f -name \"*.pyc\""* ]]
-  [[ "$output" == *"rm -rf .pulumi-backend .venv htmlcov .pytest_cache"* ]]
+  [[ "$output" == *"rm -rf .venv dist build *.egg-info"* ]]
 }

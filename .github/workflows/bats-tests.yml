@@ -5,8 +5,7 @@ on:
     branches:
       - main
   pull_request:
-    branches:
-      - main
+    branches: ["main"]
 
 permissions:
   contents: read
@@ -27,6 +26,10 @@ jobs:
         run: |
           mkdir -p "${HOME}/.aws"
           cp -n .env.empty .env || touch .env
+          mkdir -p .pulumi-backend
 
       - name: Run CLI suite via Make
+        env:
+          PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
+          PULUMI_CONFIG_PASSPHRASE: ""
         run: make test-cli

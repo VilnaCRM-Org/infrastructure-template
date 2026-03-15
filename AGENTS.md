@@ -1,14 +1,14 @@
 # AGENTS
 
-This repository is a Pulumi infrastructure template for AWS. Agents should keep the scope tight, prefer testable changes, and avoid turning local validation into real cloud mutations unless the user explicitly asks for that.
+This repository is a Pulumi-based infrastructure template. Agents should keep changes minimal, preserve the local developer workflow, and avoid introducing hidden cloud dependencies into CI.
 
 ## Working rules
 
 1. Make the smallest change that satisfies the task.
-2. Prefer updating tests, docs, or examples before broad workflow refactors.
+2. Prefer updating tests, docs, and examples before widening release or deployment behavior.
 3. Run the narrowest useful validation for the files you touched.
 4. Use `pulumi -C pulumi ...` for direct Pulumi CLI commands.
-5. Keep CI credential-free by default. Structural, unit, integration-smoke, mutation, CLI, and aggregate local-battery checks should not require live AWS access.
+5. Keep the structural, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
 
 ## Secret handling
 
@@ -27,7 +27,7 @@ These rules are mandatory for AI coding agents in this repository.
 
 ## Pulumi workflow
 
-1. Default validation should use Pulumi mocks, dry runs, or local-only smoke tests.
+1. Structural, unit, integration, mutation, and CLI checks should stay local-backend-friendly.
 2. Preview before apply when working against a real stack.
 3. Prefer ephemeral validation stacks such as `pr-<number>` or `smoke` for manual checks.
 4. Destroy ephemeral validation stacks after the check completes.
@@ -37,5 +37,5 @@ These rules are mandatory for AI coding agents in this repository.
 1. Use `gh pr view <PR>` and `gh pr checks <PR>` for context.
 2. Pull review threads with `gh api graphql` and resolve every actionable thread.
 3. Keep refactors minimal and directly tied to review feedback.
-4. Update `docs/` whenever local workflows, CI expectations, or credential requirements change.
+4. Update `docs/` whenever the developer workflow, CI surface, or credential contract changes.
 5. Re-run the relevant checks before pushing.

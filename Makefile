@@ -20,9 +20,11 @@ DOCKER_COMPOSE    = docker compose
 COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
 COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
-POETRY            = poetry -C $(PULUMI_DIR)
-COVERAGE_OPTS            ?= --cov --cov-config=.coveragerc --cov-report=term-missing
+COVERAGE_OPTS            ?= --cov=./pulumi --cov-report=term-missing
 UNIT_COVERAGE_OPTS       ?= $(COVERAGE_OPTS) --cov-fail-under=100
+INTEGRATION_COVERAGE_ENV  = -e COVERAGE_FILE=/workspace/.coverage.integration \
+	-e COVERAGE_PROCESS_START=/workspace/.coveragerc \
+	-e COVERAGE_RCFILE=/workspace/.coveragerc
 
 # Misc
 .DEFAULT_GOAL     = help
@@ -62,16 +64,22 @@ down: ## Stop the Docker Compose environment.
 
 test-unit: ## Execute fast unit tests for the Pulumi application layer.
 	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(UNIT_COVERAGE_OPTS)" \
-		$(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/unit
+		$(COMPOSE_SERVICE) poetry run pytest -q tests/unit
 
-test-integration: ## Execute stack-level smoke tests with Pulumi mocks.
-	$(COMPOSE) run --rm -e PYTEST_ADDOPTS="$(COVERAGE_OPTS)" \
-		$(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/integration
+test-integration: ## Execute Pulumi automation-based integration tests.
+	$(COMPOSE) run --rm $(INTEGRATION_COVERAGE_ENV) \
+		$(COMPOSE_SERVICE) poetry run pytest -q tests/integration
+	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
+		-e COVERAGE_RCFILE=/workspace/.coveragerc \
+		$(COMPOSE_SERVICE) poetry run coverage combine
+	$(COMPOSE) run --rm -e COVERAGE_FILE=/workspace/.coverage.integration \
+		-e COVERAGE_RCFILE=/workspace/.coveragerc \
+		$(COMPOSE_SERVICE) poetry run coverage report --show-missing
 
-test-pulumi: ## Perform structural checks on Pulumi project configuration and CI contracts.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) $(POETRY) run pytest -q tests/pulumi
+test-pulumi: ## Perform structural checks on Pulumi project configuration.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) poetry run pytest -q tests/pulumi
 
-test-mutation: ## Run mutation testing suite against the Pulumi component layer.
+test-mutation: ## Run mutation testing suite against Pulumi components.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
 
 test-cli: ## Validate Makefile front-ends via Bats.
@@ -87,4 +95,4 @@ clean: ## Remove Docker Compose artifacts, Python caches, and build artifacts.
 	$(DOCKER_COMPOSE) down -v 2>/dev/null || true
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	rm -rf .pulumi-backend .venv htmlcov .pytest_cache 2>/dev/null || true
+	rm -rf .venv dist build *.egg-info 2>/dev/null || true

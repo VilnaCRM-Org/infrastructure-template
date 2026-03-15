@@ -1,5 +1,5 @@
-"""Pulumi application components."""
+"""Pulumi application components for the infrastructure template."""
 
-from app.server import ExampleServer
+from .environment import EnvironmentSettings
 
-__all__ = ["ExampleServer"]
+__all__ = ["EnvironmentSettings"]

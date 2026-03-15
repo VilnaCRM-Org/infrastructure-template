@@ -1,6 +1,6 @@
 # Testing and Validation
 
-This repository intentionally splits validation into narrow suites so failures point to the exact layer that regressed.
+This repository uses multiple test types so infrastructure-template changes are checked from configuration shape down to the developer CLI surface.
 
 ## Structural tests
 
@@ -13,9 +13,9 @@ make test-pulumi
 Coverage:
 
 - Every public Make target is exercised through dry-run or help-output assertions
-- `pulumi/Pulumi.yaml` and `pulumi/Pulumi.example.yaml`
-- GitHub Actions workflow contracts for preview, deploy, and linting
-- Dockerfile checksum and pinned-download safeguards
+- `pulumi/Pulumi.yaml`
+- Release workflow contracts
+- Dockerfile supply-chain safeguards
 
 ## Unit tests
 
@@ -27,13 +27,11 @@ make test-unit
 
 Coverage:
 
-- `pulumi/app/server.py`
-- Config fallback behavior for `amiId`, `instanceType`, and `nameTag`
-- Component type token and exported Pulumi outputs
+- `pulumi/app/environment.py`
+- Config fallback behavior for `environment` and `serviceName`
+- Component type token and exported outputs
 
-These tests use Pulumi mocks, so they do not require AWS credentials.
-
-## Integration smoke tests
+## Integration tests
 
 Run with:
 
@@ -44,10 +42,8 @@ make test-integration
 Coverage:
 
 - The real `pulumi/__main__.py` entrypoint
-- Composition between the stack entrypoint and the `ExampleServer` component
-- Output wiring for the EC2 instance metadata
-
-This suite still uses Pulumi runtime mocks to stay deterministic in CI.
+- Pulumi Automation lifecycle behavior with a local backend
+- Output wiring for environment metadata
 
 ## Mutation tests
 
@@ -59,10 +55,10 @@ make test-mutation
 
 Coverage:
 
-- Mutation analysis of `pulumi/app/server.py`
-- Regression resistance for both unit and integration-smoke assertions
+- Mutation analysis of `pulumi/app`
+- Regression resistance for unit and integration assertions
 
-Mutation testing is the slowest suite and is best left to CI unless you are working directly on the component behavior.
+Mutation testing is the slowest suite and is usually best left to CI unless you are changing component logic directly.
 
 ## CLI tests
 
@@ -77,7 +73,6 @@ Coverage:
 - `make help`
 - `make all`
 - `make start`
-- `make pulumi ARGS="version"`
 - `make pulumi-preview`
 - `make pulumi-up`
 - `make pulumi-refresh`
@@ -92,13 +87,9 @@ Coverage:
 - `make test`
 - `make clean`
 
-These tests validate command behavior with dry-run assertions, but `make test-cli`
-still runs inside the Docker test container and therefore requires Docker
-locally.
-
 ## Full local run
 
-Run the complete local validation battery with:
+Run the standard local validation battery with:
 
 ```bash
 make test

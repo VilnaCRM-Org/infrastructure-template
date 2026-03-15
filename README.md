@@ -2,34 +2,29 @@
 
 [![SWUbanner](https://raw.githubusercontent.com/vshymanskyy/StandWithUkraine/main/banner2-direct.svg)](https://supportukrainenow.org/)
 
-[![Pulumi Preview](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-preview.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-preview.yml)
-[![Pulumi Deploy](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-deploy.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-deploy.yml)
 [![Pulumi Unit Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-unit.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-unit.yml)
 [![Pulumi Integration Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-integration.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-integration.yml)
 [![Pulumi Structural Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-structural.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-structural.yml)
 [![Pulumi Mutation Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-mutation.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/pulumi-mutation.yml)
 [![CLI Tests](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/bats-tests.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/bats-tests.yml)
-[![Super Linter](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/super-linter.yml/badge.svg)](https://github.com/VilnaCRM-Org/infrastructure-template/actions/workflows/super-linter.yml)
 
-Pulumi-first starter repository for teams that want a reproducible AWS infrastructure baseline, a containerized developer workspace, and CI validation before deployments hit a real stack.
+Production-ready scaffold for teams that want to ship infrastructure-as-code with Pulumi and Docker from day zero.
 
 ## Possibilities
 
-- Pulumi (Python) template that provisions an example EC2 instance through a reusable component and supports preview/deploy workflows.
-- Docker Compose workspace with Pulumi, Poetry, AWS CLI, and test tooling preinstalled.
-- Focused CI suites for structural, unit, integration, mutation, and CLI-level regression tests.
-- Pulumi preview and deploy workflows with GitHub OIDC support and static-key fallback.
-- Built-in linting via GitHub Super Linter for repository hygiene.
-- Version-controlled documentation under `docs/` instead of wiki-only instructions.
+- Pulumi (Python) starter that exports environment metadata and tagging helpers.
+- Reproducible Docker Compose workspace with a Pulumi-ready container and helper `make` tasks.
+- CI pipelines for structural, unit, integration, mutation, and CLI-level checks.
+- Release and template-sync automations to keep downstream repos aligned.
+- Documentation on AWS credential management for secure automation using GitHub OIDC or static secrets.
 
 ## Why You Might Need It
 
-Bootstrapping infrastructure repositories is repetitive and easy to get wrong. This template gives you:
+Spin up consistent project infrastructure without wiring every component manually. This template gives DevOps teams a single source that:
 
-- A minimal Pulumi stack that is easy to replace with your own resources.
-- Local and CI workflows that prove changes before merge.
-- Secure-by-default guidance for GitHub Actions, AWS credentials, release automation, and template synchronization.
-- A docs-as-code structure that keeps onboarding and operational guidance in-repo.
+- Encodes best practices from VilnaCRM’s production stack.
+- Works out-of-the-box with AWS and Pulumi.
+- Keeps infrastructure changes reviewable with local Pulumi previews and CI test suites before deploying.
 
 ## License
 
@@ -37,36 +32,58 @@ This software is distributed under the [Creative Commons Zero v1.0 Universal](ht
 
 ## Documentation
 
-All maintained project docs live under `docs/`:
+All project docs live under `docs/` to keep everything version controlled. Start with the handbook and jump directly to common topics:
 
-- [Documentation handbook](docs/README.md)
-- [Testing and validation matrix](docs/testing.md)
-- [GitHub Actions secrets](docs/github-actions-secrets.md)
-- [PyCharm autocomplete](docs/pycharm-autocomplete.md)
+- [Quick Start](docs/README.md#quick-start)
+- [Local Tooling](docs/README.md#local-tooling)
+- [Development Environment](docs/README.md#development)
+- [PyCharm Autocomplete](docs/pycharm-autocomplete.md)
+- [CI/CD and Secrets](docs/README.md#cicd-and-secrets)
+- [Testing and Validation](docs/README.md#testing-and-validation)
+- [Security](docs/README.md#security)
+- [Contributing](docs/README.md#contributing)
+- [Sponsorship](docs/README.md#sponsorship)
 
 Community Q&A lives under the [`vilnacrm` tag on Stack Overflow](https://stackoverflow.com/questions/tagged/vilnacrm). For questions or feature requests, open an issue.
 
 ## Local Pulumi test suites
 
-Docker Compose CLI 2.24.0+ is required because `docker-compose.yml` uses the `env_file.required` flag.
+Docker Compose CLI 2.24.0+ is required because `docker-compose.yml` uses the
+`env_file.required` flag (older Compose releases fail to parse it).
 
-The Makefile resolves the effective env file as the first existing file from `.env` and `.env.empty`.
+## Environment files
+
+The Makefile resolves the effective env file as the first existing file from
+`.env` and `.env.empty`.
 
 - `.env` is git-ignored and should hold local secrets or developer-specific overrides.
-- `.env.empty` is committed and acts as the safe fallback for fresh clones and CI jobs.
-- `.env.dist` is an optional example file that shows the expected variable names.
+- `.env.empty` is committed and acts as the minimal fallback so Docker Compose and `make` targets still run in a fresh clone.
+- `.env.dist` remains an optional example/template file you can copy from when you want a fuller starting point; unlike `.env.empty`, it is not the automatic fallback used by the Makefile.
 
-Use the `make` targets to validate the repository locally:
+For onboarding, create or update `.env` with any local overrides you need, keep
+`.env.empty` safe to commit, and refresh `.env.dist` only when the example
+values or documented setup flow changes.
+
+Install development dependencies via Poetry and then use the `make` targets to run the different Pulumi-focused suites:
 
 ```sh
+poetry install --with dev
+
+# Configuration validation
 make test-pulumi
+
+# Unit tests (pure Pulumi runtime with mocks)
 make test-unit
+
+# Automation-based integration tests
 make test-integration
+
+# Mutation analysis (time-consuming)
 make test-mutation
-make test-cli
-make test
 ```
+
+You can also execute `make test` to run the structural, unit, integration, and CLI checks as a batch.
 
 ## Security
 
-Please disclose vulnerabilities responsibly and report security issues to the maintainers privately. See [`SECURITY.md`](SECURITY.md) and the repository's [security advisories](https://github.com/VilnaCRM-Org/infrastructure-template/security).
+Please disclose any vulnerabilities found responsibly – report security issues to the maintainers privately.

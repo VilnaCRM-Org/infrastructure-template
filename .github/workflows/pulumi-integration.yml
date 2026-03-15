@@ -26,4 +26,9 @@ jobs:
           cp -n .env.empty .env || touch .env
 
       - name: Run integration suite inside Docker
-        run: make test-integration
+        env:
+          PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
+          PULUMI_CONFIG_PASSPHRASE: ""
+        run: |
+          mkdir -p .pulumi-backend
+          make test-integration

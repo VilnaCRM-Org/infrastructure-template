@@ -1,50 +1,45 @@
 # GitHub Actions Secrets
 
-The structural, unit, integration, mutation, and CLI workflows are local-only and do not require cloud credentials. Secrets are only needed for preview, deploy, release, or template-sync automation.
+The CI test workflows use a local Pulumi backend and do not require cloud credentials by default. Configure secrets only when you enable deployments, release automation, or template synchronization.
 
-## Pulumi and AWS secrets
+## Pulumi and AWS Secrets (for deploys)
 
-| Secret                  | Purpose                                         | Notes                                                                                                                                                        |
-| ----------------------- | ----------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `PULUMI_ACCESS_TOKEN`   | Authenticate against the Pulumi Service backend | Optional when using a local backend. Required for preview/deploy to perform real cloud operations; otherwise those jobs skip after the credential preflight. |
-| `AWS_ACCESS_KEY_ID`     | Static AWS credential for GitHub Actions        | Optional when you use GitHub OIDC instead.                                                                                                                   |
-| `AWS_SECRET_ACCESS_KEY` | Secret paired with the access key above         | Optional when you use GitHub OIDC instead.                                                                                                                   |
-| `AWS_SESSION_TOKEN`     | Session credential for temporary IAM sessions   | Optional; only needed when your static credential flow requires it.                                                                                          |
-| `AWS_REGION`            | Default AWS region for preview/deploy workflows | Optional; defaults to `eu-central-1`. Prefer a repository or organization variable when possible.                                                            |
-| `AWS_ROLE_TO_ASSUME`    | IAM role ARN for GitHub OIDC                    | Preferred over long-lived static keys. The workflows read it from either `vars.AWS_ROLE_TO_ASSUME` or `secrets.AWS_ROLE_TO_ASSUME`.                          |
+| Secret                  | Purpose                                 | Notes                                                                                                         |
+| ----------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `AWS_ACCESS_KEY_ID`     | Authenticate AWS API calls              | Optional if you use GitHub OIDC; pair with `AWS_SECRET_ACCESS_KEY`.                                           |
+| `AWS_SECRET_ACCESS_KEY` | Authenticate AWS API calls              | Store the matching secret key when using static IAM users.                                                    |
+| `PULUMI_ACCESS_TOKEN`   | Authenticate against the Pulumi Service | Required when using the Pulumi Service backend. Generate in the Pulumi UI under **Settings → Access Tokens**. |
 
-## Preferred setup: GitHub OIDC
+### Using GitHub OIDC Instead of Static Keys
 
-The preview and deploy workflows support GitHub OIDC already.
+If you prefer short-lived credentials:
 
-1. Create an IAM role that trusts `token.actions.githubusercontent.com`.
-2. Grant the role only the permissions required by the Pulumi stack.
-3. Store the role ARN as `AWS_ROLE_TO_ASSUME`.
-4. Optionally set `AWS_REGION` as a repository variable or secret.
+1. Create an IAM role that trusts your GitHub organization/repository via OpenID Connect.
+2. Grant the role permissions to manage the stack resources.
+3. Store the role ARN as `AWS_OIDC_ROLE_ARN` (or another name) and update the workflow to assume it.
 
-If `AWS_ROLE_TO_ASSUME` is not set, the workflows fall back to static IAM credentials. If neither OIDC nor static AWS credentials are configured, the preview/deploy jobs exit successfully after the preflight skip instead of failing the template repository.
+See [Configuring OpenID Connect in cloud providers](https://docs.github.com/en/actions/security-guides/security-hardening-your-deployments/configuring-openid-connect-in-cloud-providers) for detailed steps.
 
-## Release automation secrets
+## Release Automation Secrets
 
-| Secret                     | Purpose                                             | Notes                                            |
-| -------------------------- | --------------------------------------------------- | ------------------------------------------------ |
-| `VILNACRM_APP_ID`          | GitHub App ID used by the release workflow          | Required by `.github/workflows/autorelease.yml`. |
-| `VILNACRM_APP_PRIVATE_KEY` | GitHub App private key used by the release workflow | Store the PEM contents directly.                 |
+| Secret              | Purpose                          | Notes                                                                            |
+| ------------------- | -------------------------------- | -------------------------------------------------------------------------------- |
+| `REPO_GITHUB_TOKEN` | Publish changelog-based releases | Optional; if unset, workflows fall back to `GITHUB_TOKEN` with `contents:write`. |
 
-## Template sync secrets
+## Template Sync Secrets
 
-Choose one authentication strategy:
+Choose one authentication strategy for the template sync workflows:
 
-| Secret                     | Purpose                                  | Notes                                              |
-| -------------------------- | ---------------------------------------- | -------------------------------------------------- |
-| `PERSONAL_ACCESS_TOKEN`    | Authenticate template sync through a PAT | Used by `.github/workflows/template-sync-pat.yml`. |
-| `VILNACRM_APP_ID`          | GitHub App ID for template sync          | Used by `.github/workflows/template-sync-app.yml`. |
-| `VILNACRM_APP_PRIVATE_KEY` | GitHub App private key for template sync | Used by `.github/workflows/template-sync-app.yml`. |
+| Secret                     | Purpose                                   | Notes                                                                           |
+| -------------------------- | ----------------------------------------- | ------------------------------------------------------------------------------- |
+| `PERSONAL_ACCESS_TOKEN`    | Authenticate template sync (PAT workflow) | Required by `.github/workflows/template-sync-pat.yml`. Needs repo write access. |
+| `VILNACRM_APP_ID`          | GitHub App ID for template sync           | Required by `.github/workflows/template-sync-app.yml`.                          |
+| `VILNACRM_APP_PRIVATE_KEY` | GitHub App private key for template sync  | Required by `.github/workflows/template-sync-app.yml`. Store the PEM contents.  |
 
-## Setting secrets
+## Setting Secrets
 
-1. Open **Settings -> Secrets and variables -> Actions** in the repository.
-2. Add only the secrets required for the workflows you actually use.
-3. Prefer repository or organization variables for non-sensitive values such as `AWS_REGION`.
-4. Rotate IAM users, GitHub App keys, and PATs regularly.
-5. Audit workflow runs for unexpected credential use.
+1. Navigate to **Settings → Secrets and variables → Actions** in your GitHub repository.
+2. Click **New repository secret** for each value listed above.
+3. If several repositories share the same infrastructure credentials, consider using organization secrets instead.
+
+Rotate credentials regularly and audit workflow runs for unexpected usage.

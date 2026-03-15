@@ -1,7 +1,7 @@
-name: generate changelog and create release
+name: generate changelog and create pre release
 
 on:
-  push:
+  pull_request:
     branches: ["main"]
     paths-ignore:
       - "CHANGELOG.md"
@@ -10,7 +10,9 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
     env:
+      CHANGELOG_BRANCH: ${{ github.head_ref }}
       RELEASE_TOKEN: ${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}
 
     permissions:
@@ -20,16 +22,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.head_ref }}
           fetch-depth: 0
           persist-credentials: false
 
       - name: Conventional Changelog Action
         id: changelog
-        uses: TriPSs/conventional-changelog-action@8118086024a5380b05b0d54ed2181516082e090f
+        uses: TriPSs/conventional-changelog-action@b7f32a8347e86c26ea2f4823cc7c160b9014c6a0
         with:
           github-token: ${{ env.RELEASE_TOKEN }}
-          output-file: "CHANGELOG.md"
+          output-file: "false"
+          pre-release: "true"
+          git-branch: ${{ env.CHANGELOG_BRANCH }}
+          skip-commit: "true"
+          skip-tag: "true"
+          skip-on-empty: "true"
 
       - name: Check if release already exists
         id: release_check
@@ -73,9 +80,11 @@ jobs:
 
       - name: Create Release
         uses: softprops/action-gh-release@a06a81a03ee405af7f2048a818ed3f03bbf83c7b
-        if: ${{ steps.changelog.outputs.skipped == 'false' && steps.release_check.outputs.exists != 'true' && steps.changelog.outputs.tag != '' }}
+        if: ${{ steps.changelog.outputs.skipped == 'false' && steps.release_check.outputs.exists != 'true' }}
         with:
           tag_name: ${{ steps.changelog.outputs.tag }}
           body: ${{ steps.changelog.outputs.clean_changelog }}
           name: ${{ steps.changelog.outputs.tag }}
+          prerelease: true
+          target_commitish: ${{ github.head_ref }}
           token: ${{ env.RELEASE_TOKEN }}

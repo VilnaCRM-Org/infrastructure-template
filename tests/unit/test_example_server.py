@@ -73,7 +73,7 @@ def mocked_pulumi_context(
     optional_values = optional_values or {}
 
     with ExitStack() as exit_stack:
-        config_patch = exit_stack.enter_context(patch("app.server.pulumi.Config"))
+        config_patch = exit_stack.enter_context(patch("pulumi.Config"))
         config_instance = config_patch.return_value
         config_instance.require.side_effect = lambda key: required_values[key]
         config_instance.get.side_effect = lambda key, default=None: optional_values.get(
@@ -228,6 +228,36 @@ def test_main_exports_expected_outputs() -> None:
 
     with mocked_pulumi_context(
         required_values={"amiId": "ami-main"},
-        optional_values={"instanceType": "t3.nano", "nameTag": "MainProgramServer"},
+        optional_values={
+            "amiId": "ami-main",
+            "instanceType": "t3.nano",
+            "nameTag": "MainProgramServer",
+        },
+    ):
+        _run_pulumi_program(program)
+
+
+def test_main_prefers_optional_ami_id_config_when_available() -> None:
+    """Use the optional amiId config path before falling back to require()."""
+
+    def program() -> None:
+        sys.path.insert(0, str(PROJECT_ROOT / "pulumi"))
+        try:
+            module_globals = runpy.run_path(str(PULUMI_MAIN))
+        finally:
+            sys.path.pop(0)
+
+        server = module_globals["server"]
+        _assert_output_value(server.ami_id, "ami-optional")
+        _assert_output_value(server.instance_type, "t3.micro")
+        _assert_output_value(server.tags, {"Name": "OptionalAmiServer"})
+
+    with mocked_pulumi_context(
+        required_values={"amiId": "ami-required"},
+        optional_values={
+            "amiId": "ami-optional",
+            "instanceType": "t3.micro",
+            "nameTag": "OptionalAmiServer",
+        },
     ):
         _run_pulumi_program(program)

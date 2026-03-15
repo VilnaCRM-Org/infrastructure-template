@@ -18,6 +18,6 @@ if ! command -v "${POETRY_BIN}" >/dev/null 2>&1; then
   exit 127
 fi
 
-"${POETRY_BIN}" -C pulumi run mutmut run \
+"${POETRY_BIN}" run mutmut run \
   --paths-to-mutate pulumi/app \
-  --runner "${POETRY_BIN} -C pulumi run pytest -q tests/unit tests/integration"
+  --runner "${POETRY_BIN} run pytest -q tests/unit tests/integration"
