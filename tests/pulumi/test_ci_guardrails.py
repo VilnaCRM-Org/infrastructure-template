@@ -31,9 +31,10 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     """Keep the preview workflow aligned with the repo-local Make entrypoints."""
     workflow = _workflow("pulumi-pr-guardrails.yml")
     jobs = workflow["jobs"]
-    same_repo_only = (
-        "${{ github.event_name != 'pull_request' || "
-        "github.event.pull_request.head.repo.full_name == github.repository }}"
+    same_repo_with_cloud_config = (
+        "${{ (github.event_name != 'pull_request' || "
+        "github.event.pull_request.head.repo.full_name == github.repository) && "
+        "vars.AWS_OIDC_ROLE_ARN != '' && vars.PULUMI_BACKEND_URL != '' }}"
     )
     same_repo_or_skipped = (
         "${{ always() && needs.preview.result == 'success' && "
@@ -123,6 +124,8 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         ),
         None,
     )
+    preview_privileged_if = " ".join(jobs["preview_privileged"]["if"].split())
+    iam_validation_if = " ".join(jobs["iam_validation"]["if"].split())
     destructive_diff_if = " ".join(jobs["destructive_diff"]["if"].split())
 
     assert workflow["concurrency"]["cancel-in-progress"] is True
@@ -132,12 +135,12 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         jobs["preview"]["env"]["PULUMI_BACKEND_URL"]
         == "file:///workspace/.pulumi-backend"
     )
-    assert jobs["preview_privileged"]["if"] == same_repo_only
+    assert preview_privileged_if == same_repo_with_cloud_config
     assert jobs["preview_privileged"]["permissions"] == {
         "contents": "read",
         "id-token": "write",
     }
-    assert jobs["iam_validation"]["if"] == same_repo_only
+    assert iam_validation_if == same_repo_with_cloud_config
     assert destructive_diff_if == same_repo_or_skipped
     assert set(jobs["destructive_diff"]["needs"]) == {"preview", "preview_privileged"}
     assert set(jobs["iam_validation"]["needs"]) == {"preview", "preview_privileged"}
@@ -154,12 +157,8 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         "preview privileged artifact upload step not found"
     )
     assert preview_privileged_upload_step["with"]["name"] == "pulumi-preview-privileged"
-    assert "github.event_name != 'pull_request'" in preview_privileged_oidc_step["if"]
-    assert (
-        "github.event.pull_request.head.repo.full_name == github.repository"
-        in preview_privileged_oidc_step["if"]
-    )
-    assert preview_privileged_oidc_step["if"] == iam_oidc_step["if"]
+    assert "if" not in preview_privileged_oidc_step
+    assert "if" not in iam_oidc_step
     assert preview_run_step["run"] == "./scripts/publish_pulumi_preview_summary.sh"
     assert preview_privileged_run_step["run"] == (
         "./scripts/publish_pulumi_preview_summary.sh"
@@ -178,12 +177,13 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
         for step in jobs["preview_privileged"]["steps"]
     )
     assert privileged_download_step is not None
-    assert privileged_download_step["if"] == same_repo_only
+    assert privileged_download_step["if"] == (
+        "${{ needs.preview_privileged.result == 'success' }}"
+    )
     assert privileged_download_step["with"]["name"] == "pulumi-preview-privileged"
     assert unprivileged_download_step is not None
     assert unprivileged_download_step["if"] == (
-        "${{ github.event_name == 'pull_request' && "
-        "github.event.pull_request.head.repo.full_name != github.repository }}"
+        "${{ needs.preview_privileged.result != 'success' }}"
     )
     assert unprivileged_download_step["with"]["name"] == "pulumi-preview-unprivileged"
     assert iam_download_step is not None
