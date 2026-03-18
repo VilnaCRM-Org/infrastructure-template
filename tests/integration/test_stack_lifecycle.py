@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import shutil
 import uuid
 from pathlib import Path
@@ -34,12 +35,29 @@ def _copy_workdir(tmp_path: Path, *, name: str) -> Path:
     return work_dir
 
 
+def _workspace_options(work_dir: Path) -> auto.LocalWorkspaceOptions:
+    """Pass the prepared Pulumi environment through Automation API workspaces."""
+    env_vars = {
+        key: value
+        for key, value in os.environ.items()
+        if key.startswith("PULUMI_")
+        or key in {"COVERAGE_FILE", "COVERAGE_PROCESS_START"}
+    }
+    return auto.LocalWorkspaceOptions(
+        work_dir=str(work_dir),
+        pulumi_home=env_vars.get("PULUMI_HOME"),
+        env_vars=env_vars,
+    )
+
+
 def test_pulumi_stack_preview_and_up_cycle(tmp_path: Path) -> None:
     """Validate preview/up/destroy behavior for the baseline stack."""
     work_dir = _copy_workdir(tmp_path, name="pulumi-program")
 
     stack = auto.create_or_select_stack(
-        stack_name=_stack_name(), work_dir=str(work_dir)
+        stack_name=_stack_name(),
+        work_dir=str(work_dir),
+        opts=_workspace_options(work_dir),
     )
     stack.set_config("environment", auto.ConfigValue(value="integration"))
     stack.set_config("serviceName", auto.ConfigValue(value="integration-test"))
@@ -90,7 +108,9 @@ def test_invalid_stack_config_fails_preview(
     """Reject invalid environment metadata during a real Pulumi preview."""
     work_dir = _copy_workdir(tmp_path, name=f"invalid-{config_key}")
     stack = auto.create_or_select_stack(
-        stack_name=_stack_name(), work_dir=str(work_dir)
+        stack_name=_stack_name(),
+        work_dir=str(work_dir),
+        opts=_workspace_options(work_dir),
     )
     baseline = {
         "environment": "integration",

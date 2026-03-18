@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import shlex
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 from typing import TextIO
@@ -32,7 +32,7 @@ def run(
     stdout: TextIO | None = None,
 ) -> subprocess.CompletedProcess[str]:
     """Execute a subprocess with consistent text-mode defaults."""
-    return subprocess.run(
+    return subprocess.run(  # nosec B603
         command,
         cwd=str(cwd) if cwd is not None else None,
         env=env,
@@ -59,7 +59,7 @@ def ensure_empty_passphrase_for_file_backend(env: dict[str, str]) -> dict[str, s
     """Keep file backends non-interactive without touching shared backends."""
     backend_url = env.get("PULUMI_BACKEND_URL", "")
     if backend_url.startswith("file://") and "PULUMI_CONFIG_PASSPHRASE" not in env:
-        env["PULUMI_CONFIG_PASSPHRASE"] = ""
+        env["PULUMI_CONFIG_PASSPHRASE"] = ""  # nosec B105
     return env
 
 

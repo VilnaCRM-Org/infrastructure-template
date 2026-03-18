@@ -2,11 +2,10 @@
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
-from _script_support import repo_root
+from _script_support import repo_root, run
 
 
 def main() -> int:
@@ -25,7 +24,12 @@ def main() -> int:
     else:
         env.setdefault("PULUMI_BACKEND_URL", "file:///workspace/.pulumi-backend")
 
-    subprocess.run(["make", "test-preview"], check=True, cwd=root_dir, env=env)
+    run(
+        ["make", "test-preview"],
+        check=True,
+        cwd=root_dir,
+        env=env,
+    )
 
     summary_path = env.get("GITHUB_STEP_SUMMARY")
     if not summary_path:
@@ -53,5 +57,5 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

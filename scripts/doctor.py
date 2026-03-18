@@ -3,13 +3,13 @@ from __future__ import annotations
 
 import os
 import shutil
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
 
 def _version(command: list[str]) -> str:
-    result = subprocess.run(
+    result = subprocess.run(  # nosec B603
         command,
         check=True,
         capture_output=True,
@@ -52,5 +52,5 @@ def main() -> int:
     return 1
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

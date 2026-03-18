@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import os
-import subprocess
+import subprocess  # nosec B404
 import sys
 from pathlib import Path
 
@@ -30,7 +30,7 @@ def _link_policy_venv(policy_venv: Path, policy_link: Path) -> None:
 
 
 def _imports_available(policy_python: Path, root_dir: Path) -> bool:
-    result = subprocess.run(
+    result = subprocess.run(  # nosec B603
         [str(policy_python), *policy_import_probe(root_dir)],
         check=False,
         capture_output=True,
@@ -93,5 +93,5 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())

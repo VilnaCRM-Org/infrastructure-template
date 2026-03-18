@@ -35,7 +35,9 @@ def main() -> int:
     if summary_file.exists():
         summary_file.unlink()
 
-    env = ensure_empty_passphrase_for_file_backend(os.environ.copy())
+    env = os.environ.copy()
+    env.setdefault("PULUMI_BACKEND_URL", backend_url)
+    env = ensure_empty_passphrase_for_file_backend(env)
     ensure_file_backend_directory(backend_url)
     run(
         [sys.executable, str(root_dir / "scripts" / "prepare_policy_pack.py")],
@@ -115,5 +117,5 @@ def main() -> int:
     return 0
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     raise SystemExit(main())
