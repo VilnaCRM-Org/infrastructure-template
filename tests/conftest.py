@@ -30,8 +30,15 @@ def pulumi_automation_environment(tmp_path_factory: pytest.TempPathFactory) -> N
         os.environ.setdefault("COVERAGE_FILE", str(PROJECT_ROOT / ".coverage"))
 
     os.environ.setdefault("PULUMI_PYTHON_CMD", python_cmd)
+    backend_url = os.environ.get("PULUMI_BACKEND_URL", "")
 
-    if os.environ.get("PULUMI_ACCESS_TOKEN") or os.environ.get("PULUMI_BACKEND_URL"):
+    if os.environ.get("PULUMI_ACCESS_TOKEN"):
+        return
+    if backend_url:
+        if backend_url.startswith("file://"):
+            os.environ.setdefault(
+                "PULUMI_CONFIG_PASSPHRASE", "integration-test-passphrase"
+            )
         return
 
     backend_dir = tmp_path_factory.mktemp("pulumi-backend")
