@@ -39,7 +39,14 @@ def test_script_support_helpers_cover_local_script_utilities(
     )
 
     env = {"PULUMI_BACKEND_URL": "file:///tmp/backend"}
+    preset_env = {
+        "PULUMI_BACKEND_URL": "file:///tmp/backend",
+        "PULUMI_CONFIG_PASSPHRASE": "already-set",
+    }
+    shared_env = {"PULUMI_BACKEND_URL": "s3://shared-backend"}
     module.ensure_empty_passphrase_for_file_backend(env)
+    module.ensure_empty_passphrase_for_file_backend(preset_env)
+    module.ensure_empty_passphrase_for_file_backend(shared_env)
     backend_dir = (tmp_path / "backend").resolve()
     module.ensure_file_backend_directory(backend_dir.as_uri())
     module.ensure_file_backend_directory("https://example.com/backend")
@@ -50,6 +57,8 @@ def test_script_support_helpers_cover_local_script_utilities(
     assert module.discover_stacks(pulumi_dir, None) == ["dev", "example"]
     assert module.discover_stacks(pulumi_dir, "prod staging") == ["prod", "staging"]
     assert env["PULUMI_CONFIG_PASSPHRASE"] == ""
+    assert preset_env["PULUMI_CONFIG_PASSPHRASE"] == "already-set"
+    assert "PULUMI_CONFIG_PASSPHRASE" not in shared_env
     assert backend_dir.is_dir()
     assert command_result.stdout == "ok\n"
     assert "import policy.pack" in "".join(module.policy_import_probe(tmp_path))
