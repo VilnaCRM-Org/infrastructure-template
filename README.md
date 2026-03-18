@@ -135,9 +135,9 @@ core Pulumi Python dependencies, the bootstrap helper resyncs it from
 consistently in Docker, CI, and local shells. The interactive Pulumi targets
 also log into the configured backend automatically, falling back to the local
 file backend under `.pulumi-backend/` when no shared backend is configured,
-select the first committed `Pulumi.<stack>.yaml` file by default, and use an
-empty `PULUMI_CONFIG_PASSPHRASE` for the template stacks unless you override it
-explicitly.
+select the first committed `Pulumi.<stack>.yaml` file by default, and expect
+shared backends to use an AWS KMS-backed secrets provider instead of a
+passphrase-managed stack secret flow.
 
 ## Security
 

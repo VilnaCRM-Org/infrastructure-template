@@ -32,6 +32,7 @@ assert_help_target() {
     down
     help
     nightly-quality
+    publish-pulumi-preview-summary
     pulumi-preview
     pulumi-up
     pulumi-refresh
@@ -67,7 +68,6 @@ assert_help_target() {
     test-preview
     test-repo-hygiene
     test-ruff
-    test-shell
     test-security
     test-secrets
     test-ty
@@ -90,6 +90,7 @@ assert_help_target() {
 @test "make start uses docker compose with .env" {
   run make -n start
   [ "$status" -eq 0 ]
+  [[ "$output" == *"./scripts/prepare_docker_context.py"* ]]
   assert_compose_env_file
   [[ "$output" == *"up -d"* ]]
 }
@@ -105,8 +106,14 @@ assert_help_target() {
   run make -n doctor
   [ "$status" -eq 0 ]
   [[ "$output" == *"COMPOSE_ENV_FILE="* ]]
-  [[ "$output" == *"./scripts/doctor.sh"* ]]
+  [[ "$output" == *"./scripts/doctor.py"* ]]
   [[ "$output" != *"AWS_SECRET_ACCESS_KEY"* ]]
+}
+
+@test "make publish-pulumi-preview-summary uses the Python helper" {
+  run make -n publish-pulumi-preview-summary
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"./scripts/publish_pulumi_preview_summary.py"* ]]
 }
 
 @test "make doctor runtime output avoids echoing synthetic secret values when docker is available" {
@@ -129,7 +136,7 @@ assert_help_target() {
   [[ "$output" == *"-e GITHUB_TOKEN"* ]]
   [[ "$output" != *"ghs_test_token"* ]]
   [[ "$output" == *"stack select"* ]]
-  [[ "$output" == *"./scripts/prepare_policy_pack.sh"* ]]
+  [[ "$output" == *"./scripts/prepare_policy_pack.py"* ]]
   [[ "$output" == *"pulumi --cwd pulumi preview --stack"* ]]
   [[ "$output" == *"--policy-pack /workspace/policy"* ]]
 }
@@ -139,7 +146,7 @@ assert_help_target() {
   [ "$status" -eq 0 ]
   assert_compose_env_file
   [[ "$output" == *"stack select"* ]]
-  [[ "$output" == *"./scripts/prepare_policy_pack.sh"* ]]
+  [[ "$output" == *"./scripts/prepare_policy_pack.py"* ]]
   [[ "$output" == *"pulumi --cwd pulumi up --stack"* ]]
   [[ "$output" == *"--policy-pack /workspace/policy"* ]]
 }
@@ -313,14 +320,6 @@ assert_help_target() {
   [[ "$output" == *"pulumi"* ]]
 }
 
-@test "make test-shell executes ShellCheck and shfmt" {
-  run make -n test-shell
-  [ "$status" -eq 0 ]
-  assert_compose_env_file
-  [[ "$output" == *"shellcheck scripts/"* ]]
-  [[ "$output" == *"shfmt -d -i 2 -ci scripts"* ]]
-}
-
 @test "make test-dockerfile executes hadolint" {
   run make -n test-dockerfile
   [ "$status" -eq 0 ]
@@ -349,7 +348,7 @@ assert_help_target() {
   assert_compose_env_file
   [[ "$output" == *"-e GITHUB_TOKEN"* ]]
   [[ "$output" != *"ghs_test_token"* ]]
-  [[ "$output" == *"./scripts/run_pulumi_preview.sh"* ]]
+  [[ "$output" == *"./scripts/run_pulumi_preview.py"* ]]
 }
 
 @test "make test-destructive-diff enforces destructive resource guardrails" {
@@ -392,7 +391,7 @@ assert_help_target() {
   assert_compose_env_file
   [[ "$output" == *"-e GITHUB_TOKEN"* ]]
   [[ "$output" != *"ghs_test_token"* ]]
-  [[ "$output" == *"./scripts/run_pulumi_drift_check.sh"* ]]
+  [[ "$output" == *"./scripts/run_pulumi_drift_check.py"* ]]
 }
 
 @test "make test-quality delegates to the Rust-based quality suite" {
@@ -405,12 +404,11 @@ assert_help_target() {
   [[ "$output" == *"make test-dependency-hygiene"* ]]
 }
 
-@test "make test-repo-hygiene delegates to workflow, yaml, shell, and Dockerfile checks" {
+@test "make test-repo-hygiene delegates to workflow, yaml, and Dockerfile checks" {
   run make -n test-repo-hygiene
   [ "$status" -eq 0 ]
   [[ "$output" == *"make test-actionlint"* ]]
   [[ "$output" == *"make test-yaml"* ]]
-  [[ "$output" == *"make test-shell"* ]]
   [[ "$output" == *"make test-dockerfile"* ]]
 }
 
@@ -418,7 +416,7 @@ assert_help_target() {
   run make -n test-mutation
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"./scripts/run_mutation_tests.sh"* ]]
+  [[ "$output" == *"./scripts/run_mutation_tests.py"* ]]
 }
 
 @test "make test-cli runs the Bats suite inside the container" {
@@ -479,7 +477,7 @@ assert_help_target() {
 @test "make report-maintainability-trends generates the Wily report" {
   run make -n report-maintainability-trends
   [ "$status" -eq 0 ]
-  [[ "$output" == *"./scripts/report_maintainability_trends.sh"* ]]
+  [[ "$output" == *"./scripts/report_maintainability_trends.py"* ]]
   [[ "$output" == *"QUALITY_ARTIFACT_DIR="* ]]
 }
 

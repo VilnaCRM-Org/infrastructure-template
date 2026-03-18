@@ -13,8 +13,8 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 7. Keep the structural, policy, quality, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
 8. Use `make ci-pr` when you want the non-mutation GitHub PR battery, `make ci` for the full local superset including mutation, and `make test` for the faster non-mutation developer battery.
 9. Use `make doctor` before debugging local Docker or Compose issues.
-10. Reuse `./scripts/prepare_docker_context.sh` when changing Docker-backed CI jobs so setup remains consistent across workflows.
-11. Keep `./scripts/prepare_policy_pack.sh`, `policy/PulumiPolicy.yaml`, `policy/.venv`, and the shared `uv` environment contract aligned when changing Pulumi policy-pack behavior.
+10. Use `make start` when changing Docker-backed CI jobs so workspace preparation stays consistent across workflows and local runs.
+11. Keep `./scripts/prepare_policy_pack.py`, `policy/PulumiPolicy.yaml`, `policy/.venv`, and the shared `uv` environment contract aligned when changing Pulumi policy-pack behavior.
 12. Reproduce PR safety checks with `make test-security`, `make test-repo-hygiene`, `make test-guardrails`, or `make ci-pr` before pushing infra-related workflow or policy changes.
 13. Do not add long-lived static AWS credentials to workflows; use the documented OIDC role variables instead.
 14. Treat `allow-destructive-infra-change` as the only supported override for destructive Pulumi diffs.
@@ -22,6 +22,8 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 16. Keep `make test-dependency-hygiene` green when editing `pyproject.toml`, `uv.lock`, or import relationships.
 17. Use `make report-quality` when you need the scheduled Wily, Vulture, docstring-coverage, and SBOM reports locally.
 18. If local Pulumi plugin downloads hit GitHub rate limits, pass `GITHUB_TOKEN="$(gh auth token)"` only to the specific preview-oriented Make command you are running.
+19. Prefer Make targets plus Python helpers under `scripts/*.py`; do not introduce new repository bash helper scripts for CI orchestration.
+20. Treat shared Pulumi backends as KMS-backed for CI and maintainer docs; do not document passphrase-backed shared backends as the default path.
 
 ## Secret handling
 

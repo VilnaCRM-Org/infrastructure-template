@@ -20,6 +20,7 @@ DOCKER_COMPOSE    = docker compose
 COMPOSE_ENV_FLAG  = $(if $(COMPOSE_ENV_FILE),--env-file $(COMPOSE_ENV_FILE),)
 COMPOSE           = $(DOCKER_COMPOSE) $(COMPOSE_ENV_FLAG)
 COMPOSE_GITHUB_TOKEN = $(if $(GITHUB_TOKEN),-e GITHUB_TOKEN,)
+REPO_PYTHON      ?= python3
 PULUMI_CWD_FLAG   = --cwd $(PULUMI_DIR)
 POLICY_PACK_DIR   = /workspace/policy
 POLICY_PACK_FLAG  = --policy-pack $(POLICY_PACK_DIR)
@@ -54,12 +55,12 @@ TOTAL_COVERAGE_ENV        = -e COVERAGE_FILE=/workspace/.coverage.total \
 # Misc
 .DEFAULT_GOAL     = help
 .RECIPEPREFIX    +=
-.PHONY: help doctor build start pulumi-preview pulumi-up pulumi-refresh \
+.PHONY: help doctor build start publish-pulumi-preview-summary pulumi-preview pulumi-up pulumi-refresh \
         pulumi-destroy sh down ci ci-pr nightly-quality report-quality \
         report-maintainability-trends report-dead-code report-docstrings \
         report-sbom test-quality test-ruff test-ty test-maintainability \
         test-architecture test-dependency-hygiene test-lockfile test-coverage \
-        test-bandit test-actionlint test-yaml test-shell test-dockerfile \
+        test-bandit test-actionlint test-yaml test-dockerfile \
         test-deps-security test-destructive-diff test-drift test-guardrails \
         test-iam-validation test-preview test-security test-secrets \
         test-repo-hygiene test-unit test-integration test-pulumi test-policy \
@@ -75,19 +76,23 @@ help: ## Display the available Make targets.
 	@grep -E '^[-a-zA-Z0-9_\.\/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[32m%-15s\033[0m %s\n", $$1, $$2}'
 
 doctor: ## Check local prerequisites and effective paths without printing secrets.
-	@COMPOSE_ENV_FILE="$(COMPOSE_ENV_FILE)" COMPOSE_SERVICE="$(COMPOSE_SERVICE)" PULUMI_DIR="$(PULUMI_DIR)" ./scripts/doctor.sh
+	@COMPOSE_ENV_FILE="$(COMPOSE_ENV_FILE)" COMPOSE_SERVICE="$(COMPOSE_SERVICE)" PULUMI_DIR="$(PULUMI_DIR)" $(REPO_PYTHON) ./scripts/doctor.py
 
 build: ## Build the Pulumi development image used by local and CI checks.
 	$(COMPOSE) build $(COMPOSE_SERVICE)
 
-start: ## Initialize and start the Pulumi development environment.
+start: ## Prepare the Docker-backed workspace and start the Pulumi development environment.
+	$(REPO_PYTHON) ./scripts/prepare_docker_context.py
 	$(COMPOSE) up -d
 
+publish-pulumi-preview-summary: ## Generate Pulumi preview artifacts and publish the summary for CI.
+	$(REPO_PYTHON) ./scripts/publish_pulumi_preview_summary.py
+
 pulumi-preview: ## Preview infrastructure changes from inside the Pulumi container.
-	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --create --non-interactive >/dev/null; ./scripts/prepare_policy_pack.sh && pulumi $(PULUMI_CWD_FLAG) preview --stack "$$stack" $(POLICY_PACK_FLAG)'
+	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --create --non-interactive >/dev/null; $(REPO_PYTHON) ./scripts/prepare_policy_pack.py && pulumi $(PULUMI_CWD_FLAG) preview --stack "$$stack" $(POLICY_PACK_FLAG)'
 
 pulumi-up: ## Apply the current Pulumi infrastructure plan.
-	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --create --non-interactive >/dev/null; ./scripts/prepare_policy_pack.sh && pulumi $(PULUMI_CWD_FLAG) up --stack "$$stack" $(POLICY_PACK_FLAG)'
+	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --create --non-interactive >/dev/null; $(REPO_PYTHON) ./scripts/prepare_policy_pack.py && pulumi $(PULUMI_CWD_FLAG) up --stack "$$stack" $(POLICY_PACK_FLAG)'
 
 pulumi-refresh: ## Sync the Pulumi stack with live cloud resources.
 	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc '$(PULUMI_LOGIN_CMD); stack="$${PULUMI_STACK:-$(PULUMI_STACK)}"; if [ -z "$$stack" ]; then echo "error: set PULUMI_STACK or commit pulumi/Pulumi.<stack>.yaml" >&2; exit 1; fi; pulumi $(PULUMI_CWD_FLAG) stack select "$$stack" --non-interactive >/dev/null; pulumi $(PULUMI_CWD_FLAG) refresh --stack "$$stack"'
@@ -181,10 +186,6 @@ test-actionlint: ## Lint GitHub Actions workflows with actionlint.
 test-yaml: ## Lint GitHub workflows, Pulumi stacks, and operational YAML.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) uv run yamllint -c .yamllint.yml $(YAML_LINT_PATHS)
 
-test-shell: ## Lint and format repository shell scripts.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) shellcheck scripts/*.sh
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) shfmt -d -i 2 -ci scripts
-
 test-dockerfile: ## Lint the development Dockerfile with hadolint.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) hadolint --config .hadolint.yaml Dockerfile
 
@@ -195,7 +196,8 @@ test-deps-security: ## Audit Python dependencies for known vulnerabilities.
 	$(COMPOSE) run --rm -e XDG_CACHE_HOME=/tmp/xdg-cache $(COMPOSE_SERVICE) uv run pip-audit --strict
 
 test-preview: ## Generate non-destructive Pulumi previews for configured stacks.
-	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc "./scripts/run_pulumi_preview.sh"
+	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) \
+		$(REPO_PYTHON) ./scripts/run_pulumi_preview.py
 
 test-destructive-diff: ## Fail when Pulumi previews delete or replace critical resources.
 	$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc '\
@@ -204,14 +206,14 @@ test-destructive-diff: ## Fail when Pulumi previews delete or replace critical r
 			event_arg="--event-path .artifacts/github-event.json"; \
 		fi; \
 		if ! compgen -G ".artifacts/pulumi-preview/*.json" >/dev/null; then \
-			./scripts/run_pulumi_preview.sh >/dev/null; \
+			$(REPO_PYTHON) ./scripts/run_pulumi_preview.py >/dev/null; \
 		fi; \
 		uv run python ./scripts/pulumi_ci_guardrails.py destructive-gate $$event_arg .artifacts/pulumi-preview/*.json'
 
 test-iam-validation: ## Validate previewed IAM policies with AWS IAM Access Analyzer.
 	$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc '\
 		if ! compgen -G ".artifacts/pulumi-preview/*.json" >/dev/null; then \
-			./scripts/run_pulumi_preview.sh >/dev/null; \
+			$(REPO_PYTHON) ./scripts/run_pulumi_preview.py >/dev/null; \
 		fi; \
 		uv run python ./scripts/pulumi_ci_guardrails.py validate-iam .artifacts/pulumi-preview/*.json'
 
@@ -226,7 +228,8 @@ test-guardrails: ## Run preview, destructive diff, and IAM validation guardrails
 	$(MAKE) test-iam-validation
 
 test-drift: ## Perform a non-destructive drift check against configured shared stacks.
-	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) bash -lc "./scripts/run_pulumi_drift_check.sh"
+	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) \
+		$(REPO_PYTHON) ./scripts/run_pulumi_drift_check.py
 
 test-quality: ## Run blocking Python quality, architecture, and dependency gates.
 	$(MAKE) test-ruff
@@ -235,25 +238,26 @@ test-quality: ## Run blocking Python quality, architecture, and dependency gates
 	$(MAKE) test-architecture
 	$(MAKE) test-dependency-hygiene
 
-test-repo-hygiene: ## Lint GitHub Actions, YAML, shell scripts, and the Dockerfile.
+test-repo-hygiene: ## Lint GitHub Actions, YAML, and the Dockerfile.
 	$(MAKE) test-actionlint
 	$(MAKE) test-yaml
-	$(MAKE) test-shell
 	$(MAKE) test-dockerfile
 
 test-mutation: ## Run mutation testing suite against Pulumi components.
 	$(COMPOSE) run --rm \
 		-e MUTATION_TEST_TARGETS="$(MUTATION_TEST_TARGETS)" \
 		-e MUTATION_TESTS_DIR="$(MUTATION_TESTS_DIR)" \
-		$(COMPOSE_SERVICE) bash -lc "./scripts/run_mutation_tests.sh"
+		$(COMPOSE_SERVICE) $(REPO_PYTHON) ./scripts/run_mutation_tests.py
 
 test-cli: ## Validate Makefile front-ends via Bats.
 	COMPOSE_TARGET=test $(COMPOSE) run --build --rm $(COMPOSE_SERVICE) bats tests/unit
 
 report-maintainability-trends: ## Build and publish Wily maintainability trend reports.
 	mkdir -p $(QUALITY_ARTIFACT_DIR)
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) bash -lc '\
-		QUALITY_ARTIFACT_DIR="$(QUALITY_ARTIFACT_DIR)" WILY_TARGETS="$(WILY_TARGETS)" ./scripts/report_maintainability_trends.sh'
+	$(COMPOSE) run --rm \
+		-e QUALITY_ARTIFACT_DIR="$(QUALITY_ARTIFACT_DIR)" \
+		-e WILY_TARGETS="$(WILY_TARGETS)" \
+		$(COMPOSE_SERVICE) $(REPO_PYTHON) ./scripts/report_maintainability_trends.py
 
 report-dead-code: ## Run the advisory dead-code report for reusable Python modules.
 	mkdir -p $(QUALITY_ARTIFACT_DIR)

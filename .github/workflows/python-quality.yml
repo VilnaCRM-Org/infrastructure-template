@@ -27,8 +27,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run Ruff suite inside Docker
         run: make test-ruff
@@ -42,8 +42,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run Ty suite inside Docker
         run: make test-ty
@@ -57,8 +57,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run maintainability gates inside Docker
         run: make test-maintainability
@@ -72,8 +72,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run architecture contracts inside Docker
         run: make test-architecture
@@ -87,8 +87,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run dependency hygiene checks inside Docker
         run: make test-dependency-hygiene
@@ -99,14 +99,13 @@ jobs:
     timeout-minutes: 30
     env:
       PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
-      PULUMI_CONFIG_PASSPHRASE: ""
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run coverage-bearing suites inside Docker
         run: |

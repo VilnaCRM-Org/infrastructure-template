@@ -27,7 +27,6 @@ These checks should be required in branch protection:
 | `Dependency Review` | GitHub-native | Pull-request dependency risk review against GitHub advisories |
 | `Actionlint` | `make test-actionlint` | Workflow syntax and common GitHub Actions mistakes |
 | `Yamllint` | `make test-yaml` | GitHub workflow YAML, Pulumi stack YAML, and operational YAML hygiene |
-| `Shell Hygiene` | `make test-shell` | ShellCheck and `shfmt` on repository shell scripts |
 | `Hadolint` | `make test-dockerfile` | Dockerfile quality and safety linting |
 | `Preview` | `make test-preview` | Non-destructive Pulumi preview artifact generation |
 | `Destructive Diff Gate` | `make test-destructive-diff` | Blocks risky deletes and replacements |
@@ -85,6 +84,8 @@ Import Linter currently enforces:
 - `app.environment` may depend on `app.guardrails`, but not the other way around
 - `policy.pack` may depend on `policy.guardrails` and `policy.config`
 - `policy.guardrails` may depend on `policy.config`
+- `app.guardrails` must stay free of `pulumi` and `pulumi_policy`
+- `policy.config` and `policy.guardrails` must stay free of `pulumi` and `pulumi_policy`
 
 This keeps runtime code, policy code, and guardrail helpers from collapsing
 into one another as AI-generated refactors expand the repo.

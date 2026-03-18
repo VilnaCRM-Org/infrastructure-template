@@ -10,7 +10,7 @@ import pytest
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 POLICY_DIR = PROJECT_ROOT / "policy"
-PREPARE_POLICY_PACK = PROJECT_ROOT / "scripts" / "prepare_policy_pack.sh"
+PREPARE_POLICY_PACK = PROJECT_ROOT / "scripts" / "prepare_policy_pack.py"
 MAIN_PY_TEMPLATE = """import pulumi
 
 
@@ -71,7 +71,7 @@ def _preview_with_policy_pack(work_dir: Path) -> subprocess.CompletedProcess[str
     }
 
     subprocess.run(
-        ["bash", str(PREPARE_POLICY_PACK)],
+        ["python3", str(PREPARE_POLICY_PACK)],
         check=True,
         cwd=PROJECT_ROOT,
         env=env,

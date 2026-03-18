@@ -27,8 +27,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run Gitleaks
         run: make test-secrets
@@ -42,8 +42,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Audit Python dependencies
         run: make test-deps-security
@@ -57,8 +57,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run Bandit
         run: make test-bandit
@@ -87,8 +87,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Lint workflows
         run: make test-actionlint
@@ -102,26 +102,11 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Lint repository YAML
         run: make test-yaml
-
-  shell_hygiene:
-    name: Shell Hygiene
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
-        with:
-          persist-credentials: false
-
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
-
-      - name: Lint shell scripts
-        run: make test-shell
 
   hadolint:
     name: Hadolint
@@ -132,8 +117,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Lint Dockerfile
         run: make test-dockerfile

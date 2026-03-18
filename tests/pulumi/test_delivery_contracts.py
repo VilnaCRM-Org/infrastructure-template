@@ -45,14 +45,14 @@ PULL_REQUEST_WORKFLOW_TIMEOUTS = {
         "bandit": 10,
         "actionlint": 10,
         "yamllint": 10,
-        "shell_hygiene": 10,
         "hadolint": 10,
     },
 }
 DOCS_INDEX = PROJECT_ROOT / "docs" / "README.md"
 ROOT_README = PROJECT_ROOT / "README.md"
-PREPARE_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_docker_context.sh"
-PREPARE_POLICY_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_policy_pack.sh"
+PREPARE_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_docker_context.py"
+PREPARE_POLICY_SCRIPT = PROJECT_ROOT / "scripts" / "prepare_policy_pack.py"
+SCRIPT_SUPPORT = PROJECT_ROOT / "scripts" / "_script_support.py"
 DETAILED_DOCS = (
     "ci-quality-gates.md",
     "ci-guardrails.md",
@@ -201,7 +201,6 @@ def test_docker_compose_keeps_workspace_and_credentials_contract() -> None:
     assert service["environment"] == [
         "PULUMI_ACCESS_TOKEN",
         "PULUMI_BACKEND_URL",
-        "PULUMI_CONFIG_PASSPHRASE",
         "AWS_ACCESS_KEY_ID",
         "AWS_SECRET_ACCESS_KEY",
         "AWS_SESSION_TOKEN",
@@ -224,7 +223,7 @@ def test_prepare_docker_context_script_creates_expected_files(tmp_path: Path) ->
     )
 
     subprocess.run(
-        ["bash", str(PREPARE_SCRIPT)],
+        ["python3", str(PREPARE_SCRIPT)],
         check=True,
         cwd=repo_dir,
         env={**os.environ, "HOME": str(home_dir)},
@@ -254,7 +253,7 @@ def test_prepare_docker_context_script_preserves_existing_env_file(
     (repo_dir / ".env").write_text("LOCAL=value\n", encoding="utf-8")
 
     subprocess.run(
-        ["bash", str(PREPARE_SCRIPT)],
+        ["python3", str(PREPARE_SCRIPT)],
         check=True,
         cwd=repo_dir,
         env={**os.environ, "HOME": str(home_dir)},
@@ -279,7 +278,7 @@ def test_prepare_docker_context_script_rejects_non_regular_env_path(
     (repo_dir / ".env").symlink_to(target_file)
 
     result = subprocess.run(
-        ["bash", str(PREPARE_SCRIPT)],
+        ["python3", str(PREPARE_SCRIPT)],
         check=False,
         cwd=repo_dir,
         capture_output=True,
@@ -301,7 +300,7 @@ def test_prepare_docker_context_script_requires_env_template(tmp_path: Path) -> 
     repo_dir.mkdir()
 
     result = subprocess.run(
-        ["bash", str(PREPARE_SCRIPT)],
+        ["python3", str(PREPARE_SCRIPT)],
         check=False,
         cwd=repo_dir,
         capture_output=True,
@@ -317,50 +316,49 @@ def test_prepare_docker_context_script_requires_env_template(tmp_path: Path) -> 
 def test_prepare_policy_pack_script_uses_shared_uv_environment() -> None:
     """Keep policy-pack bootstrap aligned with the shared uv-managed interpreter."""
     script_text = PREPARE_POLICY_SCRIPT.read_text(encoding="utf-8")
+    support_text = SCRIPT_SUPPORT.read_text(encoding="utf-8")
 
     assert PREPARE_POLICY_SCRIPT.exists()
-    assert 'POLICY_VENV="${POLICY_VENV:-${HOME}/.venvs/infrastructure-template}"' in (
-        script_text
+    assert SCRIPT_SUPPORT.exists()
+    assert (
+        'POLICY_VENV", f"{Path.home()}/.venvs/infrastructure-template"' in script_text
     )
-    assert 'POLICY_VENV_LINK="${POLICY_DIR}/.venv"' in script_text
-    assert 'ln -sfn "${POLICY_VENV}" "${POLICY_VENV_LINK}"' in script_text
-    assert 'UV_PROJECT_ENVIRONMENT="${POLICY_VENV}"' in script_text
-    assert "uv sync --frozen --all-groups" in script_text
-    assert 'ROOT_DIR="${ROOT_DIR}"' in script_text
-    assert 'sys.path.insert(0, os.environ["ROOT_DIR"])' in script_text
-    assert "import pulumi" in script_text
-    assert "import pulumi_policy" in script_text
-    assert "import policy.config" in script_text
-    assert "import policy.guardrails" in script_text
-    assert "import policy.pack" in script_text
+    assert 'policy_link = policy_dir / ".venv"' in script_text
+    assert "policy_link.symlink_to(policy_venv)" in script_text
+    assert 'env["UV_PROJECT_ENVIRONMENT"] = str(policy_venv)' in script_text
+    assert '"uv", "sync", "--frozen", "--all-groups"' in script_text
+    assert "policy_import_probe(root_dir)" in script_text
+    assert "sys.path.insert(0," in support_text
+    assert "import pulumi" in support_text
+    assert "import pulumi_policy" in support_text
+    assert "import policy.config" in support_text
+    assert "import policy.guardrails" in support_text
+    assert "import policy.pack" in support_text
 
 
 def test_new_helper_scripts_keep_local_ci_behaviour_explicit() -> None:
     """Keep extracted helper scripts discoverable and safe to execute locally."""
-    doctor_script = (PROJECT_ROOT / "scripts" / "doctor.sh").read_text(encoding="utf-8")
+    doctor_script = (PROJECT_ROOT / "scripts" / "doctor.py").read_text(encoding="utf-8")
     preview_summary_script = (
-        PROJECT_ROOT / "scripts" / "publish_pulumi_preview_summary.sh"
+        PROJECT_ROOT / "scripts" / "publish_pulumi_preview_summary.py"
     ).read_text(encoding="utf-8")
     wily_script = (
-        PROJECT_ROOT / "scripts" / "report_maintainability_trends.sh"
+        PROJECT_ROOT / "scripts" / "report_maintainability_trends.py"
     ).read_text(encoding="utf-8")
 
-    assert "docker compose version --short" in doctor_script
-    assert "effective env file:" in doctor_script
-    assert '[[ ! -d "${PULUMI_DIR}" ]]' in doctor_script
-    assert "pulumi directory missing:" in doctor_script
-    assert 'ROOT_DIR="${ROOT_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"' in wily_script
-    assert 'ROOT_DIR="$(cd "${ROOT_DIR}" && pwd)"' in wily_script
     assert (
-        'QUALITY_ARTIFACT_DIR="${QUALITY_ARTIFACT_DIR:-${ROOT_DIR}/.artifacts/quality}"'
-        in wily_script
+        'compose_version = _version(["docker", "compose", "version", "--short"])'
+        in doctor_script
     )
-    assert 'if [[ "${QUALITY_ARTIFACT_DIR}" != /* ]]; then' in wily_script
-    assert 'cd "${ROOT_DIR}"' in wily_script
-    assert "git rev-parse --verify HEAD" in wily_script
+    assert "effective env file:" in doctor_script
+    assert "pulumi directory missing:" in doctor_script
+    assert 'root_dir = Path(os.environ.get("ROOT_DIR"' in wily_script
+    assert "quality_artifact_dir = Path(" in wily_script
+    assert "if not quality_artifact_dir.is_absolute()" in wily_script
+    assert '"git", "rev-parse", "--verify", "HEAD"' in wily_script
     assert "Wily maintainability report skipped" in wily_script
     assert "PULUMI_REQUIRE_SHARED_BACKEND" in preview_summary_script
-    assert "make test-preview" in preview_summary_script
+    assert '"make", "test-preview"' in preview_summary_script
     assert "GITHUB_STEP_SUMMARY" in preview_summary_script
 
 
@@ -425,7 +423,7 @@ def test_makefile_keeps_pulumi_guardrails_secret_safe() -> None:
     assert "export GITHUB_TOKEN" in makefile_text
     assert refresh_select in makefile_text
     assert destroy_select in makefile_text
-    assert makefile_text.count(guardrail_runs) >= 7
+    assert makefile_text.count(guardrail_runs) >= 6
 
 
 def test_bats_suite_covers_every_public_make_target() -> None:
@@ -440,6 +438,7 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make -n doctor",
         "make -n start",
         "make -n nightly-quality",
+        "make -n publish-pulumi-preview-summary",
         "make -n pulumi-preview",
         "make -n pulumi-up",
         "make -n pulumi-refresh",
@@ -467,7 +466,6 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make -n test-lockfile",
         "make -n test-maintainability",
         "make -n test-repo-hygiene",
-        "make -n test-shell",
         "make -n test-security",
         "make -n test-secrets",
         "make -n test-yaml",
@@ -501,7 +499,7 @@ def test_local_battery_workflow_avoids_duplicate_mutation_runs() -> None:
     assert triggers["push"]["branches"] == ["main"]
     assert "pull_request" in triggers
     assert workflow["jobs"]["local_battery"]["timeout-minutes"] == 30
-    assert "Prepare Docker context" in step_names
+    assert "Start development environment" in step_names
     assert "Run non-mutation PR battery inside Docker" in step_names
     assert any("make ci-pr" in line for line in run_lines)
     assert not any("make ci" == line for line in run_lines)
@@ -517,7 +515,7 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
         "pulumi-mutation.yml": ["make test-mutation"],
         "pulumi-policy.yml": ["make test-policy"],
         "pulumi-pr-guardrails.yml": [
-            "./scripts/publish_pulumi_preview_summary.sh",
+            "make publish-pulumi-preview-summary",
             "make test-destructive-diff",
             "make test-iam-validation",
         ],
@@ -537,7 +535,6 @@ def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
             "make test-bandit",
             "make test-actionlint",
             "make test-yaml",
-            "make test-shell",
             "make test-dockerfile",
         ],
     }
@@ -581,10 +578,9 @@ def test_ci_workflows_use_guardrails_and_shared_bootstrap() -> None:
         for job_name, expected_timeout in jobs.items():
             job = workflow["jobs"][job_name]
             assert job["timeout-minutes"] == expected_timeout
-            assert any(
-                "./scripts/prepare_docker_context.sh" in line
-                for line in _run_lines(job["steps"])
-            ), f"{workflow_name}:{job_name} must use the shared Docker bootstrap"
+            assert any("make start" in line for line in _run_lines(job["steps"])), (
+                f"{workflow_name}:{job_name} must use the shared Docker bootstrap"
+            )
 
 
 def test_actions_are_pinned_to_full_commit_shas() -> None:
@@ -677,7 +673,6 @@ def test_quality_workflow_runs_quality_gates_on_push_and_pull_request() -> None:
         jobs["coverage"]["env"]["PULUMI_BACKEND_URL"]
         == "file:///workspace/.pulumi-backend"
     )
-    assert jobs["coverage"]["env"]["PULUMI_CONFIG_PASSPHRASE"] == ""
 
     ruff_runs = [step.get("run") for step in jobs.get("ruff", {}).get("steps", [])]
     ty_runs = [step.get("run") for step in jobs.get("ty", {}).get("steps", [])]
@@ -757,7 +752,8 @@ def test_ci_architecture_docs_match_make_entrypoints() -> None:
     )
 
     assert "Docker-backed CI workflows" in architecture_doc
-    assert "GitHub-native jobs such as CodeQL" in architecture_doc
+    assert "GitHub-native" in architecture_doc
+    assert "CodeQL" in architecture_doc
     assert "prerequisite sanity check" in architecture_doc
     assert "Pulumi structural tests" in architecture_doc
     assert "make ci-pr" in architecture_doc
@@ -778,5 +774,4 @@ def test_sre_docs_map_blocking_ci_checks_back_to_local_commands() -> None:
     )
     assert "`Bandit` -> `make test-bandit`" in operations_doc
     assert "`Yamllint` -> `make test-yaml`" in operations_doc
-    assert "`Shell Hygiene` -> `make test-shell`" in operations_doc
     assert "`Hadolint` -> `make test-dockerfile`" in operations_doc

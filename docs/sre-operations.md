@@ -137,7 +137,6 @@ Map failures back to their local commands:
 - `Bandit` -> `make test-bandit`
 - `Actionlint` -> `make test-actionlint`
 - `Yamllint` -> `make test-yaml`
-- `Shell Hygiene` -> `make test-shell`
 - `Hadolint` -> `make test-dockerfile`
 - `CodeQL`, `Dependency Review`, `Infracost`, and `CodeRabbit` -> GitHub-native only
 

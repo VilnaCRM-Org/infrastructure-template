@@ -10,9 +10,9 @@ import yaml
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 WORKFLOWS_DIR = PROJECT_ROOT / ".github" / "workflows"
 GUARDRAILS_DOC = PROJECT_ROOT / "docs" / "ci-guardrails.md"
-PREVIEW_SCRIPT = PROJECT_ROOT / "scripts" / "run_pulumi_preview.sh"
-PREVIEW_SUMMARY_SCRIPT = PROJECT_ROOT / "scripts" / "publish_pulumi_preview_summary.sh"
-DRIFT_SCRIPT = PROJECT_ROOT / "scripts" / "run_pulumi_drift_check.sh"
+PREVIEW_SCRIPT = PROJECT_ROOT / "scripts" / "run_pulumi_preview.py"
+PREVIEW_SUMMARY_SCRIPT = PROJECT_ROOT / "scripts" / "publish_pulumi_preview_summary.py"
+DRIFT_SCRIPT = PROJECT_ROOT / "scripts" / "run_pulumi_drift_check.py"
 GITLEAKS_CONFIG = PROJECT_ROOT / ".gitleaks.toml"
 ACTION_SHA_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
 
@@ -65,14 +65,6 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
             step
             for step in jobs["preview_privileged"]["steps"]
             if step.get("name") == "Configure AWS credentials via OIDC"
-        ),
-        None,
-    )
-    require_backend_step = next(
-        (
-            step
-            for step in jobs["preview_privileged"]["steps"]
-            if step.get("name") == "Require shared Pulumi backend"
         ),
         None,
     )
@@ -146,7 +138,6 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     assert set(jobs["iam_validation"]["needs"]) == {"preview", "preview_privileged"}
     assert preview_privileged_oidc_step is not None, "preview OIDC step not found"
     assert iam_oidc_step is not None, "IAM validation OIDC step not found"
-    assert require_backend_step is not None, "shared backend check step not found"
     assert preview_run_step is not None, "preview run step not found"
     assert preview_privileged_run_step is not None, (
         "privileged preview run step not found"
@@ -159,22 +150,14 @@ def test_preview_guardrail_workflow_requires_preview_diff_and_iam_jobs() -> None
     assert preview_privileged_upload_step["with"]["name"] == "pulumi-preview-privileged"
     assert "if" not in preview_privileged_oidc_step
     assert "if" not in iam_oidc_step
-    assert preview_run_step["run"] == "./scripts/publish_pulumi_preview_summary.sh"
-    assert preview_privileged_run_step["run"] == (
-        "./scripts/publish_pulumi_preview_summary.sh"
-    )
+    assert preview_run_step["run"] == "make publish-pulumi-preview-summary"
+    assert preview_privileged_run_step["run"] == "make publish-pulumi-preview-summary"
     assert preview_privileged_run_step["env"] == {
         "PULUMI_REQUIRE_SHARED_BACKEND": "true"
     }
-    assert '[[ -z "${PULUMI_BACKEND_URL:-}" ]]' in require_backend_step["run"]
-    assert "PULUMI_BACKEND_URL repository variable" in require_backend_step["run"]
+    assert any(step.get("run") == "make start" for step in jobs["preview"]["steps"])
     assert any(
-        step.get("run") == "./scripts/prepare_docker_context.sh"
-        for step in jobs["preview"]["steps"]
-    )
-    assert any(
-        step.get("run") == "./scripts/prepare_docker_context.sh"
-        for step in jobs["preview_privileged"]["steps"]
+        step.get("run") == "make start" for step in jobs["preview_privileged"]["steps"]
     )
     assert privileged_download_step is not None
     assert privileged_download_step["if"] == (
@@ -289,17 +272,20 @@ def test_new_guardrail_scripts_and_configs_are_present() -> None:
     assert GITLEAKS_CONFIG.exists()
     assert PREVIEW_SUMMARY_SCRIPT.exists()
     assert "gh auth token" not in preview_text
-    assert "pulumi --cwd" in preview_text
-    assert 'login --non-interactive "${BACKEND_URL}"' in preview_text
+    assert '"pulumi"' in preview_text
+    assert '"--cwd"' in preview_text
+    assert '"login"' in preview_text
+    assert '"--non-interactive"' in preview_text
     assert "PULUMI_REQUIRE_SHARED_BACKEND" in preview_summary_text
-    assert "make test-preview" in preview_summary_text
+    assert '"make", "test-preview"' in preview_summary_text
     assert "GITHUB_STEP_SUMMARY" in preview_summary_text
-    assert "preview \\" in preview_text
-    assert '--stack "${stack}"' in preview_text
-    assert 'uv --project "${ROOT_DIR}" run python' in preview_text
-    assert 'login --non-interactive "${BACKEND_URL}"' in drift_text
-    assert "unable to select existing stack" in drift_text
-    assert "PULUMI_DIR '${PULUMI_DIR}' does not exist" in drift_text
+    assert '"preview"' in preview_text
+    assert '"--stack"' in preview_text
+    assert '"summarize"' in preview_text
+    assert '"login"' in drift_text
+    assert "PULUMI_DIR '" in drift_text
+    assert "does not exist" in drift_text
+    assert "Checking drift for stack" in drift_text
     assert "expect-no-changes" in drift_text
     assert "ARG TARGETARCH=amd64" not in dockerfile_text
     assert "actionlint" in dockerfile_text

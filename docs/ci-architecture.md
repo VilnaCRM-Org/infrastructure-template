@@ -18,7 +18,7 @@ Docker-backed pull request checks use the same Docker workspace and the same
 | `pulumi-structural.yml` | `make test-pulumi` | Validates Pulumi metadata, workflow contracts, and Dockerfile safeguards |
 | `pulumi-policy.yml` | `make test-policy` | Validates the Pulumi policy pack and AWS guardrail coverage |
 | `pulumi-pr-guardrails.yml` | `make test-preview`, `make test-destructive-diff`, `make test-iam-validation` | Generates the PR preview artifact and enforces destructive/IAM guardrails |
-| `security-scans.yml` | `make test-secrets`, `make test-deps-security`, `make test-bandit`, `make test-actionlint`, `make test-yaml`, `make test-shell`, `make test-dockerfile` | Runs blocking security and repo-hygiene checks plus GitHub dependency review |
+| `security-scans.yml` | `make test-secrets`, `make test-deps-security`, `make test-bandit`, `make test-actionlint`, `make test-yaml`, `make test-dockerfile` | Runs blocking security and repo-hygiene checks plus GitHub dependency review |
 | `codeql.yml` | GitHub-native | Scans Python code and workflow code with CodeQL |
 | `python-quality.yml` | `make test-ruff`, `make test-ty`, `make test-maintainability`, `make test-architecture`, `make test-dependency-hygiene`, `make test-coverage` | Blocking Python quality, maintainability, architecture, dependency, and coverage gates |
 | `pulumi-unit.yml` | `make test-unit` | Mock-based Pulumi component tests with full coverage |
@@ -33,16 +33,16 @@ Docker-backed pull request checks use the same Docker workspace and the same
 
 ### Prepared Docker Context
 
-Docker-backed CI workflows call `./scripts/prepare_docker_context.sh` before
-running checks. GitHub-native jobs such as CodeQL, Dependency Review, and
-Scorecard do not invoke it because they do not run inside the repository Docker
-workspace. For the Docker-backed jobs, the script standardizes the expected
-local state:
+Docker-backed CI workflows call `make start` before running checks. GitHub-native
+jobs such as CodeQL, Dependency Review, and Scorecard do not invoke it because
+they do not run inside the repository Docker workspace. For the Docker-backed
+jobs, `make start` standardizes the expected local state:
 
 - creates `${HOME}/.aws` with restrictive permissions
 - materializes `.env` from `.env.empty` when needed
 - enforces owner-only permissions on `.env`
 - prepares the `.pulumi-backend` directory used by local-backend test flows
+- starts the Compose service so later `make` targets share the same prepared workspace
 
 Centralizing the setup keeps workflows consistent and reduces drift between
 checks.
@@ -74,6 +74,7 @@ battery.
 - `make ci-pr` matches the non-mutation GitHub pull-request battery, including preview and security guardrails.
 - `make ci` is the full local superset, including the dedicated mutation suite.
 - `make report-quality` mirrors the scheduled quality-report workflow locally.
+- `make start` prepares the Docker-backed workspace before CI-style checks or manual Docker sessions.
 - `make doctor` provides a quick prerequisite check before developers start
   debugging Docker or Pulumi behavior.
 
@@ -89,8 +90,7 @@ Use this checklist:
 3. define `permissions`
 4. add `concurrency`
 5. set `timeout-minutes`
-6. reuse `./scripts/prepare_docker_context.sh` if the job uses the Docker
-   workspace
+6. call `make start` if the job uses the Docker workspace
 7. extend the structural tests and docs in the same PR
 
 ## Failure Triage

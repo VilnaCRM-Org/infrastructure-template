@@ -24,7 +24,9 @@ Add these under **Settings → Secrets and variables → Actions → Secrets →
 | Secret | Purpose | Notes |
 | --- | --- | --- |
 | `PULUMI_ACCESS_TOKEN` | Authenticate against the Pulumi Service backend | Only required when the backend is Pulumi Cloud |
-| `PULUMI_CONFIG_PASSPHRASE` | Unlock passphrase-protected backends | Required when the backend uses passphrase encryption; optional otherwise |
+
+Shared Pulumi backends should use an AWS KMS-backed secrets provider rather
+than a passphrase-managed stack secret flow.
 
 ## OIDC role setup
 
@@ -55,7 +57,7 @@ Choose one authentication strategy for the template sync workflows:
 
 1. Navigate to **Settings → Secrets and variables → Actions** in your GitHub repository.
 2. Add `AWS_OIDC_ROLE_ARN`, `PULUMI_BACKEND_URL`, `PULUMI_PREVIEW_STACKS`, and `PULUMI_DRIFT_STACKS` under **Variables → Repository variables**. Add `AWS_REGION` there only if you need a region other than the default `eu-central-1`.
-3. Add `PULUMI_ACCESS_TOKEN`, `PULUMI_CONFIG_PASSPHRASE`, and any release or template-sync credentials under **Secrets → Repository secrets**.
-4. If several repositories share the same guardrail configuration, use organization variables for `AWS_OIDC_ROLE_ARN`, `PULUMI_BACKEND_URL`, `PULUMI_PREVIEW_STACKS`, and `PULUMI_DRIFT_STACKS`. Add `AWS_REGION` at the organization level only if you want to override the default `eu-central-1`. Use organization secrets for `PULUMI_ACCESS_TOKEN`, `PULUMI_CONFIG_PASSPHRASE`, and any release or template-sync credentials.
+3. Add `PULUMI_ACCESS_TOKEN` and any release or template-sync credentials under **Secrets → Repository secrets**.
+4. If several repositories share the same guardrail configuration, use organization variables for `AWS_OIDC_ROLE_ARN`, `PULUMI_BACKEND_URL`, `PULUMI_PREVIEW_STACKS`, and `PULUMI_DRIFT_STACKS`. Add `AWS_REGION` at the organization level only if you want to override the default `eu-central-1`. Use organization secrets for `PULUMI_ACCESS_TOKEN` and any release or template-sync credentials.
 
 Rotate credentials regularly and audit workflow runs for unexpected usage.

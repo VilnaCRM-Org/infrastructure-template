@@ -17,7 +17,7 @@ PYPROJECT = PROJECT_ROOT / "pyproject.toml"
 DOCS_INDEX = PROJECT_ROOT / "docs" / "README.md"
 ROOT_README = PROJECT_ROOT / "README.md"
 QUALITY_DOC = PROJECT_ROOT / "docs" / "ci-quality-gates.md"
-MUTATION_SCRIPT = PROJECT_ROOT / "scripts" / "run_mutation_tests.sh"
+MUTATION_SCRIPT = PROJECT_ROOT / "scripts" / "run_mutation_tests.py"
 ACTION_SHA_REF = re.compile(r"^[^@]+@[0-9a-f]{40}$")
 
 
@@ -56,12 +56,20 @@ def test_pyproject_declares_quality_tooling_contracts() -> None:
     assert expected_tools.issubset(dev_dependencies)
     assert "C90" in ruff["select"]
     assert data["tool"]["ruff"]["lint"]["mccabe"]["max-complexity"] == 10
-    assert deptry["known_first_party"] == ["app", "policy"]
+    assert deptry["known_first_party"] == ["_script_support", "app", "policy"]
     assert deptry["package_module_name_map"]["pyyaml"] == ["yaml"]
     assert deptry["package_module_name_map"]["pulumi-policy"] == ["pulumi_policy"]
     assert deptry["per_rule_ignores"]["DEP002"] == ["pulumi-aws"]
     assert importlinter["root_packages"] == ["app", "policy"]
-    assert len(importlinter["contracts"]) == 4
+    assert importlinter["include_external_packages"] is True
+    assert [contract["name"] for contract in importlinter["contracts"]] == [
+        "Pulumi runtime does not depend on the policy pack",
+        "Policy pack stays isolated from Pulumi runtime modules",
+        "Pulumi app layering remains one-way",
+        "Policy layering remains one-way",
+        "Runtime guardrails stay free of Pulumi SDK bindings",
+        "Policy helpers stay free of Pulumi runtime bindings",
+    ]
     assert data["tool"]["vulture"]["min_confidence"] == 80
     assert "pulumi/app" in data["tool"]["vulture"]["paths"]
 
@@ -95,23 +103,18 @@ def test_security_scan_workflow_covers_repo_hygiene_and_dependency_review() -> N
     assert "bandit" in jobs
     assert "dependency_review" in jobs
     assert "yamllint" in jobs
-    assert "shell_hygiene" in jobs
     assert "hadolint" in jobs
     assert jobs["bandit"]["timeout-minutes"] == 10
     assert (
         jobs["dependency_review"]["if"] == "${{ github.event_name == 'pull_request' }}"
     )
     assert jobs["yamllint"]["timeout-minutes"] == 10
-    assert jobs["shell_hygiene"]["timeout-minutes"] == 10
     assert jobs["hadolint"]["timeout-minutes"] == 10
     assert any(
         step.get("run") == "make test-bandit" for step in jobs["bandit"]["steps"]
     )
     assert any(
         step.get("run") == "make test-yaml" for step in jobs["yamllint"]["steps"]
-    )
-    assert any(
-        step.get("run") == "make test-shell" for step in jobs["shell_hygiene"]["steps"]
     )
     assert any(
         step.get("run") == "make test-dockerfile" for step in jobs["hadolint"]["steps"]
@@ -233,7 +236,9 @@ def test_mutation_script_derives_coverage_flags_from_mutation_paths() -> None:
     """Keep mutation coverage aligned with the configured mutation target paths."""
     script = MUTATION_SCRIPT.read_text(encoding="utf-8")
 
-    assert 'read -r -a mutation_paths <<<"${MUTATION_PATHS}"' in script
-    assert 'coverage_flags+=("--cov=${mutation_path}")' in script
-    assert '"${UV_BIN}" run pytest -q "${coverage_flags[@]}" --cov-branch' in script
+    assert 'split_values(os.environ.get("MUTATION_PATHS", "pulumi/app"))' in script
+    assert 'coverage_flags = [f"--cov={mutation_path}"' in script
+    assert "for mutation_path in mutation_paths]" in script
+    assert '"--cov-branch"' in script
+    assert '"mutmut"' in script
     assert "--cov=pulumi/app" not in script

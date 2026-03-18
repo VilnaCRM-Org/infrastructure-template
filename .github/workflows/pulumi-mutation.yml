@@ -29,11 +29,10 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run mutation suite inside Docker
         env:
           PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
-          PULUMI_CONFIG_PASSPHRASE: ""
         run: make test-mutation

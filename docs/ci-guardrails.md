@@ -24,8 +24,8 @@ These checks are intended to be marked as required in branch protection:
 | `CodeQL (actions)` | GitHub-native | Scans workflow code for insecure patterns |
 
 `make test-security` aggregates Gitleaks, dependency audit, and Bandit.
-`make test-repo-hygiene` aggregates Actionlint, Yamllint, ShellCheck/`shfmt`,
-and Hadolint. `make test-guardrails` aggregates preview generation,
+`make test-repo-hygiene` aggregates Actionlint, Yamllint, and Hadolint.
+`make test-guardrails` aggregates preview generation,
 destructive diff gating, and IAM validation. `make ci-pr` and `make ci`
 include all three batteries.
 
@@ -34,8 +34,8 @@ include all three batteries.
 The preview workflow uses the same Docker workspace and policy pack that local
 developers use:
 
-1. `./scripts/prepare_docker_context.sh`
-2. `make test-preview`
+1. `make start`
+2. `make publish-pulumi-preview-summary`
 3. `make test-destructive-diff`
 4. `make test-iam-validation`
 
@@ -121,7 +121,9 @@ Optional repository secrets:
 | Secret | Purpose |
 | --- | --- |
 | `PULUMI_ACCESS_TOKEN` | Required only when the backend is the Pulumi Service |
-| `PULUMI_CONFIG_PASSPHRASE` | Required only for passphrase-protected backends |
+
+Shared backends should use an AWS KMS-backed Pulumi secrets provider rather
+than a passphrase-managed stack secret flow.
 
 Fork pull requests always run the unprivileged file-backend preview and the
 destructive diff gate. Same-repo pull requests also fall back to the

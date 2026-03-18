@@ -54,7 +54,7 @@ targets = ["pulumi", "policy", "scripts"]
 [tool.deptry]
 extend_exclude = [".artifacts", ".pulumi-backend"]
 ignore_notebooks = true
-known_first_party = ["app", "policy"]
+known_first_party = ["_script_support", "app", "policy"]
 
 [tool.deptry.package_module_name_map]
 pyyaml = ["yaml"]
@@ -85,6 +85,7 @@ DEP004 = [
 
 [tool.importlinter]
 root_packages = ["app", "policy"]
+include_external_packages = true
 
 [[tool.importlinter.contracts]]
 name = "Pulumi runtime does not depend on the policy pack"
@@ -109,6 +110,18 @@ name = "Policy layering remains one-way"
 type = "layers"
 containers = ["policy"]
 layers = ["pack", "guardrails", "config"]
+
+[[tool.importlinter.contracts]]
+name = "Runtime guardrails stay free of Pulumi SDK bindings"
+type = "forbidden"
+source_modules = ["app.guardrails"]
+forbidden_modules = ["pulumi", "pulumi_policy"]
+
+[[tool.importlinter.contracts]]
+name = "Policy helpers stay free of Pulumi runtime bindings"
+type = "forbidden"
+source_modules = ["policy.config", "policy.guardrails"]
+forbidden_modules = ["pulumi", "pulumi_policy"]
 
 [tool.vulture]
 exclude = ["tests/", ".artifacts/", ".pulumi-backend/"]

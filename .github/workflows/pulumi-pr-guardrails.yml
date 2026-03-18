@@ -30,17 +30,16 @@ jobs:
       AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'eu-central-1' }}
       PULUMI_BACKEND_URL: file:///workspace/.pulumi-backend
       PULUMI_PREVIEW_STACKS: ${{ vars.PULUMI_PREVIEW_STACKS }}
-      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Run preview guardrail
-        run: ./scripts/publish_pulumi_preview_summary.sh
+        run: make publish-pulumi-preview-summary
 
       - name: Upload preview artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -68,7 +67,6 @@ jobs:
       AWS_DEFAULT_REGION: ${{ vars.AWS_REGION || 'eu-central-1' }}
       PULUMI_BACKEND_URL: ${{ vars.PULUMI_BACKEND_URL }}
       PULUMI_PREVIEW_STACKS: ${{ vars.PULUMI_PREVIEW_STACKS }}
-      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5
@@ -82,20 +80,13 @@ jobs:
           role-session-name: gha-pulumi-preview-${{ github.run_id }}
           aws-region: ${{ vars.AWS_REGION || 'eu-central-1' }}
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
-
-      - name: Require shared Pulumi backend
-        run: |
-          if [[ -z "${PULUMI_BACKEND_URL:-}" ]]; then
-            echo "error: set the PULUMI_BACKEND_URL repository variable for privileged previews." >&2
-            exit 1
-          fi
+      - name: Start development environment
+        run: make start
 
       - name: Run preview guardrail
         env:
           PULUMI_REQUIRE_SHARED_BACKEND: "true"
-        run: ./scripts/publish_pulumi_preview_summary.sh
+        run: make publish-pulumi-preview-summary
 
       - name: Upload privileged preview artifact
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -122,8 +113,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Download privileged preview artifact
         if: ${{ needs.preview_privileged.result == 'success' }}
@@ -180,8 +171,8 @@ jobs:
           role-session-name: gha-iam-validate-${{ github.run_id }}
           aws-region: ${{ vars.AWS_REGION || 'eu-central-1' }}
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Download preview artifact
         uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e

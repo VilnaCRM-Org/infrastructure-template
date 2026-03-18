@@ -45,7 +45,7 @@ test:
 - `policy/__main__.py` registers the `PolicyPack`
 - `policy/PulumiPolicy.yaml` points Pulumi at a repo-local `policy/.venv`
   path so the policy runtime stays portable across CI, Docker, and local shells
-- `scripts/prepare_policy_pack.sh` keeps the shared `uv` environment ready for
+- `scripts/prepare_policy_pack.py` keeps the shared `uv` environment ready for
   Pulumi's Python policy runtime and refreshes `policy/.venv` as a symlink to
   the shared interpreter
 

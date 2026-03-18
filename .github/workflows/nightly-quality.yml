@@ -27,8 +27,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Generate Wily report
         run: make report-maintainability-trends
@@ -49,8 +49,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Generate dead-code report
         run: make report-dead-code
@@ -71,8 +71,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Generate docstring report
         run: make report-docstrings
@@ -97,8 +97,8 @@ jobs:
         with:
           persist-credentials: false
 
-      - name: Prepare Docker context
-        run: ./scripts/prepare_docker_context.sh
+      - name: Start development environment
+        run: make start
 
       - name: Generate SBOM
         run: make report-sbom

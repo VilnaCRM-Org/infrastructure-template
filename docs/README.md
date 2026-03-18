@@ -73,7 +73,7 @@ test-crossguard   Alias for the Pulumi CrossGuard policy-pack suite.
 test-pulumi       Structural validation for manifests, workflows, and supply-chain guards.
 test-policy       Pulumi policy-pack tests and guardrail coverage.
 test-quality      Blocking Python quality, maintainability, architecture, and dependency checks.
-test-repo-hygiene Workflow, YAML, shell, and Dockerfile linting.
+test-repo-hygiene Workflow, YAML, and Dockerfile linting.
 test-ruff         Ruff lint and format drift checks.
 test-ty           Ty static typing diagnostics for the Pulumi and policy layers.
 test-unit         Pulumi component tests with mocks.
@@ -125,14 +125,14 @@ CI checks are split into focused workflows that run inside the Docker workspace:
 - `pulumi-policy.yml` executes the Pulumi policy-pack suite.
 - `pulumi-mutation.yml` executes mutation testing.
 - `python-quality.yml` runs Ruff, Ty, maintainability, architecture, dependency-hygiene, and coverage checks.
-- `security-scans.yml` runs secrets, Bandit, dependency audit/review, workflow linting, YAML linting, shell hygiene, and Hadolint.
+- `security-scans.yml` runs secrets, Bandit, dependency audit/review, workflow linting, YAML linting, and Hadolint.
 - `bats-tests.yml` validates the Makefile CLI surface.
 - `pulumi-local.yml` runs `make ci-pr`, the non-mutation pull-request battery inside Docker.
 - `nightly-quality.yml` publishes maintainability, dead-code, docstring, and SBOM reports.
 
 These checks do not require AWS or Pulumi credentials by default. They use
 concurrency groups, bounded job timeouts, pinned actions, and a shared
-`./scripts/prepare_docker_context.sh` bootstrap path so local and GitHub-hosted
+`make start` bootstrap path so local and GitHub-hosted
 validation stay aligned. If you add deploy workflows or provision real cloud
 resources, follow the [GitHub Actions Secrets guide](github-actions-secrets.md)
 to configure the required secrets.
