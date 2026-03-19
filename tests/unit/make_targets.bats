@@ -416,6 +416,9 @@ assert_help_target() {
   run make -n test-mutation
   [ "$status" -eq 0 ]
   assert_compose_env_file
+  [[ "$output" == *"-e MUTATION_PATHS="* ]]
+  [[ "$output" == *"-e MUTATION_COVERAGE_TARGETS="* ]]
+  [[ "$output" == *"-e MUTATION_RUNNER="* ]]
   [[ "$output" == *"./scripts/run_mutation_tests.py"* ]]
 }
 

@@ -138,7 +138,22 @@ def test_nightly_quality_workflow_generates_reports_and_attestation() -> None:
         for step in job.get("steps", [])
         if step.get("uses", "").startswith("actions/upload-artifact@")
     ]
-    maintainability_checkout = jobs["maintainability_trends"]["steps"][0]
+    maintainability_checkout = next(
+        (
+            step
+            for step in jobs["maintainability_trends"].get("steps", [])
+            if step.get("uses", "").startswith("actions/checkout@")
+        ),
+        None,
+    )
+    attest_step = next(
+        (
+            step
+            for step in jobs["sbom"].get("steps", [])
+            if step.get("uses", "").startswith("actions/attest-build-provenance@")
+        ),
+        None,
+    )
 
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
@@ -147,6 +162,7 @@ def test_nightly_quality_workflow_generates_reports_and_attestation() -> None:
     assert jobs["docstrings"]["timeout-minutes"] == 15
     assert jobs["sbom"]["timeout-minutes"] == 15
     assert jobs["docstrings"]["name"] == "Docstring Coverage"
+    assert maintainability_checkout is not None, "actions/checkout step not found"
     assert maintainability_checkout["with"]["fetch-depth"] == 0
     assert jobs["sbom"]["permissions"] == {
         "attestations": "write",
@@ -174,9 +190,13 @@ def test_nightly_quality_workflow_generates_reports_and_attestation() -> None:
         step.get("with", {}).get("path") == ".artifacts/quality/docstr-coverage.txt"
         for step in jobs["docstrings"]["steps"]
     )
+    assert attest_step is not None, "attest-build-provenance step not found"
     assert any(step.get("run") == "make report-sbom" for step in jobs["sbom"]["steps"])
     assert any("actions/upload-artifact@" in uses for uses in sbom_uses)
-    assert any("actions/attest-build-provenance@" in uses for uses in sbom_uses)
+    assert (
+        attest_step["uses"]
+        == "actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32"
+    )
 
 
 def test_quality_docs_and_configs_are_present_and_indexed() -> None:

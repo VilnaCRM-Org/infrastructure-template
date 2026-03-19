@@ -71,11 +71,18 @@ def test_find_uv_binary_prefers_env_and_supports_fallbacks(
     module = load_script_module(monkeypatch, "_script_support")
     env_uv = tmp_path / "uv-env"
     env_uv.write_text("", encoding="utf-8")
+    os.chmod(env_uv, 0o755)
     path_uv = tmp_path / "uv-path"
     path_uv.write_text("", encoding="utf-8")
+    os.chmod(path_uv, 0o755)
 
     monkeypatch.setenv("UV_BIN", str(env_uv))
     assert module.find_uv_binary() == str(env_uv)
+
+    missing_env_uv = tmp_path / "missing-uv"
+    monkeypatch.setenv("UV_BIN", str(missing_env_uv))
+    monkeypatch.setattr(module.shutil, "which", lambda name: str(path_uv))
+    assert module.find_uv_binary() == str(path_uv)
 
     monkeypatch.delenv("UV_BIN", raising=False)
     monkeypatch.setattr(module.shutil, "which", lambda name: str(path_uv))
@@ -156,6 +163,12 @@ def test_prepare_docker_context_main_bootstraps_and_rejects_invalid_env(
     repo_dir.mkdir()
     monkeypatch.setenv("HOME", str(home_dir))
     monkeypatch.chdir(repo_dir)
+
+    aws_marker = home_dir / ".aws"
+    aws_marker.write_text("not-a-directory\n", encoding="utf-8")
+    assert module.main() == 1
+    assert "~/.aws must be a directory" in capsys.readouterr().err
+    aws_marker.unlink()
 
     assert module.main() == 1
     assert ".env.empty not found" in capsys.readouterr().err
@@ -355,6 +368,17 @@ def test_report_maintainability_trends_main_handles_git_and_wily_paths(
         command[:3] == ["uv", "run", "wily"] and "rank" in command for command in calls
     )
 
+    symlink_reports_dir = repo_dir / "symlink-reports"
+    symlink_reports_dir.mkdir(parents=True, exist_ok=True)
+    symlink_cache_target = tmp_path / "symlink-target"
+    symlink_cache_target.write_text("stale\n", encoding="utf-8")
+    symlink_cache_dir = symlink_reports_dir / "wily-cache"
+    symlink_cache_dir.symlink_to(symlink_cache_target)
+    monkeypatch.setenv("QUALITY_ARTIFACT_DIR", str(symlink_reports_dir))
+    calls.clear()
+    assert module.main() == 0
+    assert not symlink_cache_dir.exists()
+
 
 def test_run_mutation_tests_main_uses_configurable_paths_and_runner(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
@@ -447,6 +471,7 @@ def test_run_pulumi_drift_check_main_handles_skip_and_success_paths(
     monkeypatch.setattr(module, "discover_stacks", lambda *args: [])
     assert module.main() == 1
     assert "no Pulumi stacks configured for drift detection" in capsys.readouterr().err
+    assert calls == []
 
     calls.clear()
     monkeypatch.setattr(module, "discover_stacks", lambda *args: ["dev"])

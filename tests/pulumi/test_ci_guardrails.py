@@ -242,6 +242,15 @@ def test_nightly_guardrails_workflow_covers_drift_and_scorecard() -> None:
     scorecard_uses = [
         step.get("uses") for step in jobs["scorecard"]["steps"] if step.get("uses")
     ]
+    drift_steps = jobs["drift_detection"]["steps"]
+    preflight_step = next(
+        (
+            step
+            for step in drift_steps
+            if step.get("name") == "Validate drift detection prerequisites"
+        ),
+        None,
+    )
 
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
@@ -254,9 +263,12 @@ def test_nightly_guardrails_workflow_covers_drift_and_scorecard() -> None:
         jobs["drift_detection"]["env"]["PULUMI_ACCESS_TOKEN"]
         == "${{ secrets.PULUMI_ACCESS_TOKEN }}"
     )
+    assert preflight_step is not None, "drift preflight step not found"
+    assert "vars.AWS_OIDC_ROLE_ARN" in preflight_step["run"]
+    assert "vars.PULUMI_BACKEND_URL" in preflight_step["run"]
     assert any(
         step.get("run") == "make test-drift"
-        for step in jobs["drift_detection"]["steps"]
+        for step in drift_steps
     )
     assert any("ossf/scorecard-action@" in uses for uses in scorecard_uses)
     assert any("upload-sarif@" in uses for uses in scorecard_uses)

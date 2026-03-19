@@ -36,8 +36,21 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Validate drift detection prerequisites
+        run: |
+          missing=()
+          if [[ -z "${{ vars.AWS_OIDC_ROLE_ARN }}" ]]; then
+            missing+=("vars.AWS_OIDC_ROLE_ARN")
+          fi
+          if [[ -z "${PULUMI_BACKEND_URL}" ]]; then
+            missing+=("vars.PULUMI_BACKEND_URL")
+          fi
+          if [[ ${#missing[@]} -gt 0 ]]; then
+            printf 'error: nightly drift detection requires %s\n' "${missing[*]}" >&2
+            exit 1
+          fi
+
       - name: Configure AWS credentials via OIDC
-        if: ${{ vars.AWS_OIDC_ROLE_ARN != '' }}
         uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7
         with:
           role-to-assume: ${{ vars.AWS_OIDC_ROLE_ARN }}

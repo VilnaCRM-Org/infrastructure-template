@@ -245,8 +245,11 @@ test-repo-hygiene: ## Lint GitHub Actions, YAML, and the Dockerfile.
 
 test-mutation: ## Run mutation testing suite against Pulumi components.
 	$(COMPOSE) run --rm \
+		-e MUTATION_PATHS="$(MUTATION_PATHS)" \
 		-e MUTATION_TEST_TARGETS="$(MUTATION_TEST_TARGETS)" \
 		-e MUTATION_TESTS_DIR="$(MUTATION_TESTS_DIR)" \
+		-e MUTATION_COVERAGE_TARGETS="$(MUTATION_COVERAGE_TARGETS)" \
+		-e MUTATION_RUNNER="$(MUTATION_RUNNER)" \
 		$(COMPOSE_SERVICE) $(REPO_PYTHON) ./scripts/run_mutation_tests.py
 
 test-cli: ## Validate Makefile front-ends via Bats.

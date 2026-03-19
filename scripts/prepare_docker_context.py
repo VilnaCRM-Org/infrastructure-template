@@ -19,8 +19,12 @@ def main() -> int:
     env_path = repo_dir / ".env"
     empty_env_path = repo_dir / ".env.empty"
     backend_dir = repo_dir / ".pulumi-backend"
+    aws_path = home_dir / ".aws"
 
-    _ensure_dir(home_dir / ".aws", 0o700)
+    if aws_path.exists() and not aws_path.is_dir():
+        print("error: ~/.aws must be a directory", file=sys.stderr)
+        return 1
+    _ensure_dir(aws_path, 0o700)
 
     if env_path.exists() and (env_path.is_symlink() or not env_path.is_file()):
         print("error: .env must be a regular file", file=sys.stderr)

@@ -146,15 +146,19 @@ where its import-failure and startup-failure branches can be tested directly.
 
 The Docker workspace keeps its `uv` virtual environment outside the bind-mounted
 repository tree so Pulumi always sees a stable interpreter with `pip`
-available for plugin discovery. The policy-pack bootstrap keeps a dedicated
-`policy/.venv` in sync from `policy/requirements.txt`, so policy startup and
-troubleshooting stay isolated from the main `uv` workspace environment.
+available for plugin discovery. The policy-pack bootstrap keeps `policy/.venv`
+pointed at the shared `uv` workspace environment and repairs that shared
+interpreter with `uv sync --frozen --all-groups` when policy imports drift, so
+policy troubleshooting should start from the main workspace environment.
 
 ## Combined coverage gate
 
 Run with:
 
 ```bash
+make test-unit
+make test-integration
+make test-policy
 make test-coverage
 ```
 

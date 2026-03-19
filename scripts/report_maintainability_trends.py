@@ -44,7 +44,10 @@ def main() -> int:
         return 0
 
     if wily_cache_dir.exists():
-        shutil.rmtree(wily_cache_dir)
+        if wily_cache_dir.is_symlink() or not wily_cache_dir.is_dir():
+            wily_cache_dir.unlink()
+        else:
+            shutil.rmtree(wily_cache_dir)
 
     run(
         [

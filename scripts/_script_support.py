@@ -75,7 +75,13 @@ def ensure_file_backend_directory(backend_url: str) -> None:
 
 def find_uv_binary() -> str:
     """Locate the uv executable inside or outside the container image."""
-    uv_bin = os.environ.get("UV_BIN") or shutil.which("uv")
+    configured_uv = os.environ.get("UV_BIN")
+    if configured_uv:
+        configured_path = Path(configured_uv)
+        if configured_path.is_file() and os.access(configured_path, os.X_OK):
+            return str(configured_path)
+
+    uv_bin = shutil.which("uv")
     if uv_bin:
         return uv_bin
 

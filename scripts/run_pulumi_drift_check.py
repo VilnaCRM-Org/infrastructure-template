@@ -26,16 +26,16 @@ def main() -> int:
         return 0
 
     env = os.environ.copy()
+    stacks = discover_stacks(pulumi_dir, env.get("PULUMI_DRIFT_STACKS"))
+    if not stacks:
+        print("error: no Pulumi stacks configured for drift detection", file=sys.stderr)
+        return 1
+
     run(
         [sys.executable, str(root_dir / "scripts" / "prepare_policy_pack.py")],
         cwd=root_dir,
         env=env,
     )
-
-    stacks = discover_stacks(pulumi_dir, env.get("PULUMI_DRIFT_STACKS"))
-    if not stacks:
-        print("error: no Pulumi stacks configured for drift detection", file=sys.stderr)
-        return 1
 
     run(
         ["pulumi", "--cwd", str(pulumi_dir), "login", "--non-interactive", backend_url],
