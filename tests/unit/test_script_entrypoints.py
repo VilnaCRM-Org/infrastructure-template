@@ -479,6 +479,7 @@ def test_run_pulumi_preview_main_handles_empty_and_successful_runs(
     (preview_dir / "summary.md").write_text("old summary\n", encoding="utf-8")
     monkeypatch.setattr(module, "repo_root", lambda _: repo_dir)
     monkeypatch.delenv("PULUMI_BACKEND_URL", raising=False)
+    monkeypatch.delenv("PULUMI_CONFIG_PASSPHRASE", raising=False)
 
     precheck_calls: list[list[str]] = []
     monkeypatch.setattr(
@@ -526,7 +527,7 @@ def test_run_pulumi_preview_main_handles_empty_and_successful_runs(
     backend_url = (repo_dir / ".pulumi-backend").resolve().as_uri()
     assert any(
         env.get("PULUMI_BACKEND_URL") == backend_url
-        and "PULUMI_CONFIG_PASSPHRASE" in env
+        and env.get("PULUMI_CONFIG_PASSPHRASE") == ""
         for _, env, _ in run_calls
     )
     assert any(
