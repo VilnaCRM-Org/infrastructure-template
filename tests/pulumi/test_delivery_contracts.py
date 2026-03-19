@@ -292,6 +292,33 @@ def test_prepare_docker_context_script_rejects_non_regular_env_path(
     assert target_file.read_text(encoding="utf-8") == "TARGET=value\n"
 
 
+def test_prepare_docker_context_script_rejects_symlinked_backend_dir(
+    tmp_path: Path,
+) -> None:
+    """Fail fast when the local backend path is a symlinked directory."""
+    home_dir = tmp_path / "home"
+    repo_dir = tmp_path / "repo"
+    backend_target = tmp_path / "backend-target"
+    home_dir.mkdir()
+    repo_dir.mkdir()
+    backend_target.mkdir()
+    (repo_dir / ".env.empty").write_text("DEFAULT=value\n", encoding="utf-8")
+    (repo_dir / ".pulumi-backend").symlink_to(backend_target, target_is_directory=True)
+
+    result = subprocess.run(
+        ["python3", str(PREPARE_SCRIPT)],
+        check=False,
+        cwd=repo_dir,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "HOME": str(home_dir)},
+        timeout=30,
+    )
+
+    assert result.returncode != 0
+    assert "error: .pulumi-backend must be a regular directory" in result.stderr
+
+
 def test_prepare_docker_context_script_requires_env_template(tmp_path: Path) -> None:
     """Fail clearly when the committed fallback env file is missing."""
     home_dir = tmp_path / "home"

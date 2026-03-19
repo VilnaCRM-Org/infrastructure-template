@@ -9,8 +9,17 @@ from pathlib import Path
 
 
 def _ensure_dir(path: Path, mode: int) -> None:
+    if path.is_symlink() or (path.exists() and not path.is_dir()):
+        raise NotADirectoryError(path)
     path.mkdir(parents=True, exist_ok=True)
     os.chmod(path, mode)
+
+
+def _is_regular_directory_path(path: Path, label: str) -> bool:
+    if path.is_symlink() or (path.exists() and not path.is_dir()):
+        print(f"error: {label} must be a regular directory", file=sys.stderr)
+        return False
+    return True
 
 
 def main() -> int:
@@ -21,8 +30,7 @@ def main() -> int:
     backend_dir = repo_dir / ".pulumi-backend"
     aws_path = home_dir / ".aws"
 
-    if aws_path.exists() and not aws_path.is_dir():
-        print("error: ~/.aws must be a directory", file=sys.stderr)
+    if not _is_regular_directory_path(aws_path, "~/.aws"):
         return 1
     _ensure_dir(aws_path, 0o700)
 
@@ -37,6 +45,8 @@ def main() -> int:
         shutil.copyfile(empty_env_path, env_path)
 
     os.chmod(env_path, stat.S_IRUSR | stat.S_IWUSR)
+    if not _is_regular_directory_path(backend_dir, ".pulumi-backend"):
+        return 1
     _ensure_dir(backend_dir, 0o700)
     return 0
 

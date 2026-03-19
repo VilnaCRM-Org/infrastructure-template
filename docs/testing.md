@@ -182,6 +182,9 @@ Coverage:
 - Mutation analysis of `pulumi/app`
 - Regression resistance for unit and integration assertions
 
+Set non-empty `MUTATION_*` overrides to customize the suite. Blank exports are
+ignored so the default mutation paths, coverage targets, and runner stay active.
+
 Mutation testing is the slowest suite and is usually best left to CI unless you are changing component logic directly.
 
 ## CLI tests

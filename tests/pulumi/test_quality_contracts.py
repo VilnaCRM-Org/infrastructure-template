@@ -254,11 +254,17 @@ def test_quality_related_actions_are_pinned_to_full_shas() -> None:
 
 def test_mutation_script_derives_coverage_flags_from_mutation_paths() -> None:
     """Keep mutation coverage aligned with the configured mutation target paths."""
-    script = MUTATION_SCRIPT.read_text(encoding="utf-8")
+    script = re.sub(r"\s+", " ", MUTATION_SCRIPT.read_text(encoding="utf-8"))
 
-    assert 'split_values(os.environ.get("MUTATION_PATHS", "pulumi/app"))' in script
-    assert 'coverage_flags = [f"--cov={mutation_path}"' in script
-    assert "for mutation_path in mutation_paths]" in script
+    assert re.search(
+        r'split_values\(os\.environ\.get\("MUTATION_PATHS", "pulumi/app"\)\)',
+        script,
+    )
+    assert re.search(
+        r'coverage_flags = \[f"--cov=\{mutation_path\}" '
+        r"for mutation_path in mutation_paths\]",
+        script,
+    )
     assert '"--cov-branch"' in script
     assert '"mutmut"' in script
     assert "--cov=pulumi/app" not in script

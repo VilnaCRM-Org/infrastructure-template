@@ -165,9 +165,16 @@ def test_prepare_docker_context_main_bootstraps_and_rejects_invalid_env(
     monkeypatch.chdir(repo_dir)
 
     aws_marker = home_dir / ".aws"
+    aws_target = tmp_path / "aws-target"
+    aws_target.mkdir()
+    aws_marker.symlink_to(aws_target, target_is_directory=True)
+    assert module.main() == 1
+    assert "~/.aws must be a regular directory" in capsys.readouterr().err
+    aws_marker.unlink()
+
     aws_marker.write_text("not-a-directory\n", encoding="utf-8")
     assert module.main() == 1
-    assert "~/.aws must be a directory" in capsys.readouterr().err
+    assert "~/.aws must be a regular directory" in capsys.readouterr().err
     aws_marker.unlink()
 
     assert module.main() == 1
@@ -181,6 +188,13 @@ def test_prepare_docker_context_main_bootstraps_and_rejects_invalid_env(
     assert ".env must be a regular file" in capsys.readouterr().err
     (repo_dir / ".env").unlink()
 
+    backend_target = tmp_path / "backend-target"
+    backend_target.mkdir()
+    (repo_dir / ".pulumi-backend").symlink_to(backend_target, target_is_directory=True)
+    assert module.main() == 1
+    assert ".pulumi-backend must be a regular directory" in capsys.readouterr().err
+    (repo_dir / ".pulumi-backend").unlink()
+
     assert module.main() == 0
     assert (home_dir / ".aws").is_dir()
     assert (repo_dir / ".env").read_text(encoding="utf-8") == "KEY=value\n"
@@ -188,6 +202,27 @@ def test_prepare_docker_context_main_bootstraps_and_rejects_invalid_env(
     (repo_dir / ".env").write_text("LOCAL=value\n", encoding="utf-8")
     assert module.main() == 0
     assert (repo_dir / ".env").read_text(encoding="utf-8") == "LOCAL=value\n"
+
+
+def test_prepare_docker_context_helpers_reject_non_directories(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """Exercise helper guards that reject symlinks and non-directory paths."""
+    module = load_script_module(monkeypatch, "prepare_docker_context")
+    regular_dir = tmp_path / "regular-dir"
+    regular_dir.mkdir()
+    symlink_dir = tmp_path / "symlink-dir"
+    symlink_dir.symlink_to(regular_dir, target_is_directory=True)
+    plain_file = tmp_path / "plain-file"
+    plain_file.write_text("x\n", encoding="utf-8")
+
+    assert module._is_regular_directory_path(regular_dir, "regular-dir") is True
+    assert module._is_regular_directory_path(symlink_dir, "symlink-dir") is False
+
+    with pytest.raises(NotADirectoryError):
+        module._ensure_dir(symlink_dir, 0o700)
+    with pytest.raises(NotADirectoryError):
+        module._ensure_dir(plain_file, 0o700)
 
 
 def test_prepare_policy_pack_helpers_and_main_paths(
