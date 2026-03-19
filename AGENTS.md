@@ -62,7 +62,9 @@ These rules are mandatory for AI coding agents in this repository.
 2. Review unresolved, non-outdated human and CodeRabbit comments before widening the patch.
 3. Keep fixes scoped to the active review feedback and the failing checks.
 4. Re-run the narrowest local validation that proves the comment or failure is addressed.
-5. Reply on review threads when the fix is already present or needs brief verification context.
-6. Ask `@coderabbitai review` after pushing if the bot has not posted a fresh approval on the new head.
-7. Do not call the PR finished until required GitHub checks are green and current review threads are resolved.
-8. If CodeRabbit still withholds approval, inspect the latest current-head CodeRabbit review summary with `gh pr view <PR> --json reviews`, address any current-head findings even when no inline thread remains open, then post a PR comment summarizing the exact fixes and ask `@coderabbitai full review` to verify the new head.
+5. Reply on every human and CodeRabbit review thread after fixing it, including brief verification context when useful.
+6. When a CodeRabbit comment is fixed, explicitly ask CodeRabbit on that same thread to re-check the comment because the fix is now present.
+7. Wait until CodeRabbit has answered every per-comment reply before asking for a new PR-wide bot review.
+8. After all fixed comments have been re-checked, ask `@coderabbitai review` or `@coderabbitai full review` on the PR only once the new head is ready for another full pass.
+9. Do not call the PR finished until all required GitHub CI checks are green, current review threads are resolved, and CodeRabbit has approved the PR.
+10. If CodeRabbit still withholds approval, inspect the latest current-head CodeRabbit review summary with `gh pr view <PR> --json reviews`, address any current-head findings even when no inline thread remains open, then repeat the per-comment recheck flow before requesting another PR-wide review.
