@@ -7,7 +7,7 @@ import sys
 from collections.abc import Callable, Iterator
 from contextlib import ExitStack, contextmanager
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 import pytest
 from app.environment import EnvironmentSettings, resolve_config_value
@@ -75,7 +75,7 @@ def _assert_output_value(output: pulumi.Output, expected: object) -> None:
 @contextmanager
 def mocked_pulumi_context(
     config_values: dict[str, object] | None = None, *, project_name: str | None = None
-) -> Iterator[None]:
+) -> Iterator[object]:
     """Patch Pulumi config/project helpers for deterministic tests."""
     config_values = config_values or {}
     with ExitStack() as stack:
@@ -90,7 +90,7 @@ def mocked_pulumi_context(
                 patch("app.environment.pulumi.get_project", return_value=project_name)
             )
 
-        yield
+        yield config_instance
 
 
 def test_stack_tag_combines_service_and_environment() -> None:
@@ -142,8 +142,13 @@ def test_environment_falls_back_to_config_value() -> None:
             {"Project": "infrastructure-template", "Environment": "qa"},
         )
 
-    with mocked_pulumi_context({"environment": "qa"}):
+    with mocked_pulumi_context({"environment": "qa"}) as config_instance:
         _run_pulumi_program(program)
+
+    assert config_instance.get.call_args_list == [
+        call("environment"),
+        call("serviceName"),
+    ]
 
 
 def test_environment_defaults_to_dev_when_unset() -> None:

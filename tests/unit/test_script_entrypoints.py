@@ -389,6 +389,8 @@ def test_run_mutation_tests_main_uses_configurable_paths_and_runner(
     repo_dir.mkdir()
     coverage_file = repo_dir / ".coverage.old"
     coverage_file.write_text("stale\n", encoding="utf-8")
+    coverage_config = repo_dir / ".coveragerc"
+    coverage_config.write_text("[run]\nbranch = True\n", encoding="utf-8")
     (repo_dir / ".coverage-dir").mkdir()
     monkeypatch.setattr(module, "repo_root", lambda _: repo_dir)
     monkeypatch.setattr(module, "find_uv_binary", lambda: "uv")
@@ -414,6 +416,7 @@ def test_run_mutation_tests_main_uses_configurable_paths_and_runner(
 
     assert module.main() == 0
     assert not coverage_file.exists()
+    assert coverage_config.exists()
     assert calls[0] == [
         "uv",
         "run",

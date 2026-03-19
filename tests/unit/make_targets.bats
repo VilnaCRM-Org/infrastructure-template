@@ -413,12 +413,16 @@ assert_help_target() {
 }
 
 @test "make test-mutation executes the mutation helper script" {
-  run make -n test-mutation
+  run env \
+    MUTATION_PATHS="pulumi/app" \
+    MUTATION_COVERAGE_TARGETS="tests/unit/test_guardrails.py" \
+    MUTATION_RUNNER="uv run pytest -q tests/unit/test_guardrails.py" \
+    make -n test-mutation
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"-e MUTATION_PATHS="* ]]
-  [[ "$output" == *"-e MUTATION_COVERAGE_TARGETS="* ]]
-  [[ "$output" == *"-e MUTATION_RUNNER="* ]]
+  [[ "$output" == *"-e MUTATION_PATHS=\"pulumi/app\""* ]]
+  [[ "$output" == *"-e MUTATION_COVERAGE_TARGETS=\"tests/unit/test_guardrails.py\""* ]]
+  [[ "$output" == *"-e MUTATION_RUNNER=\"uv run pytest -q tests/unit/test_guardrails.py\""* ]]
   [[ "$output" == *"./scripts/run_mutation_tests.py"* ]]
 }
 

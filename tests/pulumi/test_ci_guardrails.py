@@ -266,10 +266,7 @@ def test_nightly_guardrails_workflow_covers_drift_and_scorecard() -> None:
     assert preflight_step is not None, "drift preflight step not found"
     assert "vars.AWS_OIDC_ROLE_ARN" in preflight_step["run"]
     assert "vars.PULUMI_BACKEND_URL" in preflight_step["run"]
-    assert any(
-        step.get("run") == "make test-drift"
-        for step in drift_steps
-    )
+    assert any(step.get("run") == "make test-drift" for step in drift_steps)
     assert any("ossf/scorecard-action@" in uses for uses in scorecard_uses)
     assert any("upload-sarif@" in uses for uses in scorecard_uses)
 

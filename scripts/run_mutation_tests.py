@@ -29,6 +29,8 @@ def main() -> int:
     )
 
     for coverage_file in root_dir.glob(".coverage*"):
+        if coverage_file.name == ".coveragerc":
+            continue
         if coverage_file.is_file():
             coverage_file.unlink()
 
