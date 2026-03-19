@@ -34,7 +34,7 @@ def main() -> int:
         return 1
     _ensure_dir(aws_path, 0o700)
 
-    if env_path.exists() and (env_path.is_symlink() or not env_path.is_file()):
+    if env_path.is_symlink() or (env_path.exists() and not env_path.is_file()):
         print("error: .env must be a regular file", file=sys.stderr)
         return 1
 

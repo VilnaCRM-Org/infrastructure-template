@@ -188,6 +188,12 @@ def test_prepare_docker_context_main_bootstraps_and_rejects_invalid_env(
     assert ".env must be a regular file" in capsys.readouterr().err
     (repo_dir / ".env").unlink()
 
+    missing_env_target = tmp_path / "missing.env"
+    (repo_dir / ".env").symlink_to(missing_env_target)
+    assert module.main() == 1
+    assert ".env must be a regular file" in capsys.readouterr().err
+    (repo_dir / ".env").unlink()
+
     backend_target = tmp_path / "backend-target"
     backend_target.mkdir()
     (repo_dir / ".pulumi-backend").symlink_to(backend_target, target_is_directory=True)
