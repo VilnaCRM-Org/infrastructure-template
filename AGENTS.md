@@ -13,7 +13,7 @@ This repository is a Pulumi-based infrastructure template. Agents should keep ch
 7. Keep the structural, policy, quality, unit, integration, mutation, CLI, and aggregate local-battery suites runnable without live AWS credentials.
 8. Use `make ci-pr` when you want the non-mutation GitHub PR battery, `make ci` for the full local superset including mutation, and `make test` for the faster non-mutation developer battery.
 9. Use `make doctor` before debugging local Docker or Compose issues.
-10. Use `make start` when changing Docker-backed CI jobs so workspace preparation stays consistent across workflows and local runs.
+10. Run `make start` when changing Docker-backed CI jobs so workspace preparation stays consistent across workflows and local runs.
 11. Keep `./scripts/prepare_policy_pack.py`, `policy/PulumiPolicy.yaml`, `policy/.venv`, and the shared `uv` environment contract aligned when changing Pulumi policy-pack behavior.
 12. Reproduce PR safety checks with `make test-security`, `make test-repo-hygiene`, `make test-guardrails`, or `make ci-pr` before pushing infra-related workflow or policy changes.
 13. Do not add long-lived static AWS credentials to workflows; use the documented OIDC role variables instead.

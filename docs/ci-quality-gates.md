@@ -36,7 +36,12 @@ These checks should be required in branch protection:
 | `CodeQL (actions)` | GitHub-native | Static security/code scanning for workflows |
 
 `make ci-pr` is the canonical local equivalent of the non-mutation pull-request
-battery. `make ci` adds the slower mutation layer on top.
+battery. The structural, policy, quality, unit, integration, mutation, CLI,
+and aggregate local suites remain runnable without live AWS credentials, but
+`make test-iam-validation` stays a separate privileged step and is
+intentionally excluded from `make ci-pr`. `make ci` adds the slower mutation
+layer on top, and IAM validation still runs separately when credentials are
+available.
 
 ## Scheduled quality monitoring
 

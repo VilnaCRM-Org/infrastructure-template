@@ -807,6 +807,16 @@ def test_ci_architecture_docs_match_make_entrypoints() -> None:
     assert "Pulumi structural tests" in architecture_doc
     assert "make ci-pr" in architecture_doc
     assert "tracked Git content" in quality_doc
+    assert "separate privileged step" in quality_doc
+    assert "excluded from `make ci-pr`" in quality_doc
+    assert "without live AWS credentials" in quality_doc
+
+
+def test_agents_guidance_keeps_make_start_wording_current() -> None:
+    """Keep agent-facing CI bootstrap guidance aligned with the current workflow."""
+    agents_doc = (PROJECT_ROOT / "AGENTS.md").read_text(encoding="utf-8")
+
+    assert "Run `make start` when changing Docker-backed CI jobs" in agents_doc
 
 
 def test_sre_docs_map_blocking_ci_checks_back_to_local_commands() -> None:

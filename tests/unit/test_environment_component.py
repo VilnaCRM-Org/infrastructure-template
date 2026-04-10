@@ -261,6 +261,50 @@ def test_default_tags_allow_owner_and_cost_center_overrides() -> None:
         _run_pulumi_program(program)
 
 
+def test_default_tags_trim_owner_and_cost_center_config_values() -> None:
+    """Normalize padded config values before exporting shared tags."""
+
+    def program() -> None:
+        """Export normalized tags from config-backed owner values."""
+        env_settings = EnvironmentSettings("unit", environment="qa")
+        pulumi.export("defaultTags", env_settings.default_tags)
+        _assert_output_value(
+            env_settings.default_tags,
+            {
+                "Project": "infrastructure-template",
+                "Environment": "qa",
+                "Owner": "team-platform",
+                "CostCenter": "cost-123",
+            },
+        )
+
+    with mocked_pulumi_context(
+        {"owner": " team-platform ", "costCenter": " cost-123 "}
+    ):
+        _run_pulumi_program(program)
+
+
+def test_default_tags_fall_back_when_owner_and_cost_center_are_blank() -> None:
+    """Replace blank owner metadata with the documented template defaults."""
+
+    def program() -> None:
+        """Export default tags for blank config values."""
+        env_settings = EnvironmentSettings("unit", environment="qa")
+        pulumi.export("defaultTags", env_settings.default_tags)
+        _assert_output_value(
+            env_settings.default_tags,
+            {
+                "Project": "infrastructure-template",
+                "Environment": "qa",
+                "Owner": "platform",
+                "CostCenter": "engineering",
+            },
+        )
+
+    with mocked_pulumi_context({"owner": "   ", "costCenter": ""}):
+        _run_pulumi_program(program)
+
+
 def test_default_tags_allow_explicit_owner_and_cost_center_overrides() -> None:
     """Honor explicit owner and cost-center overrides before config defaults."""
 
@@ -272,6 +316,32 @@ def test_default_tags_allow_explicit_owner_and_cost_center_overrides() -> None:
             service_name="billing",
             owner="payments",
             cost_center="finops",
+        )
+        pulumi.export("defaultTags", env_settings.default_tags)
+        _assert_output_value(
+            env_settings.default_tags,
+            {
+                "Project": "billing",
+                "Environment": "qa",
+                "Owner": "payments",
+                "CostCenter": "finops",
+            },
+        )
+
+    _run_pulumi_program(program)
+
+
+def test_default_tags_trim_explicit_owner_and_cost_center_overrides() -> None:
+    """Normalize explicit owner overrides before exporting default tags."""
+
+    def program() -> None:
+        """Export default tags for explicit padded tag overrides."""
+        env_settings = EnvironmentSettings(
+            "unit",
+            environment="qa",
+            service_name="billing",
+            owner=" payments ",
+            cost_center=" finops ",
         )
         pulumi.export("defaultTags", env_settings.default_tags)
         _assert_output_value(

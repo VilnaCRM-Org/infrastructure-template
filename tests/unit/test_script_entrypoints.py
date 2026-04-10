@@ -586,12 +586,14 @@ def test_run_pulumi_preview_main_handles_empty_and_successful_runs(
     monkeypatch.setattr(module, "run", fake_run)
     assert module.main() == 0
 
+    dev_stem = module._safe_preview_artifact_stem("dev")
+    staging_stem = module._safe_preview_artifact_stem("qa/staging")
     output = capsys.readouterr().out
-    assert "Pulumi Preview: dev" in output
-    assert "Pulumi Preview: qa_staging" in output
+    assert f"Pulumi Preview: {dev_stem}" in output
+    assert f"Pulumi Preview: {staging_stem}" in output
     assert not (preview_dir / "stale.json").exists()
-    assert (preview_dir / "dev.json").is_file()
-    assert (preview_dir / "qa_staging.json").is_file()
+    assert (preview_dir / f"{dev_stem}.json").is_file()
+    assert (preview_dir / f"{staging_stem}.json").is_file()
     assert (repo_dir / ".pulumi-backend").is_dir()
     backend_url = (repo_dir / ".pulumi-backend").resolve().as_uri()
     assert any(
@@ -612,6 +614,20 @@ def test_run_pulumi_preview_main_handles_empty_and_successful_runs(
         command[3:8] == ["stack", "select", "dev", "--create", "--non-interactive"]
         for command, _, _ in run_calls
     )
+
+
+def test_run_pulumi_preview_artifact_stems_add_a_hash_to_avoid_collisions(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Different raw stack names must not collapse into the same artifact stem."""
+    module = load_script_module(monkeypatch, "run_pulumi_preview")
+
+    slash_stack = module._safe_preview_artifact_stem("org/prod")
+    underscore_stack = module._safe_preview_artifact_stem("org_prod")
+
+    assert slash_stack.startswith("org_prod-")
+    assert underscore_stack.startswith("org_prod-")
+    assert slash_stack != underscore_stack
 
 
 def test_run_pulumi_preview_main_keeps_shared_backends_read_only(

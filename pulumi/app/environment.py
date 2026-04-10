@@ -33,6 +33,12 @@ def _default_tags_from_parts(parts: tuple[str, str, str, str]) -> dict[str, str]
     }
 
 
+def _normalize_tag_value(value: str, *, default: str) -> str:
+    """Trim tag values and fall back to the default when the result is empty."""
+    normalized = value.strip()
+    return normalized or default
+
+
 def resolve_config_value(
     explicit: str | None, configured: str | None, *, default: str
 ) -> str:
@@ -79,14 +85,20 @@ class EnvironmentSettings(pulumi.ComponentResource):
                 default=pulumi.get_project(),
             )
         )
-        resolved_owner = resolve_config_value(
-            owner,
-            config.get("owner"),
+        resolved_owner = _normalize_tag_value(
+            resolve_config_value(
+                owner,
+                config.get("owner"),
+                default=DEFAULT_OWNER,
+            ),
             default=DEFAULT_OWNER,
         )
-        resolved_cost_center = resolve_config_value(
-            cost_center,
-            config.get("costCenter"),
+        resolved_cost_center = _normalize_tag_value(
+            resolve_config_value(
+                cost_center,
+                config.get("costCenter"),
+                default=DEFAULT_COST_CENTER,
+            ),
             default=DEFAULT_COST_CENTER,
         )
 

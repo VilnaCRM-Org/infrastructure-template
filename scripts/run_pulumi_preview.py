@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 from __future__ import annotations
 
+import hashlib
 import os
 import sys
 from pathlib import Path
@@ -59,6 +60,16 @@ def _select_stack_for_preview(
     return select_result.returncode or 1
 
 
+def _safe_preview_artifact_stem(stack: str) -> str:
+    """Build a filesystem-safe preview artifact stem without name collisions."""
+    sanitized = "".join(
+        character if character.isalnum() or character in "._-" else "_"
+        for character in stack
+    )
+    digest = hashlib.sha256(stack.encode("utf-8")).hexdigest()[:8]
+    return f"{sanitized or 'stack'}-{digest}"
+
+
 def main() -> int:
     root_dir = repo_root(__file__)
     pulumi_dir = Path(os.environ.get("PULUMI_DIR", root_dir / "pulumi"))
@@ -104,11 +115,9 @@ def main() -> int:
     uses_file_backend = _uses_file_backend(backend_url)
 
     for stack in stacks:
-        safe_stack = "".join(
-            character if character.isalnum() or character in "._-" else "_"
-            for character in stack
+        preview_file = preview_artifact_dir / (
+            f"{_safe_preview_artifact_stem(stack)}.json"
         )
-        preview_file = preview_artifact_dir / f"{safe_stack}.json"
 
         select_failure = _select_stack_for_preview(
             pulumi_dir,
