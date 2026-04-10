@@ -1,86 +1,53 @@
-# Autorelease action
+# Autorelease Action
 
 ## Overview
 
-Auto-release workflows automate the process of creating software releases in response to specific triggers like merging a pull request or pushing to a certain branch. This automation helps streamline the development process, reduce human error, and ensure consistent release practices.
+This repository publishes stable releases from Git tags instead of committing a
+version bump back to the protected default branch. The first stable release must
+be seeded manually. After that, the GitHub Actions autorelease workflow can tag
+the next version and create the matching GitHub release automatically.
 
----
+## Why This Flow Exists
 
-## Why You Might Need Auto-Release
+The default branch is protected by pull-request, code-scanning, and code-quality
+rules. A release workflow that tries to commit `CHANGELOG.md` or a bumped
+version file directly to `main` will fail under those rules. Tag-only releases
+avoid rewriting protected history while still producing deterministic versioned
+artifacts.
 
-Consistency: Automating the release process ensures that every release adheres to predefined standards and procedures, reducing the risk of human error and inconsistency in the release quality.
+## Release Model
 
-Efficiency: By automating the changelog generation and release process, teams can save time and focus on development and testing rather than on the operational details of creating a release.
+1. Seed the first stable release manually.
+   Use the commit you want to treat as the first stable release and publish a
+   GitHub release with a semver tag such as `v0.2.0`.
+2. Let autorelease derive the next version from Git tags.
+   The workflow uses the latest stable semver tag as the current version source.
+3. Publish later releases automatically.
+   Every subsequent qualifying push to `main` can create the next tag and the
+   matching GitHub release without committing back to the branch.
 
-Integration: Auto-release workflows can be integrated with other tools and workflows, such as continuous integration (CI) systems, to ensure that releases are made only when all tests pass, maintaining the quality of the code in the production.
+## Workflow Behavior
 
-Traceability: Automated releases include detailed logs and changelogs, providing a clear audit trail for changes, which is beneficial for debugging and understanding the project’s history.
+- `push` on `main` runs the normal production autorelease flow.
+- The workflow does not update `pyproject.toml` or `CHANGELOG.md` in Git.
+- The workflow pushes only tags and then creates the GitHub release body from
+  the generated changelog text.
 
-Speed: Automation accelerates the process of releasing and deploying software, which is especially crucial in high-paced agile environments where multiple releases might occur in a single day.
+## Token Requirements
 
----
+The workflow uses `REPO_GITHUB_TOKEN` when present and falls back to the
+repository-scoped `GITHUB_TOKEN`. The token needs `contents: write` so it can
+push tags and publish releases.
 
-## Setting Up an Auto-Release Workflow
+## Manual Seed Release
 
-### Step-by-Step Guide
+If the repository has historical tags without GitHub releases, clean that state
+up before enabling automatic stable releases:
 
-#### 1) The GitHub App configuration
+1. Delete any stray tag that points to an unpublished failed workflow commit.
+2. Create the first stable release manually from the intended default-branch
+   commit.
+3. Verify the new release tag is now the latest stable semver tag.
 
-Let's start by creating and configuring a GitHub App. Go to Settings > Developer Settings > GitHub Apps (Developer Settings is at the bottom of the Settings page). Click on New GitHub App.
-
-Once you are creating a new GitHub app, make sure to configure the following:
-
-1. Complete the necessary details for the application:
-   - Set a clear, identifiable name (e.g., "YourOrg-AutoRelease")
-   - Provide a detailed description of the app's purpose
-2. Uncheck the active webhook (not needed for this use case)
-3. Configure Repository Permissions (principle of least privilege):
-   - Administration: Read & Write (required for branch protection)
-   - Contents: Read & Write (required for releases)
-   - Issues: Read & Write (required for release notes)
-   - Metadata: Read-only (minimum required)
-   - Pull Requests: Read & Write (required for automation)
-4. For security:
-
-   - Check "Install Only on this account"
-   - Enable "Suspend installations on detected abuse"
-
-After creating the app:
-
-1. Install the app on your repository:
-
-   - Go to the app's settings page
-   - Click "Install App"
-   - Select the repository where you want to use auto-release
-
-2. Generate and secure the private key:
-
-   - In app settings, click "Generate Private Key"
-   - The key will be automatically downloaded
-   - **IMPORTANT**: Store this key securely - it cannot be downloaded again
-   - If the key is ever compromised, revoke it immediately and generate a new one
-
-3. Locate the App ID:
-   - Find it at: Settings > Developer Settings > GitHub Apps > Your App > General
-   - The App ID is displayed at the top of the page
-
-#### 2) The GitHub repository configuration
-
-Go to Settings > Secrets and Variables > Actions to create new secrets:
-
-1. Add the private key as `PULUMI_AUTORELEASE_APP_KEY`
-2. Add the app ID as `PULUMI_AUTORELEASE_APP_ID`
-
-Note: These secrets will be used in the Pulumi-based deployment workflows.
-
-#### 3) Allow force push
-
-⚠️ **CAUTION**: Force push can overwrite repository history. Configure carefully:
-
-1. Go to Settings > Branches > Branch protection rules
-2. For the protected branch (e.g., main):
-   - Enable "Allow force pushes"
-   - **IMPORTANT**: Restrict force pushes to the GitHub App only
-   - Do **NOT** allow force pushes for other users or apps
-
-**NOTE**: Force push is required for the auto-release workflow to update version tags, but should be strictly limited to the GitHub App to prevent accidental history rewrites.
+After that seed release exists, the autorelease workflow can advance from that
+tag automatically.
