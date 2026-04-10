@@ -23,6 +23,7 @@ def main() -> int:
         split_values(os.environ.get("MUTATION_COVERAGE_TARGETS"))
         or mutation_test_targets
     )
+    mutation_time_multiplier = os.environ.get("MUTATION_TEST_TIME_MULTIPLIER", "3")
     mutation_runner = os.environ.get(
         "MUTATION_RUNNER",
         f"{uv_bin} run pytest -q {' '.join(mutation_test_targets)}",
@@ -61,6 +62,8 @@ def main() -> int:
             mutation_runner,
             "--tests-dir",
             mutation_tests_dir,
+            "--test-time-multiplier",
+            mutation_time_multiplier,
             "--use-coverage",
         ],
         cwd=root_dir,

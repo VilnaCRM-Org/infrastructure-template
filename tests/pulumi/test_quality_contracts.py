@@ -308,6 +308,11 @@ def test_mutation_script_derives_coverage_flags_from_mutation_paths() -> None:
         r"for mutation_path in mutation_paths\]",
         script,
     )
+    assert re.search(
+        r'os\.environ\.get\("MUTATION_TEST_TIME_MULTIPLIER", "3"\)',
+        script,
+    )
     assert '"--cov-branch"' in script
     assert '"mutmut"' in script
+    assert '"--test-time-multiplier"' in script
     assert "--cov=pulumi/app" not in script

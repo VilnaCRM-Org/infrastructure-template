@@ -10,7 +10,13 @@ from pathlib import Path
 from unittest.mock import call, patch
 
 import pytest
-from app.environment import EnvironmentSettings, resolve_config_value
+from app.environment import (
+    EnvironmentSettings,
+    _default_tags_from_parts,
+    _stack_metadata_from_outputs,
+    _stack_tag_from_parts,
+    resolve_config_value,
+)
 from pulumi.runtime import mocks, settings, stack
 
 import pulumi
@@ -362,6 +368,22 @@ def test_resolve_config_value_preserves_explicit_configured_and_default_paths() 
     assert resolve_config_value("prod", "staging", default="dev") == "prod"
     assert resolve_config_value(None, "staging", default="dev") == "staging"
     assert resolve_config_value(None, None, default="dev") == "dev"
+
+
+def test_stack_metadata_helpers_keep_the_four_field_layout() -> None:
+    """Map service, environment, owner, and cost center without index drift."""
+    metadata = _stack_metadata_from_outputs(
+        ["billing", "qa", "team-platform", "cost-123"]
+    )
+
+    assert metadata == ("billing", "qa", "team-platform", "cost-123")
+    assert _stack_tag_from_parts(metadata) == "billing-qa"
+    assert _default_tags_from_parts(metadata) == {
+        "Project": "billing",
+        "Environment": "qa",
+        "Owner": "team-platform",
+        "CostCenter": "cost-123",
+    }
 
 
 def _assert_config_error(config_values: dict[str, object], message: str) -> None:

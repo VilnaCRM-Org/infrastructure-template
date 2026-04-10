@@ -442,6 +442,7 @@ def test_run_mutation_tests_main_uses_configurable_paths_and_runner(
     )
     monkeypatch.setenv("MUTATION_TESTS_DIR", "tests/unit")
     monkeypatch.setenv("MUTATION_COVERAGE_TARGETS", "tests/unit/test_guardrails.py")
+    monkeypatch.setenv("MUTATION_TEST_TIME_MULTIPLIER", "4")
     monkeypatch.setenv(
         "MUTATION_RUNNER", "uv run pytest -q tests/unit/test_guardrails.py"
     )
@@ -480,6 +481,8 @@ def test_run_mutation_tests_main_uses_configurable_paths_and_runner(
         "uv run pytest -q tests/unit/test_guardrails.py",
         "--tests-dir",
         "tests/unit",
+        "--test-time-multiplier",
+        "4",
         "--use-coverage",
     ]
 
