@@ -15,7 +15,7 @@ DOCKER_COMPOSE = PROJECT_ROOT / "docker-compose.yml"
 SECRETS_DOC = PROJECT_ROOT / "docs" / "github-actions-secrets.md"
 BATS_FILE = PROJECT_ROOT / "tests" / "unit" / "make_targets.bats"
 UV_LOCKFILE = PROJECT_ROOT / "uv.lock"
-RELEASE_WORKFLOWS = ("autorelease.yml", "autoprerelase.yml")
+RELEASE_WORKFLOWS = ("autorelease.yml",)
 TEMPLATE_SYNC_WORKFLOWS = ("template-sync-app.yml", "template-sync-pat.yml")
 PULL_REQUEST_WORKFLOW_TIMEOUTS = {
     "bats-tests.yml": {"bats_tests": 15},
@@ -103,13 +103,10 @@ def _run_lines(steps: list[dict]) -> list[str]:
 def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
     """Keep the release workflows aligned with the documented secret contract."""
     secrets_doc = SECRETS_DOC.read_text(encoding="utf-8")
-    cancel_in_progress = {
-        "autorelease.yml": False,
-        "autoprerelase.yml": True,
-    }
 
     assert secrets_doc.startswith("# GitHub Actions Secrets and Variables\n")
     assert "fall back to `GITHUB_TOKEN`" in secrets_doc
+    assert not (WORKFLOWS_DIR / "autoprerelase.yml").exists()
 
     for workflow_name in RELEASE_WORKFLOWS:
         workflow = yaml.safe_load(
@@ -117,17 +114,25 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         )
         release_job = _release_job(workflow, workflow_name=workflow_name)
         steps = release_job["steps"]
+        checkout_step = _checkout_step(steps, workflow_name=workflow_name)
+        changelog_step = next(
+            step
+            for step in steps
+            if step.get("name") == "Conventional Changelog Action"
+        )
 
         assert (
             release_job["env"]["RELEASE_TOKEN"]
             == "${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
         )
+        assert release_job["env"]["CHANGELOG_BRANCH"] == "${{ github.ref_name }}"
         assert any(step.get("name") == "Create Release" for step in steps)
         assert release_job["timeout-minutes"] == 10
-        assert (
-            workflow["concurrency"]["cancel-in-progress"]
-            is cancel_in_progress[workflow_name]
-        )
+        assert checkout_step["with"]["ref"] == "${{ env.CHANGELOG_BRANCH }}"
+        assert checkout_step["with"]["fetch-depth"] == 0
+        assert checkout_step["with"]["persist-credentials"] is False
+        assert changelog_step["with"]["git-branch"] == "${{ env.CHANGELOG_BRANCH }}"
+        assert workflow["concurrency"]["cancel-in-progress"] is False
 
 
 def test_dockerfile_pins_base_image_and_verifies_downloads() -> None:
