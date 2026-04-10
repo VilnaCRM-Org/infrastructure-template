@@ -29,7 +29,6 @@ artifacts.
 ## Workflow Behavior
 
 - `push` on `main` runs the normal production autorelease flow.
-- `workflow_dispatch` exists for temporary validation on a branch before merge.
 - The workflow does not update `pyproject.toml` or `CHANGELOG.md` in Git.
 - The workflow pushes only tags and then creates the GitHub release body from
   the generated changelog text.

@@ -112,7 +112,6 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         workflow = yaml.safe_load(
             (WORKFLOWS_DIR / workflow_name).read_text(encoding="utf-8")
         )
-        triggers = _triggers(workflow)
         release_job = _release_job(workflow, workflow_name=workflow_name)
         steps = release_job["steps"]
         checkout_step = _checkout_step(steps, workflow_name=workflow_name)
@@ -126,7 +125,6 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
             release_job["env"]["RELEASE_TOKEN"]
             == "${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
         )
-        assert "workflow_dispatch" in triggers
         assert release_job["env"]["CHANGELOG_BRANCH"] == "${{ github.ref_name }}"
         assert any(step.get("name") == "Create Release" for step in steps)
         assert release_job["timeout-minutes"] == 10
