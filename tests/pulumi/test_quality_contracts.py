@@ -82,7 +82,10 @@ def test_pyproject_declares_quality_tooling_contracts() -> None:
         "allowed_importers"
     ] == ["app.environment"]
     assert contracts["Pulumi app layering remains one-way"]["containers"] == ["app"]
-    assert contracts["Pulumi app layering remains one-way"]["layers"] == ["environment", "guardrails"]
+    assert contracts["Pulumi app layering remains one-way"]["layers"] == [
+        "environment",
+        "guardrails",
+    ]
     assert contracts["Policy pack stays behind the policy entrypoint"][
         "protected_modules"
     ] == ["policy.pack"]
@@ -102,7 +105,11 @@ def test_pyproject_declares_quality_tooling_contracts() -> None:
         "allowed_importers"
     ] == ["policy.pack", "policy.guardrails"]
     assert contracts["Policy layering remains one-way"]["containers"] == ["policy"]
-    assert contracts["Policy layering remains one-way"]["layers"] == ["pack", "guardrails", "config"]
+    assert contracts["Policy layering remains one-way"]["layers"] == [
+        "pack",
+        "guardrails",
+        "config",
+    ]
     assert data["tool"]["vulture"]["min_confidence"] == 80
     assert "pulumi/app" in data["tool"]["vulture"]["paths"]
 
