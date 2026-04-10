@@ -189,8 +189,8 @@ test-yaml: ## Lint GitHub workflows, Pulumi stacks, and operational YAML.
 test-dockerfile: ## Lint the development Dockerfile with hadolint.
 	$(COMPOSE) run --rm $(COMPOSE_SERVICE) hadolint --config .hadolint.yaml Dockerfile
 
-test-secrets: ## Scan the working tree for accidentally committed secrets.
-	$(COMPOSE) run --rm $(COMPOSE_SERVICE) gitleaks dir . --config .gitleaks.toml --no-banner --redact
+test-secrets: ## Scan tracked Git content for accidentally committed secrets.
+	$(COMPOSE) run --rm $(COMPOSE_SERVICE) gitleaks git . --config .gitleaks.toml --no-banner --redact
 
 test-deps-security: ## Audit Python dependencies for known vulnerabilities.
 	$(COMPOSE) run --rm -e XDG_CACHE_HOME=/tmp/xdg-cache $(COMPOSE_SERVICE) uv run pip-audit --strict
@@ -222,10 +222,9 @@ test-security: ## Run secret, dependency, and workflow security checks.
 	$(MAKE) test-deps-security
 	$(MAKE) test-bandit
 
-test-guardrails: ## Run preview, destructive diff, and IAM validation guardrails.
+test-guardrails: ## Run the credential-free preview and destructive-diff guardrails.
 	$(MAKE) test-preview
 	$(MAKE) test-destructive-diff
-	$(MAKE) test-iam-validation
 
 test-drift: ## Perform a non-destructive drift check against configured shared stacks.
 	@$(COMPOSE) run --rm $(COMPOSE_GITHUB_TOKEN) $(COMPOSE_SERVICE) \
@@ -320,4 +319,4 @@ clean: ## Remove Docker Compose artifacts, Python caches, and build artifacts.
 	$(DOCKER_COMPOSE) down -v 2>/dev/null || true
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete 2>/dev/null || true
-	rm -rf .venv dist build *.egg-info 2>/dev/null || true
+	rm -rf .venv policy/.venv dist build *.egg-info 2>/dev/null || true

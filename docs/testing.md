@@ -92,12 +92,13 @@ make test-guardrails
 
 Coverage:
 
-- `make test-secrets` runs Gitleaks against the working tree
+- `make test-secrets` runs Gitleaks against tracked Git content
 - `make test-deps-security` runs `pip-audit --strict`
 - `make test-bandit` runs Bandit against repository Python code
 - `make test-preview` generates the Pulumi preview artifact consumed by later checks
 - `make test-destructive-diff` blocks deletes and replacements of critical infrastructure without an explicit PR override label
-- `make test-iam-validation` validates previewed IAM policies with AWS IAM Access Analyzer
+- `make test-guardrails` keeps the credential-free preview and destructive-diff flow reproducible locally
+- `make test-iam-validation` validates previewed IAM policies with AWS IAM Access Analyzer when AWS credentials are intentionally configured
 
 Dependency Review, CodeQL, SBOM attestations, and OpenSSF Scorecard are
 GitHub-native only. The repository keeps those workflow definitions under

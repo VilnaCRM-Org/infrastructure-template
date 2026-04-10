@@ -14,6 +14,11 @@ Pulumi `Output`.
 
 Those checks live in `pulumi/app/guardrails.py` and are applied by
 `EnvironmentSettings` before stack exports and default tags are derived.
+The exported `defaultTags` helper includes the mandatory `Project`,
+`Environment`, `Owner`, and `CostCenter` tags, using the resolved
+service/environment metadata plus the template defaults of `platform` and
+`engineering` unless the stack overrides `owner` or `costCenter` in Pulumi
+config.
 
 ## Policy pack
 

@@ -327,11 +327,11 @@ assert_help_target() {
   [[ "$output" == *"hadolint --config .hadolint.yaml Dockerfile"* ]]
 }
 
-@test "make test-secrets executes gitleaks against the working tree" {
+@test "make test-secrets executes gitleaks against tracked Git content" {
   run make -n test-secrets
   [ "$status" -eq 0 ]
   assert_compose_env_file
-  [[ "$output" == *"gitleaks dir . --config .gitleaks.toml --no-banner --redact"* ]]
+  [[ "$output" == *"gitleaks git . --config .gitleaks.toml --no-banner --redact"* ]]
 }
 
 @test "make test-deps-security executes pip-audit in strict mode" {
@@ -377,12 +377,25 @@ assert_help_target() {
   [[ "$output" == *"make test-bandit"* ]]
 }
 
-@test "make test-guardrails delegates to preview, destructive diff, and IAM validation" {
+@test "make test-guardrails delegates to preview and destructive diff only" {
   run make -n test-guardrails
   [ "$status" -eq 0 ]
   [[ "$output" == *"make test-preview"* ]]
   [[ "$output" == *"make test-destructive-diff"* ]]
-  [[ "$output" == *"make test-iam-validation"* ]]
+  [[ "$output" != *"make test-iam-validation"* ]]
+}
+
+@test "make test-battery runs the aggregate developer battery" {
+  run make -n test-battery
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"make test-pulumi"* ]]
+  [[ "$output" == *"make test-policy"* ]]
+  [[ "$output" == *"make test-quality"* ]]
+  [[ "$output" == *"make test-repo-hygiene"* ]]
+  [[ "$output" == *"make test-unit"* ]]
+  [[ "$output" == *"make test-integration"* ]]
+  [[ "$output" == *"make test-coverage"* ]]
+  [[ "$output" == *"make test-cli"* ]]
 }
 
 @test "make test-drift executes the non-destructive drift helper" {
@@ -463,7 +476,7 @@ assert_help_target() {
   [[ "$output" == *"docker compose down -v"* ]]
   [[ "$output" == *"find . -type d -name __pycache__"* ]]
   [[ "$output" == *"find . -type f -name \"*.pyc\""* ]]
-  [[ "$output" == *"rm -rf .venv dist build *.egg-info"* ]]
+  [[ "$output" == *"rm -rf .venv policy/.venv dist build *.egg-info"* ]]
 }
 
 @test "make report-quality delegates to every scheduled quality report" {

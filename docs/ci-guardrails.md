@@ -16,7 +16,7 @@ These checks are intended to be marked as required in branch protection:
 | `Preview` | `make test-preview` | Produces a non-destructive Pulumi preview artifact for every configured stack |
 | `Destructive Diff Gate` | `make test-destructive-diff` | Blocks deletes and replacements of critical infrastructure unless explicitly approved |
 | `IAM Validation` | `make test-iam-validation` | Validates previewed IAM policies with AWS IAM Access Analyzer |
-| `Secrets Scan` | `make test-secrets` | Runs Gitleaks against the working tree |
+| `Secrets Scan` | `make test-secrets` | Runs Gitleaks against tracked Git content |
 | `Dependency Audit` | `make test-deps-security` | Audits Python dependencies with `pip-audit --strict` |
 | `Bandit` | `make test-bandit` | Lints repository Python code for common security hazards |
 | `Actionlint` | `make test-actionlint` | Lints GitHub Actions workflow syntax and common security issues |
@@ -25,9 +25,10 @@ These checks are intended to be marked as required in branch protection:
 
 `make test-security` aggregates Gitleaks, dependency audit, and Bandit.
 `make test-repo-hygiene` aggregates Actionlint, Yamllint, and Hadolint.
-`make test-guardrails` aggregates preview generation,
-destructive diff gating, and IAM validation. `make ci-pr` and `make ci`
-include all three batteries.
+`make test-guardrails` aggregates preview generation and destructive diff
+gating without requiring AWS credentials. `make ci-pr` and `make ci` include
+the credential-free guardrail battery, while IAM validation stays isolated in
+its dedicated OIDC-gated workflow/job.
 
 ## Preview model
 

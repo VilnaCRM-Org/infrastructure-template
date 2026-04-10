@@ -55,15 +55,16 @@ The preview target syncs the shared `uv` environment if necessary and enables
 the repository policy pack automatically, so guardrail drift is caught before
 the Pulumi plan is shown.
 
-When you want to reproduce the PR-blocking preview flow exactly, use:
+When you want to reproduce the credential-free PR preview flow locally, use:
 
 ```bash
 make test-guardrails
 ```
 
-That target generates the preview artifact, blocks destructive changes to
-critical resources, and validates any previewed IAM policies with Access
-Analyzer.
+That target generates the preview artifact and blocks destructive changes to
+critical resources without requiring live AWS credentials. Keep
+`make test-iam-validation` for the separate Access Analyzer check when you
+intentionally have AWS credentials configured.
 
 Apply only after the preview is understood and reviewed:
 

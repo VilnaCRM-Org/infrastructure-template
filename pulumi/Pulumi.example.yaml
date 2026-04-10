@@ -3,3 +3,4 @@ config:
   infrastructure-template:amiId: ami-xxxxxxxxxxxxxxxxx
   infrastructure-template:instanceType: t3.micro
   infrastructure-template:nameTag: ExampleAppServerInstance
+encryptionsalt: v1:qYONAe8CNuE=:v1:O/82qsM01J5T8f4Z:Mv3YegCs1m8ZsFtRrMRXmaZ45Qk2sQ==

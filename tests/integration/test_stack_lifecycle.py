@@ -71,7 +71,12 @@ def test_pulumi_stack_preview_and_up_cycle(tmp_path: Path) -> None:
         assert up_result.outputs["stackTag"].value == "integration-test-integration"
         assert up_result.outputs["serviceName"].value == "integration-test"
         assert up_result.outputs["environment"].value == "integration"
-        assert "defaultTags" in up_result.outputs
+        assert up_result.outputs["defaultTags"].value == {
+            "Project": "integration-test",
+            "Environment": "integration",
+            "Owner": "platform",
+            "CostCenter": "engineering",
+        }
     finally:
         try:
             stack.destroy(on_output=None)

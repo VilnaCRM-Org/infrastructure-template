@@ -608,3 +608,89 @@ def test_run_pulumi_preview_main_handles_empty_and_successful_runs(
         == ["pulumi", "--cwd", str(pulumi_dir), "login", "--non-interactive"]
         for command, _, _ in run_calls
     )
+    assert any(
+        command[3:8] == ["stack", "select", "dev", "--create", "--non-interactive"]
+        for command, _, _ in run_calls
+    )
+
+
+def test_run_pulumi_preview_main_keeps_shared_backends_read_only(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Fail fast instead of creating typo stacks in shared preview backends."""
+    module = load_script_module(monkeypatch, "run_pulumi_preview")
+    repo_dir = tmp_path / "repo"
+    pulumi_dir = repo_dir / "pulumi"
+    policy_dir = repo_dir / "policy"
+    preview_dir = repo_dir / ".artifacts" / "pulumi-preview"
+    preview_dir.mkdir(parents=True)
+    pulumi_dir.mkdir()
+    policy_dir.mkdir()
+    monkeypatch.setattr(module, "repo_root", lambda _: repo_dir)
+    monkeypatch.setenv("PULUMI_BACKEND_URL", "s3://shared-backend")
+    monkeypatch.setattr(module, "discover_stacks", lambda *args: ["missing-stack"])
+
+    run_calls: list[tuple[list[str], dict[str, str]]] = []
+
+    def fake_run(command, **kwargs):
+        env = kwargs.get("env", {})
+        run_calls.append((command, env))
+        if command[0] == "pulumi" and command[3:6] == [
+            "stack",
+            "select",
+            "missing-stack",
+        ]:
+            return subprocess.CompletedProcess(
+                command,
+                255,
+                stderr="error: no stack named missing-stack found\n",
+            )
+        return subprocess.CompletedProcess(command, 0, stdout="")
+
+    monkeypatch.setattr(module, "run", fake_run)
+    assert module.main() == 255
+
+    error_output = capsys.readouterr().err
+    assert "shared-backend previews will not create missing stacks" in error_output
+    assert "no stack named missing-stack found" in error_output
+    assert any(
+        command[3:7] == ["stack", "select", "missing-stack", "--non-interactive"]
+        for command, _ in run_calls
+    )
+    assert not any("--create" in command for command, _ in run_calls)
+
+
+def test_run_pulumi_preview_main_returns_file_backend_select_failures(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Surface file-backend stack-select failures without shared-backend messaging."""
+    module = load_script_module(monkeypatch, "run_pulumi_preview")
+    repo_dir = tmp_path / "repo"
+    pulumi_dir = repo_dir / "pulumi"
+    policy_dir = repo_dir / "policy"
+    preview_dir = repo_dir / ".artifacts" / "pulumi-preview"
+    preview_dir.mkdir(parents=True)
+    pulumi_dir.mkdir()
+    policy_dir.mkdir()
+    monkeypatch.setattr(module, "repo_root", lambda _: repo_dir)
+    monkeypatch.delenv("PULUMI_BACKEND_URL", raising=False)
+    monkeypatch.setattr(module, "discover_stacks", lambda *args: ["dev"])
+
+    run_calls: list[list[str]] = []
+
+    def fake_run(command, **kwargs):
+        run_calls.append(command)
+        if command[0] == "pulumi" and command[3:6] == ["stack", "select", "dev"]:
+            return subprocess.CompletedProcess(command, 1, stderr="")
+        return subprocess.CompletedProcess(command, 0, stdout="")
+
+    monkeypatch.setattr(module, "run", fake_run)
+    assert module.main() == 1
+
+    assert "shared-backend previews will not create missing stacks" not in (
+        capsys.readouterr().err
+    )
+    assert any(
+        command[3:8] == ["stack", "select", "dev", "--create", "--non-interactive"]
+        for command in run_calls
+    )

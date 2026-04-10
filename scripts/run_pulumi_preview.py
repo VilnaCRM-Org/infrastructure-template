@@ -14,6 +14,51 @@ from _script_support import (
 )
 
 
+def _uses_file_backend(backend_url: str) -> bool:
+    """Return whether Pulumi preview should treat the backend as ephemeral."""
+    return backend_url.startswith("file://")
+
+
+def _select_stack_for_preview(
+    pulumi_dir: Path,
+    stack: str,
+    *,
+    env: dict[str, str],
+    uses_file_backend: bool,
+) -> int | None:
+    """Select the target stack and fail fast on shared-backend typos."""
+    select_command = [
+        "pulumi",
+        "--cwd",
+        str(pulumi_dir),
+        "stack",
+        "select",
+        stack,
+        "--non-interactive",
+    ]
+    if uses_file_backend:
+        select_command.insert(-1, "--create")
+
+    select_result = run(
+        select_command,
+        check=False,
+        capture_output=True,
+        env=env,
+    )
+    if select_result.returncode == 0:
+        return None
+
+    if not uses_file_backend:
+        print(
+            "error: shared-backend previews will not create missing stacks. "
+            f"Create `{stack}` explicitly or fix PULUMI_PREVIEW_STACKS.",
+            file=sys.stderr,
+        )
+    if select_result.stderr:
+        print(select_result.stderr, file=sys.stderr, end="")
+    return select_result.returncode or 1
+
+
 def main() -> int:
     root_dir = repo_root(__file__)
     pulumi_dir = Path(os.environ.get("PULUMI_DIR", root_dir / "pulumi"))
@@ -56,6 +101,7 @@ def main() -> int:
         ["pulumi", "--cwd", str(pulumi_dir), "login", "--non-interactive", backend_url],
         env=env,
     )
+    uses_file_backend = _uses_file_backend(backend_url)
 
     for stack in stacks:
         safe_stack = "".join(
@@ -64,19 +110,14 @@ def main() -> int:
         )
         preview_file = preview_artifact_dir / f"{safe_stack}.json"
 
-        run(
-            [
-                "pulumi",
-                "--cwd",
-                str(pulumi_dir),
-                "stack",
-                "select",
-                stack,
-                "--create",
-                "--non-interactive",
-            ],
+        select_failure = _select_stack_for_preview(
+            pulumi_dir,
+            stack,
             env=env,
+            uses_file_backend=uses_file_backend,
         )
+        if select_failure is not None:
+            return select_failure
 
         with preview_file.open("w", encoding="utf-8") as handle:
             run(

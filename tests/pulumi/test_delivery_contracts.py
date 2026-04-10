@@ -454,7 +454,7 @@ def test_makefile_keeps_pulumi_guardrails_secret_safe() -> None:
 
 
 def test_bats_suite_covers_every_public_make_target() -> None:
-    """Keep every public make target locked down by the CLI regression suite."""
+    """Keep public and shared aggregate make targets under CLI regression tests."""
     bats_text = BATS_FILE.read_text(encoding="utf-8")
     expected_invocations = [
         "make help",
@@ -477,6 +477,7 @@ def test_bats_suite_covers_every_public_make_target() -> None:
         "make -n report-sbom",
         "make -n sh",
         "make -n down",
+        "make -n test-battery",
         "make -n test-actionlint",
         "make -n test-architecture",
         "make -n test-bandit",
@@ -531,6 +532,24 @@ def test_local_battery_workflow_avoids_duplicate_mutation_runs() -> None:
     assert any("make ci-pr" in line for line in run_lines)
     assert not any("make ci" == line for line in run_lines)
     assert not any("make test-mutation" in line for line in run_lines)
+
+
+def test_makefile_secret_and_guardrail_targets_stay_developer_safe() -> None:
+    """Keep secret and preview guardrails aligned with local developer workflows."""
+    makefile_text = (PROJECT_ROOT / "Makefile").read_text(encoding="utf-8")
+
+    assert "gitleaks git . --config .gitleaks.toml --no-banner --redact" in (
+        makefile_text
+    )
+    assert "gitleaks dir ." not in makefile_text
+    assert (
+        "$(MAKE) test-iam-validation"
+        not in (
+            makefile_text.split("test-guardrails:", maxsplit=1)[1].split(
+                "test-drift:", maxsplit=1
+            )[0]
+        )
+    )
 
 
 def test_ci_workflows_keep_make_entrypoints_in_sync() -> None:
