@@ -100,10 +100,34 @@ source_modules = ["policy"]
 forbidden_modules = ["app"]
 
 [[tool.importlinter.contracts]]
+name = "Runtime guardrails stay behind the environment component"
+type = "protected"
+protected_modules = ["app.guardrails"]
+allowed_importers = ["app.environment"]
+
+[[tool.importlinter.contracts]]
 name = "Pulumi app layering remains one-way"
 type = "layers"
 containers = ["app"]
 layers = ["environment", "guardrails"]
+
+[[tool.importlinter.contracts]]
+name = "Policy pack stays behind the policy entrypoint"
+type = "protected"
+protected_modules = ["policy.pack"]
+allowed_importers = ["policy.__main__"]
+
+[[tool.importlinter.contracts]]
+name = "Policy guardrails stay behind the pack surface"
+type = "protected"
+protected_modules = ["policy.guardrails"]
+allowed_importers = ["policy.pack"]
+
+[[tool.importlinter.contracts]]
+name = "Policy config stays behind the pack and guardrails"
+type = "protected"
+protected_modules = ["policy.config"]
+allowed_importers = ["policy.pack", "policy.guardrails"]
 
 [[tool.importlinter.contracts]]
 name = "Policy layering remains one-way"

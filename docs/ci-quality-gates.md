@@ -81,14 +81,26 @@ Import Linter currently enforces:
 
 - `app` must not import `policy`
 - `policy` must not import `app`
-- `app.environment` may depend on `app.guardrails`, but not the other way around
+- `app.environment` may depend on `app.guardrails`, but not the other way
+  around
+- `policy.__main__` may depend on `policy.pack`
 - `policy.pack` may depend on `policy.guardrails` and `policy.config`
 - `policy.guardrails` may depend on `policy.config`
 - `app.guardrails` must stay free of `pulumi` and `pulumi_policy`
 - `policy.config` and `policy.guardrails` must stay free of `pulumi` and `pulumi_policy`
 
 This keeps runtime code, policy code, and guardrail helpers from collapsing
-into one another as AI-generated refactors expand the repo.
+into one another as AI-generated refactors expand the repo. The standalone
+`pulumi/__main__.py` entrypoint stays under structural-test coverage rather than
+Import Linter because it is not a package module, but it still uses the `app`
+package surface instead of reaching into `app.environment` directly.
+
+When a downstream Pulumi repository grows into a componentized layout such as
+`stacks.<stack>`, `components.<domain>`, and `shared`, extend the same
+orchestration-to-reusable dependency direction there too: stack entrypoints may
+depend on components and shared helpers, components may depend on shared
+helpers, and shared helpers must not depend back on stack entrypoints or
+service-specific components.
 
 ## Dependency hygiene rules
 

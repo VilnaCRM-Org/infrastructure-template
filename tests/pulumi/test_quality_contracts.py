@@ -62,14 +62,47 @@ def test_pyproject_declares_quality_tooling_contracts() -> None:
     assert deptry["per_rule_ignores"]["DEP002"] == ["pulumi-aws"]
     assert importlinter["root_packages"] == ["app", "policy"]
     assert importlinter["include_external_packages"] is True
-    assert [contract["name"] for contract in importlinter["contracts"]] == [
+    contracts = {contract["name"]: contract for contract in importlinter["contracts"]}
+    assert list(contracts) == [
         "Pulumi runtime does not depend on the policy pack",
         "Policy pack stays isolated from Pulumi runtime modules",
+        "Runtime guardrails stay behind the environment component",
         "Pulumi app layering remains one-way",
+        "Policy pack stays behind the policy entrypoint",
+        "Policy guardrails stay behind the pack surface",
+        "Policy config stays behind the pack and guardrails",
         "Policy layering remains one-way",
         "Runtime guardrails stay free of Pulumi SDK bindings",
         "Policy helpers stay free of Pulumi runtime bindings",
     ]
+    assert contracts["Runtime guardrails stay behind the environment component"][
+        "protected_modules"
+    ] == ["app.guardrails"]
+    assert contracts["Runtime guardrails stay behind the environment component"][
+        "allowed_importers"
+    ] == ["app.environment"]
+    assert contracts["Pulumi app layering remains one-way"]["containers"] == ["app"]
+    assert contracts["Pulumi app layering remains one-way"]["layers"] == ["environment", "guardrails"]
+    assert contracts["Policy pack stays behind the policy entrypoint"][
+        "protected_modules"
+    ] == ["policy.pack"]
+    assert contracts["Policy pack stays behind the policy entrypoint"][
+        "allowed_importers"
+    ] == ["policy.__main__"]
+    assert contracts["Policy guardrails stay behind the pack surface"][
+        "protected_modules"
+    ] == ["policy.guardrails"]
+    assert contracts["Policy guardrails stay behind the pack surface"][
+        "allowed_importers"
+    ] == ["policy.pack"]
+    assert contracts["Policy config stays behind the pack and guardrails"][
+        "protected_modules"
+    ] == ["policy.config"]
+    assert contracts["Policy config stays behind the pack and guardrails"][
+        "allowed_importers"
+    ] == ["policy.pack", "policy.guardrails"]
+    assert contracts["Policy layering remains one-way"]["containers"] == ["policy"]
+    assert contracts["Policy layering remains one-way"]["layers"] == ["pack", "guardrails", "config"]
     assert data["tool"]["vulture"]["min_confidence"] == 80
     assert "pulumi/app" in data["tool"]["vulture"]["paths"]
 
@@ -225,6 +258,9 @@ def test_quality_docs_and_configs_are_present_and_indexed() -> None:
     assert "Wily" in content
     assert "SBOM" in content
     assert "artifact attestation" in content
+    assert "`stacks.<stack>`" in content
+    assert "`components.<domain>`" in content
+    assert "`shared`" in content
     assert "`pulumi`, `policy`, and `scripts`" in testing_doc
     assert ".github/workflows/" not in yamllint_config["ignore"]
     assert yamllint_config["rules"]["truthy"]["check-keys"] is False
