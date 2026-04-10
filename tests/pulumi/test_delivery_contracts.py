@@ -107,6 +107,10 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         "autorelease.yml": False,
         "autoprerelase.yml": True,
     }
+    branch_refs = {
+        "autorelease.yml": "${{ github.ref_name }}",
+        "autoprerelase.yml": "${{ github.head_ref }}",
+    }
 
     assert secrets_doc.startswith("# GitHub Actions Secrets and Variables\n")
     assert "fall back to `GITHUB_TOKEN`" in secrets_doc
@@ -117,13 +121,24 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         )
         release_job = _release_job(workflow, workflow_name=workflow_name)
         steps = release_job["steps"]
+        checkout_step = _checkout_step(steps, workflow_name=workflow_name)
+        changelog_step = next(
+            step
+            for step in steps
+            if step.get("name") == "Conventional Changelog Action"
+        )
 
         assert (
             release_job["env"]["RELEASE_TOKEN"]
             == "${{ secrets.REPO_GITHUB_TOKEN || secrets.GITHUB_TOKEN }}"
         )
+        assert release_job["env"]["CHANGELOG_BRANCH"] == branch_refs[workflow_name]
         assert any(step.get("name") == "Create Release" for step in steps)
         assert release_job["timeout-minutes"] == 10
+        assert checkout_step["with"]["ref"] == "${{ env.CHANGELOG_BRANCH }}"
+        assert checkout_step["with"]["fetch-depth"] == 0
+        assert checkout_step["with"]["persist-credentials"] is False
+        assert changelog_step["with"]["git-branch"] == "${{ env.CHANGELOG_BRANCH }}"
         assert (
             workflow["concurrency"]["cancel-in-progress"]
             is cancel_in_progress[workflow_name]
