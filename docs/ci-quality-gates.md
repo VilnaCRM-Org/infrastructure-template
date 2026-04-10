@@ -21,7 +21,7 @@ These checks should be required in branch protection:
 | `Architecture` | `make test-architecture` | Import Linter contracts for package isolation and dependency direction |
 | `Dependency Hygiene` | `make test-dependency-hygiene` | `uv lock --check` plus Deptry for missing, misplaced, and unused dependencies |
 | `Coverage` | `make test-coverage` after `make test-unit`, `make test-integration`, `make test-policy` | Combined branch-coverage gate |
-| `Secrets Scan` | `make test-secrets` | Gitleaks against the working tree |
+| `Secrets Scan` | `make test-secrets` | Gitleaks against tracked Git content |
 | `Dependency Audit` | `make test-deps-security` | `pip-audit --strict` for known Python vulnerabilities |
 | `Bandit` | `make test-bandit` | Python security linting for runtime and helper code |
 | `Dependency Review` | GitHub-native | Pull-request dependency risk review against GitHub advisories |

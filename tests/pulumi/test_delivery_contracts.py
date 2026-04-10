@@ -796,6 +796,9 @@ def test_ci_architecture_docs_match_make_entrypoints() -> None:
     architecture_doc = (PROJECT_ROOT / "docs" / "ci-architecture.md").read_text(
         encoding="utf-8"
     )
+    quality_doc = (PROJECT_ROOT / "docs" / "ci-quality-gates.md").read_text(
+        encoding="utf-8"
+    )
 
     assert "Docker-backed CI workflows" in architecture_doc
     assert "GitHub-native" in architecture_doc
@@ -803,6 +806,7 @@ def test_ci_architecture_docs_match_make_entrypoints() -> None:
     assert "prerequisite sanity check" in architecture_doc
     assert "Pulumi structural tests" in architecture_doc
     assert "make ci-pr" in architecture_doc
+    assert "tracked Git content" in quality_doc
 
 
 def test_sre_docs_map_blocking_ci_checks_back_to_local_commands() -> None:
