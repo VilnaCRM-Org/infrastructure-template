@@ -132,6 +132,8 @@ def test_release_workflows_use_repo_token_with_github_token_fallback() -> None:
         assert checkout_step["with"]["fetch-depth"] == 0
         assert checkout_step["with"]["persist-credentials"] is False
         assert changelog_step["with"]["git-branch"] == "${{ env.CHANGELOG_BRANCH }}"
+        assert changelog_step["with"]["version-file"] == "pyproject.toml"
+        assert changelog_step["with"]["version-path"] == "project.version"
         assert workflow["concurrency"]["cancel-in-progress"] is False
 
 
