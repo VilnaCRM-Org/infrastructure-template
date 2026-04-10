@@ -5,6 +5,7 @@ on:
     branches: ["main"]
     paths-ignore:
       - 'CHANGELOG.md'
+  workflow_dispatch:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -38,10 +39,10 @@ jobs:
         uses: TriPSs/conventional-changelog-action@8118086024a5380b05b0d54ed2181516082e090f
         with:
           github-token: ${{ env.RELEASE_TOKEN }}
-          output-file: 'CHANGELOG.md'
+          output-file: 'false'
           git-branch: ${{ env.CHANGELOG_BRANCH }}
-          version-file: 'pyproject.toml'
-          version-path: 'project.version'
+          skip-version-file: 'true'
+          skip-commit: 'true'
 
       - name: Check if release already exists
         id: release_check
