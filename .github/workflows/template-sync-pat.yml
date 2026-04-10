@@ -2,11 +2,17 @@ name: Template Sync with PAT
 
 on:
   schedule:
-    - cron: "0 0 1 * *"
+    - cron: '0 0 1 * *'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   repo-sync:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     if: ${{ github.repository != 'VilnaCRM-Org/infrastructure-template' }}
     permissions:
       contents: write

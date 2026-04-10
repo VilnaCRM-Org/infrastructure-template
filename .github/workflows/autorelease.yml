@@ -4,7 +4,15 @@ on:
   push:
     branches: ["main"]
     paths-ignore:
-      - "CHANGELOG.md"
+      - 'CHANGELOG.md'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: bash
 
 jobs:
   build:
@@ -29,7 +37,7 @@ jobs:
         uses: TriPSs/conventional-changelog-action@8118086024a5380b05b0d54ed2181516082e090f
         with:
           github-token: ${{ env.RELEASE_TOKEN }}
-          output-file: "CHANGELOG.md"
+          output-file: 'CHANGELOG.md'
 
       - name: Check if release already exists
         id: release_check

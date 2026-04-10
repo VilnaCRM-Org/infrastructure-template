@@ -1,15 +1,23 @@
 [run]
+branch = True
 parallel = True
 
 [paths]
-source =
+pulumi =
     pulumi
+    /workspace/pulumi
+    */pulumi
     */pulumi-program
+policy =
+    policy
+    /workspace/policy
+    */policy
+scripts =
+    scripts
+    /workspace/scripts
+    */scripts
 
 [report]
 show_missing = True
-include =
-    pulumi/*
 omit =
     */site-packages/*
-    pulumi/sitecustomize.py

@@ -24,16 +24,21 @@ def pulumi_automation_environment(tmp_path_factory: pytest.TempPathFactory) -> N
 
     os.environ.setdefault("PULUMI_SKIP_UPDATE_CHECK", "true")
     python_cmd = sys.executable
-    coverage_wrapper = PROJECT_ROOT / "scripts" / "pulumi_python_with_coverage.sh"
 
-    if _COVERAGE_CONFIG.exists() and coverage_wrapper.exists():
+    if _COVERAGE_CONFIG.exists():
         os.environ.setdefault("COVERAGE_PROCESS_START", str(_COVERAGE_CONFIG))
         os.environ.setdefault("COVERAGE_FILE", str(PROJECT_ROOT / ".coverage"))
-        python_cmd = str(coverage_wrapper)
 
     os.environ.setdefault("PULUMI_PYTHON_CMD", python_cmd)
+    backend_url = os.environ.get("PULUMI_BACKEND_URL", "")
 
-    if os.environ.get("PULUMI_ACCESS_TOKEN") or os.environ.get("PULUMI_BACKEND_URL"):
+    if os.environ.get("PULUMI_ACCESS_TOKEN"):
+        return
+    if backend_url:
+        if backend_url.startswith("file://"):
+            os.environ.setdefault(
+                "PULUMI_CONFIG_PASSPHRASE", "integration-test-passphrase"
+            )
         return
 
     backend_dir = tmp_path_factory.mktemp("pulumi-backend")
@@ -50,3 +55,10 @@ def pulumi_automation_environment(tmp_path_factory: pytest.TempPathFactory) -> N
     os.environ.setdefault("PULUMI_HOME", str(backend_dir))
     os.environ.setdefault("PULUMI_BACKEND_URL", backend_uri)
     os.environ.setdefault("PULUMI_CONFIG_PASSPHRASE", env["PULUMI_CONFIG_PASSPHRASE"])
+
+
+@pytest.fixture(scope="session")
+def ensure_pulumi_cli() -> None:
+    """Skip integration cases that require the Pulumi CLI when it is unavailable."""
+    if shutil.which("pulumi") is None:
+        pytest.skip("Pulumi CLI binary is not available in PATH.")

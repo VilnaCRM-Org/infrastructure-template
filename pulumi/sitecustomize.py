@@ -1,9 +1,20 @@
 """Enable coverage collection in subprocesses when configured."""
 
-try:
-    import coverage
-except ImportError:  # pragma: no cover - best-effort only
-    coverage = None
+import sys
+from typing import Any
 
-if coverage is not None:
-    coverage.process_startup()
+coverage_module: Any | None
+
+try:
+    import coverage as coverage_module
+except Exception:
+    coverage_module = None
+
+if coverage_module is not None:
+    try:
+        coverage_module.process_startup()
+    except Exception as exc:
+        print(
+            f"warning: coverage subprocess startup failed: {exc}",
+            file=sys.stderr,
+        )
